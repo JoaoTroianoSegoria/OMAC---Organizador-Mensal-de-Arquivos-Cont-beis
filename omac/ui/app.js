@@ -269,12 +269,7 @@ function desenharNotas() {
     corpo.append(tr);
   }
   $("#tabela-corpo").replaceChildren(corpo);
-  $("#tabela").querySelector("tfoot").hidden = notas.length === 0;
-  $("#tabela").querySelector("thead").hidden = notas.length === 0;
-  $("#tabela-vazia").hidden = notas.length > 0;
-  $("#tabela-vazia-texto").textContent = estado.dados.qtd_pasta
-    ? `Nenhuma nota com competência em ${nomeMes}.`
-    : "Não encontrei nenhuma nota (PDF) nesta pasta.";
+  desenharVazio(nomeMes);
 
   // Avisos: os de cada nota do mês + os gerais da pasta
   const itens = [];
@@ -302,6 +297,43 @@ function desenharNotas() {
   }
 
   $$('[data-acao="exportar"]').forEach((b) => { b.disabled = notas.length === 0; });
+}
+
+/* Sem notas: no lugar dos cartões e da tabela, explica o porquê e o que fazer. */
+function desenharVazio(nomeMes) {
+  const { notas, qtd_pasta, competencias } = estado.dados;
+  const vazio = notas.length === 0;
+  $("#resumo").hidden = vazio;
+  $("#tabela-caixa").hidden = vazio;
+  $("#notas-vazio").hidden = !vazio;
+  if (!vazio) return;
+
+  const pastaVazia = qtd_pasta === 0;
+  $("#notas-vazio-ic").setAttribute("href", pastaVazia ? "#i-pasta" : "#i-notas");
+  $("#notas-vazio-acoes").hidden = !pastaVazia;
+  if (pastaVazia) {
+    $("#notas-vazio-titulo").textContent = "Nenhuma nota nesta pasta";
+    $("#notas-vazio-texto").textContent =
+      "Não encontrei PDFs de notas direto na pasta escolhida. O OMAC não olha dentro de subpastas: " +
+      "confira se é a pasta onde as notas do ano ficam (por exemplo, NFS‑e\u00a02026).";
+    $("#notas-vazio-meses").replaceChildren();
+    return;
+  }
+
+  $("#notas-vazio-titulo").textContent = `Nenhuma nota em ${nomeMes}`;
+  $("#notas-vazio-texto").textContent =
+    `A pasta tem ${qtd_pasta} ${qtd_pasta === 1 ? "nota" : "notas"}, mas nenhuma com competência neste mês. ` +
+    "Meses com notas:";
+  // Os meses mais recentes primeiro
+  $("#notas-vazio-meses").replaceChildren(...[...competencias].reverse().slice(0, 8).map(([a, m, n]) => {
+    const b = document.createElement("button");
+    b.className = "btn btn-peq";
+    b.dataset.acao = "ir-mes";
+    b.dataset.ano = a;
+    b.dataset.mes = m;
+    b.textContent = `${MESES[m - 1]} ${a} · ${n} ${n === 1 ? "nota" : "notas"}`;
+    return b;
+  }));
 }
 
 async function exportar(formato) {
@@ -366,7 +398,7 @@ function mostrarToast(texto, { erro = false, acoes = [] } = {}) {
 
 function ligarEventos() {
   $$(".menu-item").forEach((b) => {
-    b.title = b.querySelector(".rotulo").textContent; // aparece quando o menu mostra só ícones
+    b.title = b.querySelector(".rotulo").firstChild.textContent.trim(); // aparece quando o menu mostra só ícones
     b.addEventListener("click", () => mostrarView(b.dataset.view));
   });
 
@@ -390,6 +422,11 @@ function ligarEventos() {
       case "abrir-pasta": api().abrir_pasta_notas(); break;
       case "exportar": exportar(alvo.dataset.formato); break;
       case "abrir-nota": abrirNota(alvo.dataset.arquivo); break;
+      case "ir-mes":
+        estado.ano = Number(alvo.dataset.ano);
+        estado.mes = Number(alvo.dataset.mes);
+        carregar();
+        break;
       case "fonte-mais": mudarFonte(1); break;
       case "fonte-menos": mudarFonte(-1); break;
       case "ver-avisos": {

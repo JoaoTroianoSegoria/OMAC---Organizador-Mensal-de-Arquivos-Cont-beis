@@ -49,12 +49,10 @@
           <svg class="ic"><use href="#i-notas"/></svg><span class="rotulo">Notas fiscais</span>
         </button>
         <button class="menu-item" data-view="extrato">
-          <svg class="ic"><use href="#i-banco"/></svg><span class="rotulo">Extrato bancário</span>
-          <span class="selo-breve">em breve</span>
+          <svg class="ic"><use href="#i-banco"/></svg><span class="rotulo">Extrato bancário<span class="selo-breve">em breve</span></span>
         </button>
         <button class="menu-item" data-view="whatsapp">
-          <svg class="ic"><use href="#i-whats"/></svg><span class="rotulo">WhatsApp</span>
-          <span class="selo-breve">em breve</span>
+          <svg class="ic"><use href="#i-whats"/></svg><span class="rotulo">WhatsApp<span class="selo-breve">em breve</span></span>
         </button>
       </nav>
 
@@ -123,7 +121,7 @@
         </div>
 
         <div id="painel-notas" hidden>
-          <div class="resumo">
+          <div class="resumo" id="resumo">
             <div class="cartao vidro">
               <span class="cartao-rotulo">Notas no mês</span>
               <strong class="cartao-valor" id="res-qtd">0</strong>
@@ -148,7 +146,7 @@
             <div><strong>Confira antes de mandar para a contabilidade</strong><ul class="lista-simples" id="avisos-lista"></ul></div>
           </div>
 
-          <div class="tabela-caixa vidro">
+          <div class="tabela-caixa vidro" id="tabela-caixa">
             <table class="tabela" id="tabela">
               <caption class="so-leitor" id="tabela-legenda"></caption>
               <thead>
@@ -171,9 +169,17 @@
                 </tr>
               </tfoot>
             </table>
-            <div class="tabela-vazia" id="tabela-vazia" hidden>
-              <svg class="ic"><use href="#i-notas"/></svg>
-              <p id="tabela-vazia-texto">Nenhuma nota com competência neste mês.</p>
+          </div>
+
+          <!-- Nenhuma nota na pasta ou no mês escolhido -->
+          <div class="vazio vidro" id="notas-vazio" hidden>
+            <span class="vazio-icone"><svg class="ic"><use id="notas-vazio-ic" href="#i-notas"/></svg></span>
+            <h2 id="notas-vazio-titulo"></h2>
+            <p id="notas-vazio-texto"></p>
+            <div class="vazio-meses" id="notas-vazio-meses"></div>
+            <div class="vazio-acoes" id="notas-vazio-acoes">
+              <button class="btn" data-acao="abrir-pasta"><svg class="ic"><use href="#i-abrir"/></svg><span>Abrir a pasta</span></button>
+              <button class="btn btn-primario" data-acao="escolher-pasta"><svg class="ic"><use href="#i-pasta"/></svg><span>Escolher outra pasta</span></button>
             </div>
           </div>
 
