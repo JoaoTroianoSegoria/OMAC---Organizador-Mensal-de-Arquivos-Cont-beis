@@ -73,6 +73,20 @@ class ApiBase:
         return {"pasta": pasta, "config": self._cfg}
 
     @seguro
+    def inicio_automatico(self):
+        return {
+            "disponivel": sistema.inicio_automatico_disponivel(),
+            "ligado": bool(sistema.inicio_automatico_ligado()),
+        }
+
+    @seguro
+    def definir_inicio_automatico(self, ligar: bool):
+        if not sistema.inicio_automatico_disponivel():
+            return {"erro": "Abrir com o Windows só funciona no .exe, dentro do Windows."}
+        sistema.definir_inicio_automatico(bool(ligar))
+        return self.inicio_automatico()
+
+    @seguro
     def abrir_pasta(self, chave: str = "pasta_notas"):
         if chave in CHAVES_DE_PASTA and self._cfg[chave]:
             sistema.abrir(self._cfg[chave])

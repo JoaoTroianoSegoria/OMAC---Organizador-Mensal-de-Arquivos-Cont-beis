@@ -4,7 +4,7 @@
  * Promise. Erros do Python chegam como { erro: "mensagem" }.
  *
  * Cada módulo (notas.js, extrato.js…) se registra assim:
- *   modulos.nome = { aoMostrar() {}, carregar() {} };   // nome = data-view do menu
+ *   modulos.nome = { aoMostrar() {}, carregar() {}, ligar() {}, aoIniciar() {} };   // nome = data-view do menu
  *   Object.assign(acoes, { "minha-acao": (alvo) => {} }); // data-acao dos botões
  */
 "use strict";
@@ -47,6 +47,8 @@ async function iniciar() {
   aplicarConfig();
   ligarEventos();
   mostrarView("notas");
+  carregarInicioAutomatico();
+  Object.values(modulos).forEach((m) => m.aoIniciar?.());
 }
 
 // DOMContentLoaded: espera os scripts dos módulos, que vêm depois deste.
@@ -76,6 +78,10 @@ function aplicarConfig() {
     });
   });
   $$("[data-config-bool]").forEach((b) => b.setAttribute("aria-checked", String(!!c[b.dataset.configBool])));
+  $$("[data-config-campo]").forEach((el) => {
+    // Não mexe no campo em que a pessoa está digitando.
+    if (el !== document.activeElement) el.value = c[el.dataset.configCampo];
+  });
   $("#escala").value = c.escala_fonte;
   $("#escala-valor").textContent = `${Math.round(c.escala_fonte * 100)}%`;
   mostrarPastas();
@@ -100,6 +106,25 @@ function mudarFonte(direcao) {
   else if (direcao > 0) novo = PASSOS_FONTE.find((p) => p > atual + 0.001) ?? 2;
   else novo = [...PASSOS_FONTE].reverse().find((p) => p < atual - 0.001) ?? 1;
   mudarConfig({ escala_fonte: novo });
+}
+
+async function carregarInicioAutomatico() {
+  const r = await api().inicio_automatico();
+  if (r.erro) return mostrarToast(r.erro, { erro: true });
+  desenharInicioAutomatico(r);
+}
+
+function desenharInicioAutomatico({ disponivel, ligado }) {
+  const chave = $("#chave-inicio");
+  chave.disabled = !disponivel;
+  chave.setAttribute("aria-checked", String(ligado));
+  $("#inicio-indisponivel").hidden = disponivel;
+}
+
+async function alternarInicioAutomatico(chave) {
+  const r = await api().definir_inicio_automatico(chave.getAttribute("aria-checked") !== "true");
+  if (r.erro) return mostrarToast(r.erro, { erro: true });
+  desenharInicioAutomatico(r);
 }
 
 /* Menu lateral só com ícones quando não cabe (janela estreita ou letra grande). */
@@ -249,6 +274,7 @@ Object.assign(acoes, {
   "ir-mes": (alvo) => mudarMes(Number(alvo.dataset.ano), Number(alvo.dataset.mes)),
   "fonte-mais": () => mudarFonte(1),
   "fonte-menos": () => mudarFonte(-1),
+  "alternar-inicio": alternarInicioAutomatico,
 });
 
 function ligarEventos() {
@@ -263,6 +289,13 @@ function ligarEventos() {
   $$("[data-config-bool]").forEach((b) => b.addEventListener("click", () => {
     mudarConfig({ [b.dataset.configBool]: !estado.cfg[b.dataset.configBool] });
   }));
+  $$("[data-config-campo]").forEach((el) => {
+    const evento = el.tagName === "SELECT" ? "change" : "input";
+    el.addEventListener(evento, () => {
+      const valor = el.dataset.tipo === "numero" ? Number(el.value) : el.value;
+      mudarConfig({ [el.dataset.configCampo]: valor });
+    });
+  });
   $("#escala").addEventListener("input", (e) => mudarConfig({ escala_fonte: Number(e.target.value) }));
 
   $$("[data-sel-mes]").forEach((s) => s.addEventListener("change", (e) => mudarMes(estado.ano, Number(e.target.value))));

@@ -37,9 +37,31 @@ VARIANTES = [
     ("extrato-otimizado", "extrato", {"tema": "claro", "visual": "otimizado"}, {}),
     ("extrato-alto-contraste", "extrato", {"tema": "claro", "alto_contraste": True}, {}),
     ("extrato-regras", "extrato", {"tema": "escuro", "visual": "bonito"}, {"aba": "regras"}),
+    ("whatsapp-enviar", "whatsapp", {"tema": "escuro", "visual": "bonito"}, {"whats": "enviar"}),
+    ("whatsapp-envio", "whatsapp", {"tema": "claro", "visual": "bonito"}, {"whats": "janela"}),
+    ("whatsapp-contas", "whatsapp", {"tema": "claro", "visual": "bonito"}, {"whats": "contas"}),
+    ("whatsapp-lembretes", "notas", {"tema": "escuro", "visual": "bonito"}, {"whats": "lembretes"}),
+    ("whatsapp-envio-otimizado", "whatsapp", {"tema": "escuro", "visual": "otimizado"}, {"whats": "janela"}),
+    ("whatsapp-lembretes-contraste", "notas", {"tema": "claro", "alto_contraste": True}, {"whats": "lembretes"}),
+    ("config-whatsapp", "config", {"tema": "claro", "visual": "bonito"}, {"rolar": "#g-whats"}),
     ("config-claro", "config", {"tema": "claro", "visual": "bonito"}, {}),
     ("config-escuro", "config", {"tema": "escuro", "visual": "bonito"}, {}),
 ]
+
+
+def _preparar_whatsapp(api, caso: str | None) -> None:
+    from datetime import date, timedelta
+
+    hoje = date.today()
+    with api._dados() as d:
+        d["inicio"] = "2026-01-01"
+        d["contas"] = [{"nome": "Aluguel", "dia": 10}, {"nome": "Internet", "dia": 22}]
+        if caso == "lembretes":
+            d["contas"] = [{"nome": "Aluguel", "dia": hoje.day},
+                           {"nome": "Condomínio", "dia": (hoje + timedelta(days=1)).day}]
+            d["ultima_abertura"] = ""
+        else:
+            d["ultima_abertura"] = hoje.isoformat()  # sem a janela de lembretes por cima
 
 
 def main() -> None:
@@ -65,7 +87,10 @@ def main() -> None:
                 alvo = pasta_vazia if extras.get("pasta") == "vazia" else pasta
                 api._cfg.update({"pasta_notas": str(alvo), "pasta_extratos": str(pasta / "Extratos"),
                                  "escala_fonte": 1.0,
-                                 "alto_contraste": False, **cfg})
+                                 "alto_contraste": False, "lembrete_fechamento_dia": 0,
+                                 "assistente_nome": "Exemplo", "lembrete_nome": "Dra. Exemplo",
+                                 "lembrete_telefone": "61900000000", **cfg})
+                _preparar_whatsapp(api, extras.get("whats"))
 
                 def chamar(metodo, args, api=api):
                     return json.dumps(getattr(api, metodo)(*json.loads(args)))
@@ -83,6 +108,17 @@ def main() -> None:
                     pagina.click(f'.menu-item[data-view="{view}"]')
                 if view == "extrato":
                     pagina.wait_for_selector("#ext-corpo tr")
+                if "whats" in extras and view == "whatsapp":
+                    pagina.wait_for_selector("#whats-corpo tr")
+                    if extras["whats"] == "contas":
+                        pagina.click('[data-acao="whats-aba"][data-aba="contas"]')
+                    if extras["whats"] == "janela":
+                        pagina.click('#whats-corpo [data-acao="whats-enviar"]')
+                        pagina.wait_for_selector("#envio[open]")
+                if extras.get("whats") == "lembretes":
+                    pagina.wait_for_selector("#lembretes[open]")
+                if "rolar" in extras:
+                    pagina.locator(extras["rolar"]).scroll_into_view_if_needed()
                 if "aba" in extras:
                     pagina.click(f'[data-acao="ext-aba"][data-aba="{extras["aba"]}"]')
                 pagina.wait_for_timeout(400)

@@ -36,6 +36,85 @@ def mostrar_na_pasta(caminho: str | Path) -> None:
         abrir(caminho.parent)
 
 
+def abrir_link(url: str) -> None:
+    """Abre um link. Levanta OSError se ninguém no sistema souber abrir o endereço."""
+    if url.startswith("whatsapp:"):
+        if sys.platform != "win32":
+            raise OSError("aplicativo do WhatsApp só no Windows")
+        os.startfile(url)  # noqa: S606
+        return
+    import webbrowser
+
+    if not webbrowser.open(url):
+        raise OSError("nenhum navegador disponível")
+
+
+def copiar_arquivo(caminho: str | Path) -> bool:
+    """Põe o arquivo na área de transferência, como o Ctrl+C do Explorador."""
+    if sys.platform != "win32":
+        return False
+    # O caminho vai pelo ambiente para não precisar escapar aspas no comando.
+    try:
+        resultado = subprocess.run(
+            ["powershell", "-NoProfile", "-NonInteractive", "-Command",
+             "Set-Clipboard -LiteralPath $env:OMAC_ARQUIVO"],
+            env={**os.environ, "OMAC_ARQUIVO": str(caminho)},
+            creationflags=subprocess.CREATE_NO_WINDOW,
+            capture_output=True,
+            timeout=20,
+        )
+    except (OSError, subprocess.SubprocessError):
+        return False  # quem chamou mostra o arquivo na pasta
+    return resultado.returncode == 0
+
+
+_CHAVE_INICIO = r"Software\Microsoft\Windows\CurrentVersion\Run"
+
+
+def inicio_automatico_disponivel() -> bool:
+    """Só o .exe no Windows: rodando pelo Python não há um programa para registrar."""
+    return sys.platform == "win32" and bool(getattr(sys, "frozen", False))
+
+
+def _comando_de_inicio() -> str:
+    return f'"{sys.executable}"'
+
+
+def inicio_automatico_ligado(nome: str = "OMAC") -> str:
+    """O comando registrado para abrir com o Windows, ou "" se não houver."""
+    if sys.platform != "win32":
+        return ""
+    import winreg
+
+    try:
+        with winreg.OpenKey(winreg.HKEY_CURRENT_USER, _CHAVE_INICIO) as k:
+            return winreg.QueryValueEx(k, nome)[0]
+    except OSError:
+        return ""
+
+
+def definir_inicio_automatico(ligar: bool, nome: str = "OMAC", comando: str | None = None) -> None:
+    import winreg
+
+    with winreg.OpenKey(winreg.HKEY_CURRENT_USER, _CHAVE_INICIO, 0, winreg.KEY_SET_VALUE) as k:
+        if ligar:
+            winreg.SetValueEx(k, nome, 0, winreg.REG_SZ, comando or _comando_de_inicio())
+        else:
+            try:
+                winreg.DeleteValue(k, nome)
+            except FileNotFoundError:
+                pass
+
+
+def corrigir_inicio_automatico() -> None:
+    """Se o .exe mudou de lugar ou de nome, atualiza o registro para não ficar quebrado."""
+    if not inicio_automatico_disponivel():
+        return
+    registrado = inicio_automatico_ligado()
+    if registrado and registrado != _comando_de_inicio():
+        definir_inicio_automatico(True)
+
+
 def memoria_gb() -> float | None:
     if sys.platform == "win32":
         import ctypes

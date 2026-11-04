@@ -1,0 +1,36 @@
+/* OMAC — módulo de WhatsApp. Tokens e componentes vêm de estilo.css. */
+
+.c-acao-nota { width: 6.5rem; white-space: nowrap; }
+.btn-enviada { color: var(--acento); }
+.c-acoes-envio { width: 11rem; text-align: right !important; white-space: nowrap; padding-left: 0 !important; padding-right: .75rem !important; }
+.c-telefone { width: 13rem; white-space: nowrap; }
+.envio-acoes { display: inline-flex; align-items: center; justify-content: flex-end; gap: .35rem; }
+#whats-qtd:empty { display: none; }
+#whats-qtd { color: var(--acento); font-variant-numeric: tabular-nums; }
+
+.grupo > .campo-texto { flex: none; }
+.form-conta { gap: .85rem; }
+.form-conta-campos { display: flex; flex-wrap: wrap; gap: 1rem; }
+.form-conta-campos .campo { min-width: 8.5rem; }
+
+/* Janelas por cima do app */
+.modal {
+  position: fixed; inset: 0; margin: auto;
+  width: min(36rem, calc(100vw - 2rem));
+  height: fit-content; max-height: calc(100vh - 2rem);
+  overflow: auto;
+  padding: 0;
+  color: var(--texto);
+  background: var(--solido);
+}
+.modal::backdrop { background: rgba(0, 0, 0, .45); }
+.modal-corpo { display: flex; flex-direction: column; gap: 1rem; padding: 1.5rem; }
+.modal h2 { font-size: 1.25rem; }
+.modal .campo-texto { flex: none; }
+.modal-acoes { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: .6rem; margin-top: .25rem; }
+.modal-erro { color: var(--erro); font-weight: 600; }
+.modal .faixa { padding: .85rem 1rem; border-radius: var(--raio-p); }
+.lembretes-lista { margin: 0; gap: .45rem; font-size: 1.05rem; }
+.lembretes-lista:empty { display: none; }
+
+[data-contraste="alto"] .modal-erro { color: var(--texto); }

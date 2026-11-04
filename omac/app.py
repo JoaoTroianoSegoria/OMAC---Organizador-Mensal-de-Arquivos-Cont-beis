@@ -15,11 +15,12 @@ from .extrato.pasta import varrer as varrer_extratos
 from .notas import exportar as exp
 from .notas.api import NotasApi
 from .notas.pasta import varrer
+from .whatsapp.api import WhatsappApi
 
 PASTA_EXTRATOS_TESTE = "Extratos"
 
 
-class Api(NotasApi, ExtratoApi):
+class Api(NotasApi, ExtratoApi, WhatsappApi):
     """Tudo o que a interface pode chamar. Módulo novo entra nesta lista de classes."""
 
 
@@ -72,6 +73,7 @@ def main() -> int:
 
     import webview
 
+    sistema.corrigir_inicio_automatico()
     api = Api()
     cfg = api._cfg
     escuro = cfg["tema"] == "escuro"

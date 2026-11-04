@@ -6,6 +6,7 @@
   <title>OMAC</title>
   <link rel="stylesheet" href="estilo.css">
   <link rel="stylesheet" href="extrato.css">
+  <link rel="stylesheet" href="whatsapp.css">
 </head>
 <body>
   <!-- Ícones (traço 2px, 24×24) -->
@@ -56,7 +57,7 @@
           <svg class="ic"><use href="#i-banco"/></svg><span class="rotulo">Extrato bancário</span>
         </button>
         <button class="menu-item" data-view="whatsapp">
-          <svg class="ic"><use href="#i-whats"/></svg><span class="rotulo">WhatsApp<span class="selo-breve">em breve</span></span>
+          <svg class="ic"><use href="#i-whats"/></svg><span class="rotulo">WhatsApp</span>
         </button>
       </nav>
 
@@ -160,7 +161,7 @@
                   <th scope="col" class="c-valor">Valor</th>
                   <th scope="col" class="c-data">Emissão</th>
                   <th scope="col" class="c-data">Competência</th>
-                  <th scope="col" class="c-acao"><span class="so-leitor">Abrir PDF</span></th>
+                  <th scope="col" class="c-acao c-acao-nota"><span class="so-leitor">Enviar e abrir PDF</span></th>
                 </tr>
               </thead>
               <tbody id="tabela-corpo"></tbody>
@@ -237,12 +238,12 @@
           <button class="btn btn-primario" data-acao="escolher-pasta" data-chave="pasta_extratos"><svg class="ic"><use href="#i-pasta"/></svg><span>Escolher pasta</span></button>
         </div>
 
-        <div class="escolhas ext-abas" id="ext-abas" hidden>
+        <div class="escolhas abas" id="ext-abas" hidden>
           <button class="escolha" data-acao="ext-aba" data-aba="lancamentos" aria-pressed="true">Lançamentos</button>
           <button class="escolha" data-acao="ext-aba" data-aba="regras" aria-pressed="false">Regras de preenchimento</button>
         </div>
 
-        <div class="ext-painel" id="ext-painel" hidden>
+        <div class="painel-coluna" id="ext-painel" hidden>
           <div class="resumo" id="ext-resumo">
             <div class="cartao vidro">
               <span class="cartao-rotulo">Entradas</span>
@@ -298,7 +299,7 @@
           </div>
         </div>
 
-        <div class="ext-painel" id="ext-regras" hidden>
+        <div class="painel-coluna" id="ext-regras" hidden>
           <form class="grupo vidro form-regra" id="form-regra">
             <h2 id="form-regra-titulo">Nova regra</h2>
             <p class="dica">Quando esse texto aparecer no extrato, o OMAC escreve a operação na planilha. Serve para todos os meses.</p>
@@ -349,13 +350,104 @@
         </div>
       </section>
 
-      <!-- ============ EM BREVE ============ -->
+      <!-- ============ WHATSAPP ============ -->
       <section class="view" id="view-whatsapp" aria-labelledby="t-whats" hidden>
-        <header class="topo"><div><h1 id="t-whats">WhatsApp</h1><p class="sub">Em desenvolvimento</p></div></header>
-        <div class="vazio vidro">
-          <span class="vazio-icone"><svg class="ic"><use href="#i-whats"/></svg></span>
-          <h2>Em breve</h2>
-          <p>Lembretes e confirmação de consultas pelo WhatsApp Business.</p>
+        <header class="topo">
+          <div>
+            <h1 id="t-whats">WhatsApp</h1>
+            <p class="sub">O OMAC deixa a conversa pronta e <strong>você</strong> aperta enviar</p>
+          </div>
+        </header>
+
+        <div class="escolhas abas" id="whats-abas">
+          <button class="escolha" data-acao="whats-aba" data-aba="enviar" aria-pressed="true">Notas a enviar <span id="whats-qtd"></span></button>
+          <button class="escolha" data-acao="whats-aba" data-aba="contas" aria-pressed="false">Lembretes de contas</button>
+          <button class="escolha" data-acao="whats-aba" data-aba="contatos" aria-pressed="false">Contatos</button>
+        </div>
+
+        <!-- Notas a enviar -->
+        <div class="painel-coluna" id="whats-enviar">
+          <div class="tabela-caixa vidro" id="whats-tabela">
+            <table class="tabela">
+              <caption class="so-leitor">Notas que ainda não foram enviadas</caption>
+              <thead>
+                <tr>
+                  <th scope="col" class="c-num">Nº</th>
+                  <th scope="col">Enviar para</th>
+                  <th scope="col" class="c-valor">Valor</th>
+                  <th scope="col" class="c-data">Atendimento</th>
+                  <th scope="col" class="c-acoes-envio"><span class="so-leitor">Ações</span></th>
+                </tr>
+              </thead>
+              <tbody id="whats-corpo"></tbody>
+            </table>
+          </div>
+          <div class="vazio vidro" id="whats-vazio" hidden>
+            <span class="vazio-icone"><svg class="ic"><use href="#i-ok"/></svg></span>
+            <h2 id="whats-vazio-titulo"></h2>
+            <p id="whats-vazio-texto"></p>
+            <button class="btn btn-primario" id="whats-vazio-pasta" data-acao="escolher-pasta" data-chave="pasta_notas" hidden><svg class="ic"><use href="#i-pasta"/></svg><span>Escolher pasta</span></button>
+          </div>
+          <p class="dica" id="whats-inicio"></p>
+        </div>
+
+        <!-- Contas -->
+        <div class="painel-coluna" id="whats-contas" hidden>
+          <form class="grupo vidro form-conta" id="form-conta">
+            <h2 id="form-conta-titulo">Nova conta</h2>
+            <p class="dica">O lembrete aparece quando o app abre pela primeira vez no dia, um dia antes do vencimento e no próprio dia.</p>
+            <div class="form-conta-campos">
+              <div class="campo campo-texto">
+                <label class="rotulo-campo" for="conta-nome">Conta</label>
+                <input id="conta-nome" type="text" autocomplete="off" placeholder="Ex.: Aluguel" required>
+              </div>
+              <div class="campo">
+                <label class="rotulo-campo" for="conta-dia">Vence todo dia</label>
+                <span class="select"><select id="conta-dia"></select></span>
+              </div>
+            </div>
+            <div class="form-acoes">
+              <button class="btn btn-primario" type="submit"><svg class="ic"><use href="#i-mais"/></svg><span id="form-conta-salvar">Adicionar conta</span></button>
+              <button class="btn" type="button" id="form-conta-cancelar" data-acao="whats-conta-cancelar" hidden>Cancelar</button>
+              <button class="btn" type="button" data-acao="whats-ver-lembretes">Ver os lembretes de hoje</button>
+            </div>
+          </form>
+          <div class="tabela-caixa vidro" id="contas-tabela">
+            <table class="tabela">
+              <caption class="so-leitor">Contas com lembrete</caption>
+              <thead>
+                <tr>
+                  <th scope="col">Conta</th>
+                  <th scope="col" class="c-data">Vence todo dia</th>
+                  <th scope="col" class="c-acoes-regra"><span class="so-leitor">Ações</span></th>
+                </tr>
+              </thead>
+              <tbody id="contas-corpo"></tbody>
+            </table>
+          </div>
+          <p class="dica" id="whats-contato-dica"></p>
+        </div>
+
+        <!-- Contatos -->
+        <div class="painel-coluna" id="whats-contatos" hidden>
+          <div class="tabela-caixa vidro" id="contatos-tabela">
+            <table class="tabela">
+              <caption class="so-leitor">Contatos salvos</caption>
+              <thead>
+                <tr>
+                  <th scope="col">Nome</th>
+                  <th scope="col" class="c-telefone">Telefone</th>
+                  <th scope="col" class="c-acao"><span class="so-leitor">Apagar</span></th>
+                </tr>
+              </thead>
+              <tbody id="contatos-corpo"></tbody>
+            </table>
+          </div>
+          <div class="vazio vidro" id="contatos-vazio" hidden>
+            <span class="vazio-icone"><svg class="ic"><use href="#i-whats"/></svg></span>
+            <h2>Nenhum contato ainda</h2>
+            <p>Os contatos entram aqui conforme você envia as notas. Eles ficam só neste computador.</p>
+          </div>
         </div>
       </section>
 
@@ -454,6 +546,46 @@
             </div>
           </section>
 
+          <section class="grupo vidro" aria-labelledby="g-whats">
+            <h2 id="g-whats">WhatsApp</h2>
+            <div class="campo campo-texto">
+              <label class="rotulo-campo" for="cfg-assistente">Nome do assistente</label>
+              <input id="cfg-assistente" type="text" autocomplete="off" data-config-campo="assistente_nome" placeholder="Seu nome">
+              <p class="dica">Assina as mensagens: <strong>Assistente Fulano:</strong> Olá…</p>
+            </div>
+            <fieldset class="opcao">
+              <legend>Abrir as conversas no</legend>
+              <div class="escolhas" data-config="whatsapp_destino">
+                <button class="escolha" data-valor="app">Aplicativo</button>
+                <button class="escolha" data-valor="web">WhatsApp Web</button>
+              </div>
+            </fieldset>
+            <div class="form-conta-campos">
+              <div class="campo campo-texto">
+                <label class="rotulo-campo" for="cfg-lembrete-nome">Quem recebe os lembretes</label>
+                <input id="cfg-lembrete-nome" type="text" autocomplete="off" data-config-campo="lembrete_nome" placeholder="Nome">
+              </div>
+              <div class="campo campo-texto">
+                <label class="rotulo-campo" for="cfg-lembrete-tel">Telefone com DDD</label>
+                <input id="cfg-lembrete-tel" type="tel" autocomplete="off" data-config-campo="lembrete_telefone" placeholder="(61) 90000-0000">
+              </div>
+            </div>
+            <div class="campo">
+              <label class="rotulo-campo" for="cfg-fechamento">Lembrar de gerar o fechamento</label>
+              <span class="select"><select id="cfg-fechamento" data-config-campo="lembrete_fechamento_dia" data-tipo="numero"></select></span>
+            </div>
+          </section>
+
+          <section class="grupo vidro" aria-labelledby="g-sistema">
+            <h2 id="g-sistema">Inicialização</h2>
+            <div class="opcao opcao-chave">
+              <svg class="ic ic-suave"><use href="#i-raio"/></svg>
+              <span class="opcao-texto"><strong id="l-inicio">Abrir com o Windows</strong><small>O OMAC abre quando o computador liga, para os lembretes aparecerem no dia certo</small></span>
+              <button class="chave" id="chave-inicio" role="switch" aria-checked="false" aria-labelledby="l-inicio" data-acao="alternar-inicio"><span></span></button>
+            </div>
+            <p class="dica" id="inicio-indisponivel" hidden>Disponível só no .exe, dentro do Windows.</p>
+          </section>
+
           <section class="grupo vidro" aria-labelledby="g-sobre">
             <h2 id="g-sobre">Sobre</h2>
             <div class="sobre">
@@ -464,17 +596,64 @@
               </div>
             </div>
             <p class="privacidade"><svg class="ic ic-suave"><use href="#i-cadeado"/></svg>
-              <span>Tudo fica neste computador. O OMAC não envia nenhum dado de paciente para a internet.</span></p>
+              <span>Tudo fica neste computador. O OMAC não envia nada sozinho: ele só abre a conversa no WhatsApp, e quem envia é você.</span></p>
           </section>
         </div>
       </section>
     </main>
   </div>
 
+  <!-- Enviar uma nota pelo WhatsApp -->
+  <dialog class="modal vidro" id="envio" aria-labelledby="envio-titulo">
+    <form id="form-envio" method="dialog" class="modal-corpo">
+      <h2 id="envio-titulo"></h2>
+      <div class="campo campo-texto">
+        <label class="rotulo-campo" for="envio-telefone">Telefone com DDD</label>
+        <input id="envio-telefone" type="tel" autocomplete="off" placeholder="(61) 90000-0000">
+      </div>
+      <div class="campo campo-texto">
+        <label class="rotulo-campo" for="envio-mensagem">Mensagem</label>
+        <textarea id="envio-mensagem" rows="5"></textarea>
+      </div>
+      <p class="modal-erro" id="envio-erro" role="alert" hidden></p>
+      <div class="faixa faixa-info" id="envio-passo" hidden>
+        <svg class="ic"><use href="#i-whats"/></svg>
+        <div id="envio-passo-texto"></div>
+      </div>
+      <div class="modal-acoes" id="envio-acoes-1">
+        <button class="btn" type="button" data-acao="whats-fechar-envio">Cancelar</button>
+        <button class="btn btn-primario" type="button" data-acao="whats-abrir-conversa"><svg class="ic"><use href="#i-whats"/></svg><span>Copiar o PDF e abrir o WhatsApp</span></button>
+      </div>
+      <div class="modal-acoes" id="envio-acoes-2" hidden>
+        <button class="btn" type="button" data-acao="whats-fechar-envio">Fechar sem marcar</button>
+        <button class="btn" type="button" data-acao="whats-marcar-fechar"><svg class="ic"><use href="#i-ok"/></svg><span>Já enviei</span></button>
+        <button class="btn btn-primario" type="button" id="envio-proxima" data-acao="whats-proxima"><span>Já enviei, próxima nota</span></button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- Lembretes do dia -->
+  <dialog class="modal vidro" id="lembretes" aria-labelledby="lembretes-titulo">
+    <div class="modal-corpo">
+      <h2 id="lembretes-titulo">Lembretes de hoje</h2>
+      <ul class="lista-simples lembretes-lista" id="lembretes-contas"></ul>
+      <div class="faixa faixa-info" id="lembretes-fechamento" hidden>
+        <svg class="ic"><use href="#i-banco"/></svg>
+        <div id="lembretes-fechamento-texto"></div>
+      </div>
+      <div class="modal-acoes">
+        <button class="btn" type="button" data-acao="whats-fechar-lembretes">Fechar</button>
+        <button class="btn" type="button" id="lembretes-ir-extrato" data-acao="whats-ir-extrato"><svg class="ic"><use href="#i-banco"/></svg><span>Abrir o extrato</span></button>
+        <button class="btn btn-primario" type="button" id="lembretes-enviar" data-acao="whats-enviar-lembrete"><svg class="ic"><use href="#i-whats"/></svg><span id="lembretes-enviar-texto">Enviar</span></button>
+      </div>
+    </div>
+  </dialog>
+
   <div class="avisos-flutuantes" id="toasts" aria-live="polite"></div>
 
   <script src="nucleo.js"></script>
   <script src="notas.js"></script>
   <script src="extrato.js"></script>
+  <script src="whatsapp.js"></script>
 </body>
 </html>

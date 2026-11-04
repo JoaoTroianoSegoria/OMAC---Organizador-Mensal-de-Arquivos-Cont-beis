@@ -41,12 +41,24 @@ extrato do banco precisavam ser passadas à mão para uma planilha que vai para 
 - **Confere pelo saldo:** cada lançamento é checado com o saldo que o banco informa. Se faltar um período e o saldo tiver mudado nele, o OMAC avisa quanto ficou de fora.
 - **Fechamento do mês em um arquivo só:** abas de extrato, notas e resumo por operação, com fórmulas que acompanham o que for digitado depois.
 
+### WhatsApp
+
+<p align="center">
+  <img src="docs/capturas/whatsapp-envio.png" alt="Janela de envio da nota" width="49%">
+  <img src="docs/capturas/whatsapp-lembretes.png" alt="Lembretes do dia" width="49%">
+</p>
+
+- **Enviar a nota ao paciente:** a mensagem sai pronta e assinada, o PDF é copiado e a conversa abre no aplicativo ou no WhatsApp Web. A pessoa cola o PDF e aperta enviar.
+- **Lista "Notas a enviar":** as notas novas ficam ali, em qualquer mês, até serem enviadas. Dá para seguir direto para a próxima.
+- **Lembretes de contas:** na primeira abertura do dia, uma janela mostra o que vence amanhã ou hoje, e um clique deixa a mensagem pronta para quem cuida dos pagamentos.
+- **Sem automação no WhatsApp:** o OMAC usa o link oficial e nunca envia nada sozinho, para não colocar o número em risco.
+
 ### Interface
 
 - **Visual "Bonito"**, com efeito de vidro líquido, cantos arredondados e temas claro/escuro (ou automático, seguindo o Windows).
 - **Visual "Otimizado"**, sem transparências nem animações, para computador fraco. Ele já vem ligado sozinho na primeira vez em PCs com pouca memória.
 - **Acessibilidade:** texto de 100% a 200% (também com <kbd>Ctrl</kbd> + <kbd>+</kbd> / <kbd>−</kbd> / <kbd>0</kbd>), alto contraste, opção de reduzir animações, navegação por teclado e leitores de tela.
-- **Menu lateral preparado para os próximos módulos** (o próximo é o WhatsApp).
+- **Menu lateral preparado para novos módulos.**
 
 <p align="center">
   <img src="docs/capturas/notas-otimizado.png" alt="Visual otimizado" width="32%">
@@ -75,8 +87,9 @@ Número, valor e datas são lidos **de dentro do PDF**. Do nome do arquivo sai s
 
 Dados de saúde são dados sensíveis. O OMAC:
 
-- funciona **100% offline**, sem enviar nada para a internet;
+- não envia nada para a internet sozinho: a única saída é a conversa do WhatsApp que a própria pessoa abre e envia;
 - guarda configurações e cache só no computador (`%APPDATA%\OMAC`);
+- guarda os telefones dos pacientes só no computador;
 - deixa o nome de quem mandou Pix fora da planilha do fechamento;
 - guarda as regras do extrato (com nomes de fornecedores) só no computador, nunca no código;
 - tem um `.gitignore` que bloqueia PDF, planilhas e extratos, para nenhum dado real ir parar no GitHub.
@@ -127,6 +140,7 @@ omac/
 ├── fechamento.py     planilha do mês, com as abas de cada módulo
 ├── notas/            leitor.py · pasta.py · exportar.py · api.py
 ├── extrato/          leitor.py · pasta.py · regras.py · exportar.py · api.py
+├── whatsapp/         mensagens.py · lembretes.py · dados.py · api.py
 └── ui/               index.html, estilo.css, nucleo.js + um .js/.css por módulo
 tests/                testes + gerador de notas e extratos de exemplo
 ```
@@ -137,4 +151,4 @@ Para criar um módulo: uma pasta em `omac/` com a classe da API (herdando de `Ap
 
 - [x] **Extrato bancário:** leitura do PDF do Inter, regras editáveis e fechamento do mês.
 - [ ] **Conciliação:** cruzar Pix recebidos com notas emitidas.
-- [ ] **WhatsApp Business:** mensagens prontas de confirmação e lembrete.
+- [x] **WhatsApp:** envio de notas e lembretes de contas pelo link oficial.

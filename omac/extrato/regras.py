@@ -9,9 +9,9 @@ from __future__ import annotations
 
 import json
 import re
-import unicodedata
 from pathlib import Path
 
+from ..texto import normalizar
 from .leitor import Lancamento
 
 SENTIDOS = {"entrada", "saida"}
@@ -27,11 +27,6 @@ REGRAS_PADRAO = [
 
 class RegraInvalida(ValueError):
     """Regra incompleta, ou arquivo de regras que não dá para entender."""
-
-
-def _normalizar(texto: str) -> str:
-    sem_acento = unicodedata.normalize("NFKD", texto).encode("ascii", "ignore").decode()
-    return " ".join(sem_acento.upper().split())
 
 
 def validar(regra: dict) -> dict:
@@ -50,7 +45,7 @@ def validar(regra: dict) -> dict:
 
 
 def _mesma(a: dict, b: dict) -> bool:
-    return a["sentido"] == b["sentido"] and _normalizar(a["quando"]) == _normalizar(b["quando"])
+    return a["sentido"] == b["sentido"] and normalizar(a["quando"]) == normalizar(b["quando"])
 
 
 def adicionar(regras: list[dict], nova: dict, antiga: dict | None = None) -> list[dict]:
@@ -70,12 +65,12 @@ def classificar(lancamento: Lancamento, regras: list[dict]) -> str:
     Compara palavras inteiras (senão "CEB" casaria com "reCEBido"). Se mais de
     uma regra servir, ganha a de texto mais longo, que é a mais específica.
     """
-    alvo = _normalizar(f"{lancamento.tipo} {lancamento.descricao}")
+    alvo = normalizar(f"{lancamento.tipo} {lancamento.descricao}")
     melhor, tamanho = "", 0
     for regra in regras:
         if regra["sentido"] != lancamento.sentido:
             continue
-        quando = _normalizar(regra["quando"])
+        quando = normalizar(regra["quando"])
         if len(quando) > tamanho and re.search(rf"(?<!\w){re.escape(quando)}(?!\w)", alvo):
             melhor, tamanho = regra["operacao"], len(quando)
     return melhor

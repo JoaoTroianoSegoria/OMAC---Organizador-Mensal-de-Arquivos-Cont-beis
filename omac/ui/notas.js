@@ -1,7 +1,7 @@
 /* OMAC — módulo de notas fiscais. */
 "use strict";
 
-const notasEstado = { dados: null, carregando: false, chave: "" };
+const notasEstado = { dados: null, enviadas: new Set(), carregando: false, chave: "" };
 const chaveNotas = () => `${estado.ano}-${estado.mes}-${estado.cfg.pasta_notas}`;
 
 modulos.notas = {
@@ -54,6 +54,8 @@ async function carregarNotas() {
       return;
     }
     notasEstado.dados = r;
+    const env = await api().whatsapp_enviadas();
+    notasEstado.enviadas = new Set(env.numeros ?? []);
     preencherSeletores($("#sel-mes"), $("#sel-ano"), r.competencias);
     desenharNotas();
   } finally {
@@ -128,7 +130,15 @@ function desenharNotas() {
     abrir.title = "Abrir o PDF da nota";
     abrir.setAttribute("aria-label", `Abrir o PDF da nota ${n.numero}`);
     abrir.innerHTML = '<svg class="ic"><use href="#i-abrir"/></svg>';
-    tdAcao.append(abrir);
+    const enviada = notasEstado.enviadas.has(n.numero);
+    const enviar = document.createElement("button");
+    enviar.className = `btn-linha${enviada ? " btn-enviada" : ""}`;
+    enviar.dataset.acao = "whats-enviar";
+    enviar.dataset.numero = n.numero;
+    enviar.title = enviada ? "Já enviada. Clique para enviar de novo" : "Enviar a nota pelo WhatsApp";
+    enviar.setAttribute("aria-label", `${enviada ? "Enviar de novo" : "Enviar"} a nota ${n.numero} pelo WhatsApp`);
+    enviar.innerHTML = `<svg class="ic"><use href="#${enviada ? "i-ok" : "i-whats"}"/></svg>`;
+    tdAcao.append(enviar, abrir);
 
     tr.append(tdNum, tdPac, tdValor, tdEm, tdComp, tdAcao);
     corpo.append(tr);
