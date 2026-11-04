@@ -32,6 +32,11 @@ VARIANTES = [
     ("notas-texto-grande", "notas", {"tema": "claro", "escala_fonte": 1.5}, {}),
     ("notas-pasta-vazia", "notas", {"tema": "escuro", "visual": "bonito"}, {"pasta": "vazia"}),
     ("notas-mes-vazio", "notas", {"tema": "escuro", "visual": "bonito"}, {"mes": 3}),
+    ("extrato-claro", "extrato", {"tema": "claro", "visual": "bonito"}, {}),
+    ("extrato-escuro", "extrato", {"tema": "escuro", "visual": "bonito"}, {}),
+    ("extrato-otimizado", "extrato", {"tema": "claro", "visual": "otimizado"}, {}),
+    ("extrato-alto-contraste", "extrato", {"tema": "claro", "alto_contraste": True}, {}),
+    ("extrato-regras", "extrato", {"tema": "escuro", "visual": "bonito"}, {"aba": "regras"}),
     ("config-claro", "config", {"tema": "claro", "visual": "bonito"}, {}),
     ("config-escuro", "config", {"tema": "escuro", "visual": "bonito"}, {}),
 ]
@@ -58,7 +63,8 @@ def main() -> None:
             for nome, view, cfg, extras in VARIANTES:
                 api = Api()
                 alvo = pasta_vazia if extras.get("pasta") == "vazia" else pasta
-                api._cfg.update({"pasta_notas": str(alvo), "escala_fonte": 1.0,
+                api._cfg.update({"pasta_notas": str(alvo), "pasta_extratos": str(pasta / "Extratos"),
+                                 "escala_fonte": 1.0,
                                  "alto_contraste": False, **cfg})
 
                 def chamar(metodo, args, api=api):
@@ -75,6 +81,10 @@ def main() -> None:
                     pagina.wait_for_selector("#notas-vazio:not([hidden])")
                 if view != "notas":
                     pagina.click(f'.menu-item[data-view="{view}"]')
+                if view == "extrato":
+                    pagina.wait_for_selector("#ext-corpo tr")
+                if "aba" in extras:
+                    pagina.click(f'[data-acao="ext-aba"][data-aba="{extras["aba"]}"]')
                 pagina.wait_for_timeout(400)
                 pagina.screenshot(path=str(saida / f"{nome}.png"))
                 pagina.close()

@@ -15,11 +15,12 @@ Aplicativo para Windows que automatiza a rotina contábil mensal de uma clínica
 
 ## O problema
 
-Todo fim de mês as notas fiscais de serviço (NFS-e) emitidas no ISS do DF precisavam ser
-passadas à mão para uma planilha que vai para a contabilidade: número, paciente, valor,
-data de emissão e data de competência, nota por nota.
+Todo fim de mês as notas fiscais de serviço (NFS-e) emitidas no ISS do DF e cada linha do
+extrato do banco precisavam ser passadas à mão para uma planilha que vai para a contabilidade.
 
 ## O que o OMAC faz
+
+### Notas fiscais
 
 - **Lê a pasta de PDFs das notas do ano** (ex.: `NFS-e 2026`) e monta a planilha do mês em um clique, em **Excel (.xlsx)** ou **CSV**.
 - **Filtra pela data de competência**, não pela de emissão. Uma nota emitida em 03/11 com competência em outubro entra no relatório de outubro.
@@ -28,12 +29,24 @@ data de emissão e data de competência, nota por nota.
 - **Avisos antes de mandar para a contabilidade:** descrição sem "tratamento odontológico", número do arquivo diferente do número da nota, nota repetida, PDF ilegível, nome de arquivo fora do padrão.
 - **Rápido em PC antigo:** cada nota é lida uma única vez (≈5 ms) e fica em cache. Nas próximas vezes, só as notas novas são lidas.
 
+### Extrato bancário
+
+<p align="center">
+  <img src="docs/capturas/extrato-claro.png" alt="Tela de extrato bancário" width="49%">
+  <img src="docs/capturas/extrato-regras.png" alt="Regras de preenchimento" width="49%">
+</p>
+
+- **Lê os extratos em PDF do Banco Inter** de uma pasta e junta tudo. Se os períodos se repetirem, cada dia vem do extrato baixado por último.
+- **Regras "quando aparecer X, colocar Y"** preenchem a coluna Operação. As entradas (Pix, crédito e débito) já vêm prontas; as saídas sem regra ficam em amarelo para preencher, e dá para criar a regra a partir da própria linha.
+- **Confere pelo saldo:** cada lançamento é checado com o saldo que o banco informa. Se faltar um período e o saldo tiver mudado nele, o OMAC avisa quanto ficou de fora.
+- **Fechamento do mês em um arquivo só:** abas de extrato, notas e resumo por operação, com fórmulas que acompanham o que for digitado depois.
+
 ### Interface
 
 - **Visual "Bonito"**, com efeito de vidro líquido, cantos arredondados e temas claro/escuro (ou automático, seguindo o Windows).
 - **Visual "Otimizado"**, sem transparências nem animações, para computador fraco. Ele já vem ligado sozinho na primeira vez em PCs com pouca memória.
 - **Acessibilidade:** texto de 100% a 200% (também com <kbd>Ctrl</kbd> + <kbd>+</kbd> / <kbd>−</kbd> / <kbd>0</kbd>), alto contraste, opção de reduzir animações, navegação por teclado e leitores de tela.
-- **Menu lateral preparado para os próximos módulos** (extrato bancário, WhatsApp).
+- **Menu lateral preparado para os próximos módulos** (o próximo é o WhatsApp).
 
 <p align="center">
   <img src="docs/capturas/notas-otimizado.png" alt="Visual otimizado" width="32%">
@@ -64,6 +77,8 @@ Dados de saúde são dados sensíveis. O OMAC:
 
 - funciona **100% offline**, sem enviar nada para a internet;
 - guarda configurações e cache só no computador (`%APPDATA%\OMAC`);
+- deixa o nome de quem mandou Pix fora da planilha do fechamento;
+- guarda as regras do extrato (com nomes de fornecedores) só no computador, nunca no código;
 - tem um `.gitignore` que bloqueia PDF, planilhas e extratos, para nenhum dado real ir parar no GitHub.
 
 ## Tecnologias
@@ -84,7 +99,7 @@ python -m venv .venv
 
 python -m pytest              # testes
 python -m omac                # abre o app
-python -m tests.fabrica pasta-de-teste   # cria notas de exemplo para testar
+python -m tests.fabrica pasta-de-teste   # cria notas e extratos de exemplo para testar
 ```
 
 - `tools/capturas.py` regenera as imagens deste README (precisa do `playwright`).
@@ -103,19 +118,23 @@ O GitHub Actions roda os testes, gera o `.exe` de 64 e 32 bits, executa um **aut
 
 ```
 omac/
-├── app.py            janela + API que a interface chama
+├── app.py            janela; a classe Api junta a API de cada módulo
+├── nucleo.py         base da API: configurações, diálogos, tratamento de erro
 ├── config.py         configurações do usuário
 ├── sistema.py        coisas do Windows (WebView2, abrir arquivo, PC fraco?)
-├── notas/
-│   ├── leitor.py     lê um PDF de NFS-e (DANFSe v2.0)
-│   ├── pasta.py      varre a pasta, cache, move canceladas
-│   └── exportar.py   gera .xlsx / .csv
-└── ui/               index.html, estilo.css, app.js
-tests/                testes + gerador de notas de exemplo
+├── pdf.py            extração de texto de PDF
+├── planilha.py       estilo comum das planilhas
+├── fechamento.py     planilha do mês, com as abas de cada módulo
+├── notas/            leitor.py · pasta.py · exportar.py · api.py
+├── extrato/          leitor.py · pasta.py · regras.py · exportar.py · api.py
+└── ui/               index.html, estilo.css, nucleo.js + um .js/.css por módulo
+tests/                testes + gerador de notas e extratos de exemplo
 ```
+
+Para criar um módulo: uma pasta em `omac/` com a classe da API (herdando de `ApiBase`), que entra na lista de `Api` em `app.py`, e um `.js` em `ui/` que se registra em `modulos` e `acoes`.
 
 ## Próximos passos
 
-- [ ] **Extrato bancário:** ler o extrato e classificar entradas e saídas por regras editáveis (PIX de paciente, cartão, fornecedores, aluguel…).
-- [ ] **Conciliação:** cruzar PIX recebidos com notas emitidas.
-- [ ] **WhatsApp Business:** lembretes e confirmação de consultas.
+- [x] **Extrato bancário:** leitura do PDF do Inter, regras editáveis e fechamento do mês.
+- [ ] **Conciliação:** cruzar Pix recebidos com notas emitidas.
+- [ ] **WhatsApp Business:** mensagens prontas de confirmação e lembrete.

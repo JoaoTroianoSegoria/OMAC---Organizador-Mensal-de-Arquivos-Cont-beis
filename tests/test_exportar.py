@@ -5,6 +5,7 @@ from openpyxl import load_workbook
 
 from omac.notas.exportar import COLUNAS, exportar, nome_sugerido
 from omac.notas.leitor import Nota
+from omac.planilha import MOEDA
 
 
 def notas():
@@ -29,7 +30,7 @@ def test_xlsx(tmp_path):
     assert linhas[2][4] == datetime(2026, 10, 31)
     assert linhas[3][1] == "TOTAL (2 notas)"
     assert linhas[3][2] == "=SUM(C2:C3)"
-    assert ws["C2"].number_format == '"R$" #,##0.00'
+    assert ws["C2"].number_format == MOEDA
     assert ws["D2"].number_format == "DD/MM/YYYY"
 
 

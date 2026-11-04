@@ -15,3 +15,9 @@ dist/
 *.csv
 *.ofx
 exemplo-notas/
+
+# Anotações de trabalho (planos internos, não vão para o repositório público)
+memoria claude/
+
+# Regras do extrato têm nomes reais de fornecedores e funcionários
+*regras*.json

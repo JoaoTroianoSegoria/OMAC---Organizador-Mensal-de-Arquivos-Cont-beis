@@ -11,6 +11,7 @@ from . import sistema
 
 PADRAO = {
     "pasta_notas": "",
+    "pasta_extratos": "",
     "visual": "bonito",  # "bonito" (liquid glass) | "otimizado"
     "tema": "sistema",  # "sistema" | "claro" | "escuro"
     "escala_fonte": 1.0,  # 1.0 a 2.0
@@ -36,6 +37,10 @@ def pasta_dados() -> Path:
 
 def caminho_cache() -> Path:
     return pasta_dados() / "cache-notas.json"
+
+
+def caminho_regras() -> Path:
+    return pasta_dados() / "regras-extrato.json"
 
 
 def carregar() -> dict:
@@ -71,6 +76,6 @@ def normalizar(cfg: dict) -> dict:
         limpo["escala_fonte"] = 1.0
     for chave in ("alto_contraste", "reduzir_movimento"):
         limpo[chave] = bool(limpo[chave])
-    for chave in ("pasta_notas", "pasta_saida"):
+    for chave in ("pasta_notas", "pasta_extratos", "pasta_saida"):
         limpo[chave] = str(limpo[chave] or "")
     return limpo

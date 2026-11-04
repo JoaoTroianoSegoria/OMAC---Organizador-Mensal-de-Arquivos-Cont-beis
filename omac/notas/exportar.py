@@ -6,13 +6,10 @@ import csv
 from decimal import Decimal
 from pathlib import Path
 
+from ..planilha import DATA, MESES, MOEDA, cabecalho, larguras, linha_de_total
 from .leitor import Nota
 
 COLUNAS = ["Nº", "Paciente", "Valor", "Emissão", "Competência"]
-MESES = [
-    "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
-    "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro",
-]
 
 
 def nome_sugerido(ano: int, mes: int, formato: str) -> str:
@@ -46,44 +43,37 @@ def _csv(notas: list[Nota], destino: Path) -> None:
 
 def _xlsx(notas: list[Nota], destino: Path, ano: int, mes: int) -> None:
     from openpyxl import Workbook
-    from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 
     wb = Workbook()
     ws = wb.active
     ws.title = f"NFS-e {mes:02d}-{ano}"
+    preencher_aba(ws, notas)
+    wb.save(destino)
 
-    ws.append(COLUNAS)
-    cabecalho = PatternFill("solid", fgColor="1F6F78")
-    for c in ws[1]:
-        c.font = Font(bold=True, color="FFFFFF")
-        c.fill = cabecalho
-        c.alignment = Alignment(horizontal="center", vertical="center")
 
+def preencher_aba(ws, notas: list[Nota]) -> None:
+    """Escreve as notas em uma aba de planilha (também usada pelo fechamento do mês)."""
+    from openpyxl.styles import Alignment
+
+    cabecalho(ws, COLUNAS)
     for n in notas:
         ws.append([n.numero, n.paciente, n.valor, n.emissao, n.competencia])
 
     ultima = ws.max_row
     for linha in ws.iter_rows(min_row=2, max_row=ultima):
         linha[0].alignment = Alignment(horizontal="center")
-        linha[2].number_format = '"R$" #,##0.00'
-        linha[3].number_format = "DD/MM/YYYY"
-        linha[4].number_format = "DD/MM/YYYY"
+        linha[2].number_format = MOEDA
+        linha[3].number_format = DATA
+        linha[4].number_format = DATA
         linha[3].alignment = linha[4].alignment = Alignment(horizontal="center")
 
     total = ultima + 1
     ws.cell(total, 2, f"TOTAL ({len(notas)} {'nota' if len(notas) == 1 else 'notas'})")
     ws.cell(total, 3, f"=SUM(C2:C{ultima})" if notas else Decimal("0"))
-    ws.cell(total, 3).number_format = '"R$" #,##0.00'
-    borda = Border(top=Side(style="medium", color="1F6F78"))
-    for col in range(1, 6):
-        c = ws.cell(total, col)
-        c.font = Font(bold=True)
-        c.border = borda
+    ws.cell(total, 3).number_format = MOEDA
+    linha_de_total(ws, total, len(COLUNAS))
 
-    for letra, largura in zip("ABCDE", (10, 42, 16, 14, 14)):
-        ws.column_dimensions[letra].width = largura
+    larguras(ws, "ABCDE", (10, 42, 16, 14, 14))
     ws.freeze_panes = "A2"
     if notas:
         ws.auto_filter.ref = f"A1:E{ultima}"
-
-    wb.save(destino)
