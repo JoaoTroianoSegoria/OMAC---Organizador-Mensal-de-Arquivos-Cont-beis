@@ -1,0 +1,305 @@
+<!doctype html>
+<html lang="pt-BR" data-tema="claro" data-visual="bonito">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>OMAC</title>
+  <link rel="stylesheet" href="estilo.css">
+</head>
+<body>
+  <!-- Ícones (traço 2px, 24×24) -->
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true">
+    <defs>
+      <symbol id="i-dente" viewBox="0 0 24 24"><path d="M7 3C4.5 3 3 5 3 7.5c0 2.5 1 4 1.6 6 .7 2.5 1 7.5 3 7.5 1.8 0 1.7-4.5 2.6-6 .4-.7 1.1-1 1.8-1s1.4.3 1.8 1c.9 1.5.8 6 2.6 6 2 0 2.3-5 3-7.5.6-2 1.6-3.5 1.6-6C21 5 19.5 3 17 3c-1.8 0-3 1-5 1S8.8 3 7 3z"/></symbol>
+      <symbol id="i-notas" viewBox="0 0 24 24"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5M9 13h6M9 17h6M9 9h2"/></symbol>
+      <symbol id="i-banco" viewBox="0 0 24 24"><path d="M3 21h18M5 18v-7M9.5 18v-7M14.5 18v-7M19 18v-7M2.5 9 12 3.5 21.5 9z"/></symbol>
+      <symbol id="i-whats" viewBox="0 0 24 24"><path d="M20.5 11.6a8.5 8.5 0 0 1-12.6 7.4L3.5 20.5l1.6-4.3a8.5 8.5 0 1 1 15.4-4.6z"/><path d="M9 9.5c.3 2.2 2.3 4.2 4.5 4.5"/></symbol>
+      <symbol id="i-ajustes" viewBox="0 0 24 24"><path d="M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3M1.5 14h5M9.5 8h5M17.5 16h5"/></symbol>
+      <symbol id="i-pasta" viewBox="0 0 24 24"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></symbol>
+      <symbol id="i-atualizar" viewBox="0 0 24 24"><path d="M20.5 12a8.5 8.5 0 1 1-2.5-6l2.5 2.5"/><path d="M20.5 3.5v5h-5"/></symbol>
+      <symbol id="i-baixar" viewBox="0 0 24 24"><path d="M12 3.5v11.5M7 10.5l5 5 5-5M4.5 20.5h15"/></symbol>
+      <symbol id="i-alerta" viewBox="0 0 24 24"><path d="M10.3 4 1.9 18.2A2 2 0 0 0 3.6 21h16.8a2 2 0 0 0 1.7-2.8L13.7 4a2 2 0 0 0-3.4 0z"/><path d="M12 9.5v4M12 17.2h.01"/></symbol>
+      <symbol id="i-abrir" viewBox="0 0 24 24"><path d="M14 3h7v7M21 3l-9 9M19 14v5a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h5"/></symbol>
+      <symbol id="i-ok" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="m8 12.2 2.8 2.8L16.2 9"/></symbol>
+      <symbol id="i-cancelada" viewBox="0 0 24 24"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5M9.5 12.5l5 5M14.5 12.5l-5 5"/></symbol>
+      <symbol id="i-brilho" viewBox="0 0 24 24"><path d="M11 3.5 12.8 8.7 18 10.5l-5.2 1.8L11 17.5l-1.8-5.2L4 10.5l5.2-1.8zM18.5 14.5l.8 2.2 2.2.8-2.2.8-.8 2.2-.8-2.2-2.2-.8 2.2-.8z"/></symbol>
+      <symbol id="i-raio" viewBox="0 0 24 24"><path d="M13 2.5 4 14h7.5l-1 7.5L20 10h-7.5z"/></symbol>
+      <symbol id="i-texto" viewBox="0 0 24 24"><path d="M3 18 7.5 6h1L13 18M4.6 14h6.8M15 18l3-8h1l3 8M15.9 15.6h5.2"/></symbol>
+      <symbol id="i-contraste" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 3a9 9 0 0 1 0 18z" fill="currentColor"/></symbol>
+      <symbol id="i-movimento" viewBox="0 0 24 24"><path d="M3 12h3l3-7 6 14 3-7h3"/></symbol>
+      <symbol id="i-fechar" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></symbol>
+      <symbol id="i-cadeado" viewBox="0 0 24 24"><rect x="4.5" y="10.5" width="15" height="10" rx="2"/><path d="M8 10.5V7.5a4 4 0 0 1 8 0v3"/></symbol>
+    </defs>
+  </svg>
+
+  <div class="fundo" aria-hidden="true"></div>
+
+  <div class="app">
+    <aside class="lateral vidro" aria-label="Menu principal">
+      <div class="marca">
+        <span class="logo"><svg class="ic"><use href="#i-dente"/></svg></span>
+        <span class="marca-texto">
+          <strong>OMAC</strong>
+          <small>Organizador Mensal<br>de Arquivos Contábeis</small>
+        </span>
+      </div>
+
+      <nav class="menu">
+        <button class="menu-item" data-view="notas" aria-current="page">
+          <svg class="ic"><use href="#i-notas"/></svg><span class="rotulo">Notas fiscais</span>
+        </button>
+        <button class="menu-item" data-view="extrato">
+          <svg class="ic"><use href="#i-banco"/></svg><span class="rotulo">Extrato bancário</span>
+          <span class="selo-breve">em breve</span>
+        </button>
+        <button class="menu-item" data-view="whatsapp">
+          <svg class="ic"><use href="#i-whats"/></svg><span class="rotulo">WhatsApp</span>
+          <span class="selo-breve">em breve</span>
+        </button>
+      </nav>
+
+      <div class="lateral-rodape">
+        <button class="menu-item" data-view="config">
+          <svg class="ic"><use href="#i-ajustes"/></svg><span class="rotulo">Configurações</span>
+        </button>
+        <p class="versao" id="versao"></p>
+      </div>
+    </aside>
+
+    <main class="conteudo" id="conteudo" tabindex="-1">
+      <!-- ============ NOTAS FISCAIS ============ -->
+      <section class="view" id="view-notas" aria-labelledby="t-notas">
+        <header class="topo">
+          <div>
+            <h1 id="t-notas">Notas fiscais</h1>
+            <p class="sub">Relatório do mês pela <strong>data de competência</strong></p>
+          </div>
+          <div class="topo-acoes">
+            <button class="btn" id="btn-atualizar" title="Ler a pasta de novo">
+              <svg class="ic"><use href="#i-atualizar"/></svg><span>Atualizar</span>
+            </button>
+            <button class="btn" data-acao="exportar" data-formato="csv" title="Exportar como CSV" disabled>
+              <svg class="ic"><use href="#i-baixar"/></svg><span>CSV</span>
+            </button>
+            <button class="btn btn-primario" data-acao="exportar" data-formato="xlsx" disabled>
+              <svg class="ic"><use href="#i-baixar"/></svg><span>Exportar Excel</span>
+            </button>
+          </div>
+        </header>
+
+        <div class="barra vidro">
+          <div class="campo campo-pasta">
+            <span class="rotulo-campo">Pasta das notas</span>
+            <div class="pasta-linha">
+              <svg class="ic ic-suave"><use href="#i-pasta"/></svg>
+              <span class="pasta-texto" id="pasta-texto">Nenhuma pasta escolhida</span>
+              <button class="btn btn-peq" data-acao="escolher-pasta">Alterar</button>
+              <button class="btn btn-peq btn-icone" data-acao="abrir-pasta" title="Abrir a pasta no Explorador" aria-label="Abrir a pasta no Explorador">
+                <svg class="ic"><use href="#i-abrir"/></svg>
+              </button>
+            </div>
+          </div>
+          <div class="campo">
+            <label class="rotulo-campo" for="sel-mes">Mês</label>
+            <span class="select"><select id="sel-mes"></select></span>
+          </div>
+          <div class="campo">
+            <label class="rotulo-campo" for="sel-ano">Ano</label>
+            <span class="select"><select id="sel-ano"></select></span>
+          </div>
+        </div>
+
+        <div class="progresso vidro" id="progresso" hidden>
+          <span id="progresso-texto">Lendo as notas…</span>
+          <div class="trilho" role="progressbar" aria-label="Lendo as notas" aria-valuemin="0" aria-valuemax="100" id="progresso-barra"><div class="trilho-cheio" id="progresso-cheio"></div></div>
+        </div>
+
+        <!-- Sem pasta -->
+        <div class="vazio vidro" id="sem-pasta" hidden>
+          <span class="vazio-icone"><svg class="ic"><use href="#i-pasta"/></svg></span>
+          <h2>Escolha a pasta das notas</h2>
+          <p>É a pasta onde você salva os PDFs das notas do ano, por exemplo <strong>NFS-e 2026</strong>.<br>O OMAC lembra dela nas próximas vezes.</p>
+          <button class="btn btn-primario" data-acao="escolher-pasta"><svg class="ic"><use href="#i-pasta"/></svg><span>Escolher pasta</span></button>
+        </div>
+
+        <div id="painel-notas" hidden>
+          <div class="resumo">
+            <div class="cartao vidro">
+              <span class="cartao-rotulo">Notas no mês</span>
+              <strong class="cartao-valor" id="res-qtd">0</strong>
+            </div>
+            <div class="cartao vidro">
+              <span class="cartao-rotulo">Valor total</span>
+              <strong class="cartao-valor" id="res-total">R$ 0,00</strong>
+            </div>
+            <button class="cartao vidro cartao-avisos" id="res-avisos-cartao" data-acao="ver-avisos">
+              <span class="cartao-rotulo">Avisos</span>
+              <strong class="cartao-valor" id="res-avisos">0</strong>
+            </button>
+          </div>
+
+          <div class="faixa faixa-info vidro" id="faixa-canceladas" hidden>
+            <svg class="ic"><use href="#i-cancelada"/></svg>
+            <div><strong id="canceladas-titulo"></strong><ul class="lista-simples" id="canceladas-lista"></ul></div>
+          </div>
+
+          <div class="faixa faixa-aviso vidro" id="faixa-avisos" hidden tabindex="-1">
+            <svg class="ic"><use href="#i-alerta"/></svg>
+            <div><strong>Confira antes de mandar para a contabilidade</strong><ul class="lista-simples" id="avisos-lista"></ul></div>
+          </div>
+
+          <div class="tabela-caixa vidro">
+            <table class="tabela" id="tabela">
+              <caption class="so-leitor" id="tabela-legenda"></caption>
+              <thead>
+                <tr>
+                  <th scope="col" class="c-num">Nº</th>
+                  <th scope="col">Paciente</th>
+                  <th scope="col" class="c-valor">Valor</th>
+                  <th scope="col" class="c-data">Emissão</th>
+                  <th scope="col" class="c-data">Competência</th>
+                  <th scope="col" class="c-acao"><span class="so-leitor">Abrir PDF</span></th>
+                </tr>
+              </thead>
+              <tbody id="tabela-corpo"></tbody>
+              <tfoot>
+                <tr>
+                  <td></td>
+                  <th scope="row" id="rod-qtd">Total</th>
+                  <td class="c-valor" id="rod-total"></td>
+                  <td colspan="3"></td>
+                </tr>
+              </tfoot>
+            </table>
+            <div class="tabela-vazia" id="tabela-vazia" hidden>
+              <svg class="ic"><use href="#i-notas"/></svg>
+              <p id="tabela-vazia-texto">Nenhuma nota com competência neste mês.</p>
+            </div>
+          </div>
+
+        </div>
+      </section>
+
+      <!-- ============ EM BREVE ============ -->
+      <section class="view" id="view-extrato" aria-labelledby="t-extrato" hidden>
+        <header class="topo"><div><h1 id="t-extrato">Extrato bancário</h1><p class="sub">Em desenvolvimento</p></div></header>
+        <div class="vazio vidro">
+          <span class="vazio-icone"><svg class="ic"><use href="#i-banco"/></svg></span>
+          <h2>Em breve</h2>
+          <p>Ler o extrato do banco, classificar entradas e saídas automaticamente<br>(PIX de paciente, cartão, Dental Speed, aluguel…) e juntar tudo na planilha da contabilidade.</p>
+        </div>
+      </section>
+
+      <section class="view" id="view-whatsapp" aria-labelledby="t-whats" hidden>
+        <header class="topo"><div><h1 id="t-whats">WhatsApp</h1><p class="sub">Em desenvolvimento</p></div></header>
+        <div class="vazio vidro">
+          <span class="vazio-icone"><svg class="ic"><use href="#i-whats"/></svg></span>
+          <h2>Em breve</h2>
+          <p>Lembretes e confirmação de consultas pelo WhatsApp Business.</p>
+        </div>
+      </section>
+
+      <!-- ============ CONFIGURAÇÕES ============ -->
+      <section class="view" id="view-config" aria-labelledby="t-config" hidden>
+        <header class="topo"><div><h1 id="t-config">Configurações</h1><p class="sub">As mudanças são salvas na hora</p></div></header>
+
+        <div class="grade-config">
+          <section class="grupo vidro" aria-labelledby="g-aparencia">
+            <h2 id="g-aparencia">Aparência</h2>
+
+            <fieldset class="opcao">
+              <legend>Visual</legend>
+              <div class="escolhas escolhas-cartao" data-config="visual">
+                <button class="escolha" data-valor="bonito">
+                  <svg class="ic"><use href="#i-brilho"/></svg>
+                  <span><strong>Bonito</strong><small>Efeito de vidro, transparências e animações</small></span>
+                </button>
+                <button class="escolha" data-valor="otimizado">
+                  <svg class="ic"><use href="#i-raio"/></svg>
+                  <span><strong>Otimizado</strong><small>Mais leve e rápido, ideal para computador antigo</small></span>
+                </button>
+              </div>
+            </fieldset>
+
+            <fieldset class="opcao">
+              <legend>Tema</legend>
+              <div class="escolhas" data-config="tema">
+                <button class="escolha" data-valor="sistema">Automático</button>
+                <button class="escolha" data-valor="claro">Claro</button>
+                <button class="escolha" data-valor="escuro">Escuro</button>
+              </div>
+            </fieldset>
+          </section>
+
+          <section class="grupo vidro" aria-labelledby="g-acess">
+            <h2 id="g-acess">Acessibilidade</h2>
+
+            <div class="opcao">
+              <div class="opcao-cab">
+                <svg class="ic ic-suave"><use href="#i-texto"/></svg>
+                <label for="escala">Tamanho do texto</label>
+                <output id="escala-valor" for="escala">100%</output>
+              </div>
+              <div class="escala-linha">
+                <button class="btn btn-icone btn-letra" data-acao="fonte-menos" aria-label="Diminuir texto">A−</button>
+                <input type="range" id="escala" min="1" max="2" step="0.05" value="1">
+                <button class="btn btn-icone btn-letra btn-letra-g" data-acao="fonte-mais" aria-label="Aumentar texto">A+</button>
+              </div>
+              <p class="dica">Atalhos: <kbd>Ctrl</kbd> + <kbd>+</kbd> aumenta, <kbd>Ctrl</kbd> + <kbd>−</kbd> diminui, <kbd>Ctrl</kbd> + <kbd>0</kbd> volta ao normal.</p>
+            </div>
+
+            <div class="opcao opcao-chave">
+              <svg class="ic ic-suave"><use href="#i-contraste"/></svg>
+              <span class="opcao-texto"><strong id="l-contraste">Alto contraste</strong><small>Cores fortes e bordas marcadas, mais fácil de ler</small></span>
+              <button class="chave" role="switch" aria-checked="false" aria-labelledby="l-contraste" data-config-bool="alto_contraste"><span></span></button>
+            </div>
+
+            <div class="opcao opcao-chave">
+              <svg class="ic ic-suave"><use href="#i-movimento"/></svg>
+              <span class="opcao-texto"><strong id="l-movimento">Reduzir animações</strong><small>Tira os movimentos da tela</small></span>
+              <button class="chave" role="switch" aria-checked="false" aria-labelledby="l-movimento" data-config-bool="reduzir_movimento"><span></span></button>
+            </div>
+          </section>
+
+          <section class="grupo vidro" aria-labelledby="g-notas">
+            <h2 id="g-notas">Notas fiscais</h2>
+            <div class="opcao">
+              <span class="rotulo-campo">Pasta das notas</span>
+              <div class="pasta-linha">
+                <svg class="ic ic-suave"><use href="#i-pasta"/></svg>
+                <span class="pasta-texto" id="cfg-pasta-texto">Nenhuma pasta escolhida</span>
+                <button class="btn btn-peq" data-acao="escolher-pasta">Alterar</button>
+              </div>
+              <p class="dica">Notas canceladas vão para a subpasta <strong>Canceladas</strong> e ficam fora do relatório.</p>
+            </div>
+            <fieldset class="opcao">
+              <legend>Formato padrão da planilha</legend>
+              <div class="escolhas" data-config="formato">
+                <button class="escolha" data-valor="xlsx">Excel (.xlsx)</button>
+                <button class="escolha" data-valor="csv">CSV</button>
+              </div>
+            </fieldset>
+          </section>
+
+          <section class="grupo vidro" aria-labelledby="g-sobre">
+            <h2 id="g-sobre">Sobre</h2>
+            <div class="sobre">
+              <span class="logo logo-g"><svg class="ic"><use href="#i-dente"/></svg></span>
+              <div>
+                <strong>OMAC <span id="sobre-versao"></span></strong>
+                <p>Organizador Mensal de Arquivos Contábeis</p>
+              </div>
+            </div>
+            <p class="privacidade"><svg class="ic ic-suave"><use href="#i-cadeado"/></svg>
+              <span>Tudo fica neste computador. O OMAC não envia nenhum dado de paciente para a internet.</span></p>
+          </section>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <div class="avisos-flutuantes" id="toasts" aria-live="polite"></div>
+
+  <script src="app.js"></script>
+</body>
+</html>

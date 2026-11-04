@@ -1,0 +1,17 @@
+# Ambiente
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# Build
+build/
+dist/
+
+# NUNCA versionar notas, extratos ou planilhas reais (dados de pacientes)
+*.pdf
+*.xlsx
+*.xls
+*.csv
+*.ofx
+exemplo-notas/
