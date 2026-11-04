@@ -11,6 +11,7 @@ from . import sistema
 
 PADRAO = {
     "pasta_notas": "",
+    "pasta_extratos": "",
     "visual": "bonito",  # "bonito" (liquid glass) | "otimizado"
     "tema": "sistema",  # "sistema" | "claro" | "escuro"
     "escala_fonte": 1.0,  # 1.0 a 2.0
@@ -18,12 +19,18 @@ PADRAO = {
     "reduzir_movimento": False,
     "formato": "xlsx",  # "xlsx" | "csv"
     "pasta_saida": "",
+    "assistente_nome": "",  # assina as mensagens: "*Assistente Fulano:*"
+    "whatsapp_destino": "app",  # "app" (instalado) | "web" (navegador)
+    "lembrete_nome": "",  # quem recebe os lembretes de contas
+    "lembrete_telefone": "",
+    "lembrete_fechamento_dia": 1,  # dia do mês para lembrar do fechamento; 0 = desligado
 }
 
 _VALIDOS = {
     "visual": {"bonito", "otimizado"},
     "tema": {"sistema", "claro", "escuro"},
     "formato": {"xlsx", "csv"},
+    "whatsapp_destino": {"app", "web"},
 }
 
 
@@ -36,6 +43,14 @@ def pasta_dados() -> Path:
 
 def caminho_cache() -> Path:
     return pasta_dados() / "cache-notas.json"
+
+
+def caminho_whatsapp() -> Path:
+    return pasta_dados() / "whatsapp.json"
+
+
+def caminho_regras() -> Path:
+    return pasta_dados() / "regras-extrato.json"
 
 
 def carregar() -> dict:
@@ -71,6 +86,11 @@ def normalizar(cfg: dict) -> dict:
         limpo["escala_fonte"] = 1.0
     for chave in ("alto_contraste", "reduzir_movimento"):
         limpo[chave] = bool(limpo[chave])
-    for chave in ("pasta_notas", "pasta_saida"):
+    for chave in ("pasta_notas", "pasta_extratos", "pasta_saida",
+                  "assistente_nome", "lembrete_nome", "lembrete_telefone"):
         limpo[chave] = str(limpo[chave] or "")
+    try:
+        limpo["lembrete_fechamento_dia"] = min(28, max(0, int(limpo["lembrete_fechamento_dia"])))
+    except (TypeError, ValueError):
+        limpo["lembrete_fechamento_dia"] = PADRAO["lembrete_fechamento_dia"]
     return limpo

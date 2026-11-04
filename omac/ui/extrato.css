@@ -1,0 +1,22 @@
+/* OMAC — módulo de extrato bancário. Tokens e componentes vêm de estilo.css. */
+
+.ext-filtros { align-self: flex-start; flex-wrap: wrap; }
+.ext-filtros .escolha { flex: 0 1 auto; min-height: 2.2rem; padding: .3rem .9rem; }
+
+.ext-tabela .c-desc { color: var(--texto-2); font-size: .88rem; overflow-wrap: anywhere; }
+.valor-entrada { color: var(--acento); font-weight: 600; }
+.valor-saida { color: var(--erro); font-weight: 600; }
+.c-saldo { color: var(--texto-2); }
+.ext-nada { text-align: center !important; color: var(--texto-2); padding: 2rem 1rem !important; }
+.c-sentido { width: 7rem; }
+.c-acoes-regra { width: 6.5rem; text-align: right !important; white-space: nowrap; padding-left: 0 !important; padding-right: .75rem !important; }
+
+.form-regra { gap: .85rem; }
+.form-regra-campos { display: flex; flex-wrap: wrap; gap: 1rem; }
+.form-regra-campos .campo { min-width: 8.5rem; }
+.form-regra-acoes, .form-acoes { display: flex; gap: .6rem; flex-wrap: wrap; }
+.regras-arquivo { display: flex; align-items: center; gap: .6rem; flex-wrap: wrap; }
+.regras-arquivo .dica { flex: 1 1 18rem; }
+
+[data-contraste="alto"] .valor-entrada,
+[data-contraste="alto"] .valor-saida { color: var(--texto); }

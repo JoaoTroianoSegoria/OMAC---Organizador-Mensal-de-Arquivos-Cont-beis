@@ -22,6 +22,8 @@ from datetime import date, datetime
 from decimal import Decimal
 from pathlib import Path
 
+from ..pdf import PdfIlegivel, extrair_paginas
+
 # Mude quando a forma de ler as notas mudar: invalida o cache antigo.
 VERSAO_LEITOR = 1
 
@@ -120,21 +122,10 @@ _RE_CANCELADA = re.compile(r"\bcancelad[ao]\b", re.IGNORECASE)
 
 def extrair_texto(caminho: Path) -> str:
     """Texto da primeira página do PDF (o DANFSe tem uma página só)."""
-    import pypdfium2 as pdfium
-
     try:
-        # Lê os bytes antes: assim o arquivo não fica preso e pode ser movido.
-        dados = Path(caminho).read_bytes()
-        pdf = pdfium.PdfDocument(dados)
-    except Exception as e:  # pdfium levanta PdfiumError, OSError, etc.
-        raise NotaIlegivel(f"não foi possível abrir o PDF ({e})") from e
-    try:
-        if len(pdf) == 0:
-            raise NotaIlegivel("o PDF está vazio")
-        texto = pdf[0].get_textpage().get_text_range()
-    finally:
-        pdf.close()
-    return texto.replace("\r\n", "\n").replace("\r", "\n")
+        return extrair_paginas(caminho, limite=1)[0]
+    except PdfIlegivel as e:
+        raise NotaIlegivel(str(e)) from e
 
 
 def interpretar_texto(texto: str, nome_arquivo: str) -> Nota:

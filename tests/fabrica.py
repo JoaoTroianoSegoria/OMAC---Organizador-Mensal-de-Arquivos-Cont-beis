@@ -154,6 +154,90 @@ def criar_pasta_exemplo(pasta: Path) -> Path:
         799, date(2026, 9, 29), date(2026, 9, 29), "100.00",
         situacao="NFS-e cancelada", tomador="NOTA CANCELADA EXEMPLO",
     )
+    criar_pasta_extratos(pasta / "Extratos")
+    return pasta
+
+
+# --- Extrato do Banco Inter de mentira ---------------------------------------
+
+_MESES = "Janeiro Fevereiro Março Abril Maio Junho Julho Agosto Setembro Outubro Novembro Dezembro".split()
+
+CREDITO = 'Credito domicilio cartao: "CARTAO DE CREDITO - MAQUININHA EXEMPLO"'
+DEBITO = 'Credito domicilio cartao: "CARTAO DE DEBITO - MAQUININHA EXEMPLO"'
+
+EXTRATOS = [
+    # início, fim, baixado em, saldo inicial, lançamentos (dia, texto, valor)
+    (date(2026, 9, 1), date(2026, 9, 30), date(2026, 10, 2), "10000.00", [
+        (date(2026, 9, 2), 'Pix recebido: "Paciente Ficticio Um"', "350.00"),
+        (date(2026, 9, 8), CREDITO, "1200.50"),
+        (date(2026, 9, 15), 'Pagamento efetuado: "DISTRIBUIDORA FICTICIA LTDA"', "-480.75"),
+        (date(2026, 9, 21), "SIMPLES NACIONAL", "-610.00"),
+    ]),
+    (date(2026, 10, 1), date(2026, 10, 31), date(2026, 11, 3), "10459.75", [
+        (date(2026, 10, 1), 'Pix recebido: "Paciente Ficticio Dois"', "180.00"),
+        (date(2026, 10, 1), CREDITO, "905.30"),
+        (date(2026, 10, 5), 'Pagamento efetuado: "DISTRIBUIDORA FICTICIA LTDA"', "-1240.00"),
+        (date(2026, 10, 6), DEBITO, "220.00"),
+        (date(2026, 10, 9), 'Pix enviado: "Cp :00000000-LABORATORIO FICTICIO"', "-350.00"),
+        (date(2026, 10, 13), 'Pix recebido: "Paciente Ficticio Tres"', "640.00"),
+        (date(2026, 10, 14), CREDITO, "2310.45"),
+        (date(2026, 10, 20), "DARF NUMERADO", "-890.20"),
+        (date(2026, 10, 22), 'Pagamento efetuado: "CONDOMINIO FICTICIO"', "-720.00"),
+        (date(2026, 10, 27), 'Pix enviado: "Cp :00000000-Colaborador Ficticio"', "-2500.00"),
+        (date(2026, 10, 29), CREDITO, "1180.00"),
+    ]),
+]
+
+
+def criar_extrato(caminho: Path, inicio: date, fim: date, baixado: date, saldo_inicial: str,
+                  lancamentos: list[tuple[date, str, str]]) -> Path:
+    """Mesmo layout de texto do PDF do Inter: saldo e valor na linha de cada lançamento."""
+    caminho = Path(caminho)
+    f = _fonte()
+    c = canvas.Canvas(str(caminho), pagesize=A4)
+    _, altura = A4
+    c.setFont(f, 8)
+
+    def escrever(y: float, texto: str) -> None:
+        c.drawString(30, altura - y, texto)
+
+    for y, texto in ((30, f"Solicitado em: {baixado:%d/%m/%Y} - 09h15"),
+                     (42, "CLINICA EXEMPLO LTDA"),
+                     (54, "CPF/CNPJ: 00.000.000/0001-00, Instituição: Banco Inter, Agência: 0001-9, Conta: 000000-0"),
+                     (66, f"Período: {inicio:%d/%m/%Y} a {fim:%d/%m/%Y}")):
+        escrever(y, texto)
+
+    saldo = Decimal(saldo_inicial)
+    y = 90
+    dias = sorted({d for d, _, _ in lancamentos})
+    for dia in dias:
+        do_dia = [(t, Decimal(v)) for d, t, v in lancamentos if d == dia]
+        final = saldo + sum(v for _, v in do_dia)
+        escrever(y, f"{dia.day} de {_MESES[dia.month - 1]} de {dia.year} Saldo do dia: {_br_sinal(final)}")
+        y += 12
+        for texto, valor in do_dia:
+            saldo += valor
+            escrever(y, f"{texto} {_br_sinal(valor)} {_br_sinal(saldo)}")
+            y += 12
+            if y > altura - 40:  # o dia pode continuar na página seguinte
+                c.showPage()
+                c.setFont(f, 8)
+                y = 40
+    c.showPage()
+    c.save()
+    return caminho
+
+
+def _br_sinal(v: Decimal) -> str:
+    return ("-" if v < 0 else "") + _br(abs(v))
+
+
+def criar_pasta_extratos(pasta: Path) -> Path:
+    pasta = Path(pasta)
+    pasta.mkdir(parents=True, exist_ok=True)
+    for inicio, fim, baixado, saldo, lancamentos in EXTRATOS:
+        criar_extrato(pasta / f"Extrato-{inicio:%d-%m-%Y}-a-{fim:%d-%m-%Y}-PDF.pdf",
+                      inicio, fim, baixado, saldo, lancamentos)
     return pasta
 
 

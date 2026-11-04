@@ -50,9 +50,10 @@ jobs:
           python -m tests.fabrica exemplo
           $p = Start-Process -FilePath dist\OMAC.exe -ArgumentList '--autoteste', 'exemplo', 'relatorio.json' -Wait -PassThru
           Get-Content relatorio.json
-          python -c "import json,sys; r=json.load(open('relatorio.json',encoding='utf-8')); sys.exit('erro' in r or r['notas']!=12 or len(r['canceladas_movidas'])!=1)"
+          python -c "import json,sys; r=json.load(open('relatorio.json',encoding='utf-8')); sys.exit('erro' in r or r['notas']!=12 or len(r['canceladas_movidas'])!=1 or r['lancamentos']==0)"
           if ($LASTEXITCODE -ne 0 -or $p.ExitCode -ne 0) { exit 1 }
           if (-not (Test-Path 'Notas fiscais - Outubro 2026.xlsx')) { exit 1 }
+          if (-not (Test-Path 'Fechamento - Outubro 2026.xlsx')) { exit 1 }
 
       - name: Renomear
         shell: pwsh
