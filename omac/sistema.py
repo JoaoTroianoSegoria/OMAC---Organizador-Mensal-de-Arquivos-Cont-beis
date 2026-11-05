@@ -96,14 +96,16 @@ def inicio_automatico_ligado(nome: str = "OMAC") -> str:
 def definir_inicio_automatico(ligar: bool, nome: str = "OMAC", comando: str | None = None) -> None:
     import winreg
 
-    with winreg.OpenKey(winreg.HKEY_CURRENT_USER, _CHAVE_INICIO, 0, winreg.KEY_SET_VALUE) as k:
-        if ligar:
+    if ligar:
+        # CreateKeyEx porque a chave Run não existe em todo Windows.
+        with winreg.CreateKeyEx(winreg.HKEY_CURRENT_USER, _CHAVE_INICIO, 0, winreg.KEY_SET_VALUE) as k:
             winreg.SetValueEx(k, nome, 0, winreg.REG_SZ, comando or _comando_de_inicio())
-        else:
-            try:
-                winreg.DeleteValue(k, nome)
-            except FileNotFoundError:
-                pass
+        return
+    try:
+        with winreg.OpenKey(winreg.HKEY_CURRENT_USER, _CHAVE_INICIO, 0, winreg.KEY_SET_VALUE) as k:
+            winreg.DeleteValue(k, nome)
+    except FileNotFoundError:
+        pass  # sem a chave ou sem o valor: já está desligado
 
 
 def corrigir_inicio_automatico() -> None:
