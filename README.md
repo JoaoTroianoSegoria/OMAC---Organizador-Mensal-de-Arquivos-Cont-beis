@@ -71,7 +71,7 @@ extrato do banco precisavam ser passadas à mão para uma planilha que vai para 
 - **Visual "Otimizado"**, sem transparências nem animações, para computador fraco. Ele já vem ligado sozinho na primeira vez em PCs com pouca memória.
 - **Acessibilidade:** texto de 100% a 200% (também com <kbd>Ctrl</kbd> + <kbd>+</kbd> / <kbd>−</kbd> / <kbd>0</kbd>), alto contraste, opção de reduzir animações, navegação por teclado e leitores de tela.
 - **Avisos que minimizam:** a faixa de avisos fica só com a quantidade, sem sumir, e abre de novo com um clique.
-- **Aviso de versão nova:** o OMAC avisa e abre o download no navegador. Trocar o `.exe` não mexe nos dados.
+- **Aviso de versão nova:** o OMAC avisa e abre o download no navegador. Trocar a pasta do programa não mexe nos dados.
 - **Menu lateral preparado para novos módulos.**
 
 <p align="center">
@@ -82,7 +82,7 @@ extrato do banco precisavam ser passadas à mão para uma planilha que vai para 
 
 ## Como usar
 
-1. Baixe o `OMAC-64bits.exe` na aba **[Releases](../../releases)**. Use o `OMAC-32bits.exe` se o Windows for 32 bits; para conferir, vá em *Configurações → Sistema → Sobre → Tipo de sistema*.
+1. Baixe o `OMAC-64bits.zip` na aba **[Releases](../../releases)**, extraia a pasta e abra o `OMAC.exe` que está dentro. Use o `OMAC-32bits.zip` se o Windows for 32 bits; para conferir, vá em *Configurações → Sistema → Sobre → Tipo de sistema*.
 2. Abra o arquivo. Na primeira vez o Windows pode mostrar "O Windows protegeu o computador", porque o app não tem assinatura digital paga. Clique em **Mais informações → Executar assim mesmo**.
 3. Escolha a pasta das notas, o mês e clique em **Exportar Excel**.
 
@@ -140,11 +140,11 @@ git tag v1.0.0
 git push origin v1.0.0
 ```
 
-O GitHub Actions roda os testes, gera o `.exe` de 64 e 32 bits, executa um **autoteste do próprio .exe** com notas de exemplo e publica tudo na aba Releases.
+O GitHub Actions roda os testes, gera o programa de 64 e 32 bits, executa **autotestes do próprio .exe** (notas de exemplo e a tela no WebView2) e publica os `.zip` na aba Releases.
 
 ### Publicar uma versão
 
-Mude `__version__` em `omac/__init__.py` e leve para a `main`. O GitHub Actions testa, gera os `.exe` e publica a Release sozinho; na próxima abertura, o app avisa que há versão nova. Um merge sem mudar o número não publica nada.
+Mude `__version__` em `omac/__init__.py` e leve para a `main`. O GitHub Actions testa, gera os `.zip` e publica a Release sozinho; na próxima abertura, o app avisa que há versão nova. Um merge sem mudar o número não publica nada.
 
 ### Estrutura
 
