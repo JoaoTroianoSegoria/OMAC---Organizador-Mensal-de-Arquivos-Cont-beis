@@ -25,7 +25,7 @@ extrato do banco precisavam ser passadas à mão para uma planilha que vai para 
 - **Lê a pasta de PDFs das notas do ano** (ex.: `NFS-e 2026`) e monta a planilha do mês em um clique, em **Excel (.xlsx)** ou **CSV**.
 - **Filtra pela data de competência**, não pela de emissão. Uma nota emitida em 03/11 com competência em outubro entra no relatório de outubro.
 - **Nome do paciente:** vem do nome do arquivo. Se a descrição do serviço disser *"tratamento odontológico referente ao dependente FULANO"*, o nome do dependente tem prioridade (caso de nota no CPF do responsável).
-- **Notas canceladas** ficam fora do relatório e são movidas sozinhas para a subpasta `Canceladas`.
+- **Notas canceladas** ficam fora do relatório e da planilha. O OMAC não move nem altera nenhum PDF.
 - **Avisos antes de mandar para a contabilidade:** descrição sem "tratamento odontológico", número do arquivo diferente do número da nota, nota repetida, PDF ilegível, nome de arquivo fora do padrão.
 - **Rápido em PC antigo:** cada nota é lida uma única vez (≈5 ms) e fica em cache. Nas próximas vezes, só as notas novas são lidas.
 
@@ -53,11 +53,25 @@ extrato do banco precisavam ser passadas à mão para uma planilha que vai para 
 - **Lembretes de contas:** na primeira abertura do dia, uma janela mostra o que vence amanhã ou hoje, e um clique deixa a mensagem pronta para quem cuida dos pagamentos.
 - **Sem automação no WhatsApp:** o OMAC usa o link oficial e nunca envia nada sozinho, para não colocar o número em risco.
 
+### Agendamentos
+
+<p align="center">
+  <img src="docs/capturas/agendamentos.png" alt="Lista de pacientes de ortodontia com o confere do mês" width="49%">
+  <img src="docs/capturas/agendamentos-mensagem.png" alt="Janela de mensagem com as três opções" width="49%">
+</p>
+
+- **Lista dos pacientes de ortodontia:** nome, telefone e valor da manutenção. Dá para alterar ou excluir, com a opção de desfazer.
+- **Três mensagens prontas:** agendar a manutenção do mês, cobrar com a chave Pix das Configurações e agendar o retorno. O texto pode ser ajustado antes de abrir a conversa.
+- **Confere do mês:** marca quem já está agendado e recomeça sozinho todo dia 1, mesmo que o app esteja fechado nesse dia.
+- **Finalizados:** quem termina o tratamento vai para outra aba e pode voltar para a lista se precisar.
+
 ### Interface
 
 - **Visual "Bonito"**, com efeito de vidro líquido, cantos arredondados e temas claro/escuro (ou automático, seguindo o Windows).
 - **Visual "Otimizado"**, sem transparências nem animações, para computador fraco. Ele já vem ligado sozinho na primeira vez em PCs com pouca memória.
 - **Acessibilidade:** texto de 100% a 200% (também com <kbd>Ctrl</kbd> + <kbd>+</kbd> / <kbd>−</kbd> / <kbd>0</kbd>), alto contraste, opção de reduzir animações, navegação por teclado e leitores de tela.
+- **Avisos que minimizam:** a faixa de avisos fica só com a quantidade, sem sumir, e abre de novo com um clique.
+- **Atualização pelo próprio app:** quando sai uma versão nova, o OMAC pergunta, baixa, confere o arquivo e abre de novo, sem mexer nos dados.
 - **Menu lateral preparado para novos módulos.**
 
 <p align="center">
@@ -87,9 +101,10 @@ Número, valor e datas são lidos **de dentro do PDF**. Do nome do arquivo sai s
 
 Dados de saúde são dados sensíveis. O OMAC:
 
-- não envia nada para a internet sozinho: a única saída é a conversa do WhatsApp que a própria pessoa abre e envia;
-- guarda configurações e cache só no computador (`%APPDATA%\OMAC`);
-- guarda os telefones dos pacientes só no computador;
+- não envia nenhum dado seu para a internet: a única saída é a conversa do WhatsApp que a própria pessoa abre e envia;
+- guarda configurações e cache só no computador (`%APPDATA%\OMAC`), em uma pasta separada do programa, que as atualizações não alteram;
+- para procurar versão nova, só consulta o GitHub, sem enviar nenhum dado seu, e dá para desligar nas Configurações;
+- guarda os telefones dos pacientes e os dados de agendamento só no computador;
 - deixa o nome de quem mandou Pix fora da planilha do fechamento;
 - guarda as regras do extrato (com nomes de fornecedores) só no computador, nunca no código;
 - tem um `.gitignore` que bloqueia PDF, planilhas e extratos, para nenhum dado real ir parar no GitHub.
@@ -127,6 +142,10 @@ git push origin v1.0.0
 
 O GitHub Actions roda os testes, gera o `.exe` de 64 e 32 bits, executa um **autoteste do próprio .exe** com notas de exemplo e publica tudo na aba Releases.
 
+### Publicar uma versão
+
+Mude `__version__` em `omac/__init__.py` e leve para a `main`. O GitHub Actions testa, gera os `.exe` e publica a Release sozinho; na próxima abertura, o app oferece a atualização. Um merge sem mudar o número não publica nada.
+
 ### Estrutura
 
 ```
@@ -134,6 +153,7 @@ omac/
 ├── app.py            janela; a classe Api junta a API de cada módulo
 ├── nucleo.py         base da API: configurações, diálogos, tratamento de erro
 ├── config.py         configurações do usuário
+├── armazem.py        leitura e gravação segura dos JSON com os dados do usuário
 ├── sistema.py        coisas do Windows (WebView2, abrir arquivo, PC fraco?)
 ├── pdf.py            extração de texto de PDF
 ├── planilha.py       estilo comum das planilhas
@@ -141,6 +161,8 @@ omac/
 ├── notas/            leitor.py · pasta.py · exportar.py · api.py
 ├── extrato/          leitor.py · pasta.py · regras.py · exportar.py · api.py
 ├── whatsapp/         mensagens.py · lembretes.py · dados.py · api.py
+├── agendamentos/     pacientes.py · mensagens.py · api.py
+├── atualizacao/      github.py · instalar.py · api.py
 └── ui/               index.html, estilo.css, nucleo.js + um .js/.css por módulo
 tests/                testes + gerador de notas e extratos de exemplo
 ```
@@ -152,3 +174,4 @@ Para criar um módulo: uma pasta em `omac/` com a classe da API (herdando de `Ap
 - [x] **Extrato bancário:** leitura do PDF do Inter, regras editáveis e fechamento do mês.
 - [ ] **Conciliação:** cruzar Pix recebidos com notas emitidas.
 - [x] **WhatsApp:** envio de notas e lembretes de contas pelo link oficial.
+- [x] **Agendamentos:** pacientes de ortodontia, mensagens e confere do mês.
