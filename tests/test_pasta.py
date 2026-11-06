@@ -3,7 +3,7 @@ from datetime import date
 import pytest
 
 from omac.notas import pasta as modulo_pasta
-from omac.notas.pasta import PASTA_CANCELADAS, Cache, varrer
+from omac.notas.pasta import Cache, varrer
 from tests.fabrica import criar_nota, criar_pasta_exemplo, nome_arquivo
 
 
@@ -28,25 +28,38 @@ def test_dependente_na_varredura(pasta):
     assert pacientes[807] == "SOFIA GOMES PEREIRA"
 
 
-def test_cancelada_vai_para_subpasta(pasta):
+def test_cancelada_fica_fora_do_relatorio_sem_mover_o_arquivo(pasta):
+    antes = sorted(p.name for p in pasta.iterdir())
     v = varrer(pasta)
-    assert len(v.canceladas_movidas) == 1
+    assert [n.numero for n in v.canceladas] == [799]
     assert 799 not in {n.numero for n in v.notas}
-    assert (pasta / PASTA_CANCELADAS / v.canceladas_movidas[0]).is_file()
-    assert not (pasta / v.canceladas_movidas[0]).exists()
-    # Na próxima leitura não há nada para mover.
-    assert varrer(pasta).canceladas_movidas == []
+    assert all(n.numero != 799 for n in v.do_mes(2026, 9))
+    assert sorted(p.name for p in pasta.iterdir()) == antes
+    assert not (pasta / "Canceladas").exists()
 
 
-def test_cancelada_com_nome_repetido_nao_sobrescreve(pasta):
-    nome = nome_arquivo(799, "NOTA CANCELADA EXEMPLO", date(2026, 9, 29))
-    (pasta / PASTA_CANCELADAS).mkdir()
-    (pasta / PASTA_CANCELADAS / nome).write_bytes(b"original")
+def test_cancelada_aparece_so_no_mes_dela(pasta):
     v = varrer(pasta)
-    assert v.canceladas_movidas == []
-    assert (pasta / nome).exists()
-    assert (pasta / PASTA_CANCELADAS / nome).read_bytes() == b"original"
-    assert any("já existe" in a["mensagem"] for a in v.avisos)
+    assert [n.numero for n in v.canceladas_do_mes(2026, 9)] == [799]
+    assert v.canceladas_do_mes(2026, 10) == []
+
+
+def test_cancelada_fica_no_cache_para_nao_ser_lida_de_novo(pasta, tmp_path):
+    arquivo_cache = tmp_path / "cache.json"
+    varrer(pasta, Cache(arquivo_cache))
+    cache = Cache(arquivo_cache)
+    v = varrer(pasta, cache)
+    assert [n.numero for n in v.canceladas] == [799]
+    assert sum(1 for item in cache.itens.values() if item["nota"]["cancelada"]) == 1
+
+
+def test_ler_a_pasta_nunca_altera_os_arquivos(pasta, tmp_path):
+    def foto():
+        return {p.name: (p.stat().st_size, p.stat().st_mtime_ns) for p in pasta.iterdir() if p.is_file()}
+
+    antes = foto()
+    varrer(pasta, Cache(tmp_path / "cache.json"))
+    assert foto() == antes
 
 
 def test_nao_entra_em_subpastas(pasta):
