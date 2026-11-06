@@ -36,7 +36,7 @@ class NotasApi(ApiBase):
             "notas": [_nota_para_js(n) for n in notas],
             "total_centavos": sum(int(n.valor * 100) for n in notas),
             "avisos": v.avisos,
-            "canceladas_movidas": v.canceladas_movidas,
+            "canceladas": [n.arquivo for n in v.canceladas_do_mes(int(ano), int(mes))],
             "competencias": v.competencias(),
             "qtd_pasta": len(v.notas),
         }
