@@ -26,7 +26,7 @@ PADRAO = {
     "lembrete_telefone": "",
     "lembrete_fechamento_dia": 1,  # dia do mês para lembrar do fechamento; 0 = desligado
     "chave_pix": "",  # vai na mensagem de cobrança da manutenção
-    "avisos_recolhidos": [],  # faixas minimizadas: "notas", "canceladas", "extrato"
+    "avisos_recolhidos": [],  # faixas minimizadas: "notas", "extrato"
     "atualizacao_automatica": True,  # procura versão nova ao abrir (instalar é sempre opcional)
     "atualizacao_adiada_em": "",  # dia em que a pessoa clicou em "Agora não"
 }
