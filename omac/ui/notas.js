@@ -15,7 +15,10 @@ Object.assign(acoes, {
   "abrir-nota": (alvo) => abrirNota(alvo.dataset.arquivo),
   "ver-avisos": () => {
     const faixa = $("#faixa-avisos");
-    if (!faixa.hidden) { faixa.scrollIntoView({ behavior: "smooth", block: "center" }); faixa.focus({ preventScroll: true }); }
+    if (faixa.hidden) return;
+    recolherFaixa(faixa, false);
+    faixa.scrollIntoView({ behavior: "smooth", block: "center" });
+    faixa.focus({ preventScroll: true });
   },
 });
 
@@ -68,7 +71,7 @@ async function carregarNotas() {
 }
 
 function desenharNotas() {
-  const { notas, total_centavos, avisos, canceladas_movidas } = notasEstado.dados;
+  const { notas, total_centavos, avisos, canceladas } = notasEstado.dados;
   $("#sem-pasta").hidden = true;
   $("#painel-notas").hidden = false;
 
@@ -151,20 +154,14 @@ function desenharNotas() {
   for (const n of notas) for (const a of n.avisos) itens.push([`Nota nº ${n.numero}`, a]);
   for (const a of avisos) itens.push([a.arquivo || "", a.mensagem]);
   $("#avisos-lista").replaceChildren(...listaDeAvisos(itens));
-  $("#faixa-avisos").hidden = itens.length === 0;
+  mostrarQtdAvisos($("#faixa-avisos"), itens.length);
   $("#res-avisos").textContent = String(itens.length);
   $("#res-avisos-cartao").classList.toggle("tem", itens.length > 0);
 
-  // Canceladas movidas nesta leitura
-  $("#faixa-canceladas").hidden = canceladas_movidas.length === 0;
-  if (canceladas_movidas.length) {
-    const n = canceladas_movidas.length;
-    $("#canceladas-titulo").textContent = n === 1
-      ? "1 nota cancelada foi movida para a pasta “Canceladas”:"
-      : `${n} notas canceladas foram movidas para a pasta “Canceladas”:`;
-    $("#canceladas-lista").replaceChildren(...canceladas_movidas.map((a) =>
-      Object.assign(document.createElement("li"), { textContent: a })));
-  }
+  // Canceladas do mês: o PDF continua na pasta, só não entra no relatório.
+  mostrarQtdAvisos($("#faixa-canceladas"), canceladas.length, "nota", "notas");
+  $("#canceladas-lista").replaceChildren(...canceladas.map((a) =>
+    Object.assign(document.createElement("li"), { textContent: a })));
 
   $$('[data-acao="exportar"]').forEach((b) => { b.disabled = notas.length === 0; });
 }

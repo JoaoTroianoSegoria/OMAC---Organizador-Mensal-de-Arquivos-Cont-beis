@@ -396,6 +396,20 @@ button { cursor: pointer; }
 .faixa-aviso::after { background: linear-gradient(160deg, var(--aviso-borda), transparent 50%, var(--aviso-borda)); }
 .faixa-info { background: var(--info-fundo); color: var(--info-texto); }
 .faixa-info::after { background: linear-gradient(160deg, var(--info-borda), transparent 50%, var(--info-borda)); }
+.faixa-corpo { flex: 1; min-width: 0; }
+.faixa-cab {
+  display: flex; align-items: center; flex-wrap: wrap; gap: .25rem .7rem;
+  width: 100%; padding: 0;
+  text-align: left; color: inherit;
+  background: none; border: 0; cursor: pointer;
+}
+.faixa-qtd { font-size: .85rem; font-weight: 700; font-variant-numeric: tabular-nums; }
+.faixa-acao { margin-left: auto; font-size: .85rem; font-weight: 600; text-decoration: underline; text-underline-offset: 2px; }
+.faixa .faixa-seta { margin: 0; width: 1.1rem; height: 1.1rem; transform: rotate(180deg); }
+.faixa-recolhivel.recolhida { padding-block: .6rem; align-items: center; }
+.faixa-recolhivel.recolhida .ic { margin-top: 0; }
+.faixa-recolhivel.recolhida .faixa-seta { transform: none; }
+.faixa-recolhivel .lista-simples { max-height: 16rem; overflow-y: auto; }
 .lista-simples { margin: .35rem 0 0; padding-left: 1.1rem; display: flex; flex-direction: column; gap: .2rem; }
 .lista-simples li { color: var(--texto); }
 .lista-simples b { font-weight: 600; }

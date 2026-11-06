@@ -85,16 +85,22 @@ function aplicarConfig() {
   $("#escala").value = c.escala_fonte;
   $("#escala-valor").textContent = `${Math.round(c.escala_fonte * 100)}%`;
   mostrarPastas();
+  desenharFaixasRecolhiveis();
   ajustarTrilho();
 }
 
 let salvarTimer = null;
+let configPendente = {};
 function mudarConfig(parcial) {
   Object.assign(estado.cfg, parcial);
+  Object.assign(configPendente, parcial);
   aplicarConfig();
   clearTimeout(salvarTimer);
   salvarTimer = setTimeout(async () => {
-    const r = await api().salvar_config(estado.cfg);
+    // Só o que mudou aqui: o Python também salva coisas, como a última pasta de exportação.
+    const mudancas = configPendente;
+    configPendente = {};
+    const r = await api().salvar_config(mudancas);
     if (r && r.erro) mostrarToast(`Não consegui salvar as configurações: ${r.erro}`, { erro: true });
   }, 300);
 }
@@ -229,6 +235,48 @@ function listaDeAvisos(itens) {
   });
 }
 
+/* ---------- Peças usadas por vários módulos ---------- */
+
+function botaoIcone(acao, icone, rotulo, dados) {
+  const b = document.createElement("button");
+  b.type = "button";
+  b.className = "btn-linha";
+  b.dataset.acao = acao;
+  Object.assign(b.dataset, dados);
+  b.title = rotulo;
+  b.setAttribute("aria-label", rotulo);
+  b.innerHTML = `<svg class="ic"><use href="#${icone}"/></svg>`;
+  return b;
+}
+
+function telefoneBR(digitos) {
+  const m = /^55(\d{2})(\d{4,5})(\d{4})$/.exec(digitos);
+  return m ? `(${m[1]}) ${m[2]}-${m[3]}` : digitos;
+}
+
+/* Faixas de aviso que dá para minimizar: seguem visíveis, mostrando só a quantidade. */
+function desenharFaixasRecolhiveis() {
+  $$("[data-recolhivel]").forEach((faixa) => {
+    const recolhida = estado.cfg.avisos_recolhidos.includes(faixa.dataset.recolhivel);
+    faixa.classList.toggle("recolhida", recolhida);
+    faixa.querySelector(".lista-simples").hidden = recolhida;
+    const cabecalho = faixa.querySelector(".faixa-cab");
+    cabecalho.setAttribute("aria-expanded", String(!recolhida));
+    cabecalho.querySelector(".faixa-acao").textContent = recolhida ? (faixa.dataset.ver || "Ver avisos") : "Minimizar";
+  });
+}
+
+function recolherFaixa(faixa, recolher) {
+  const id = faixa.dataset.recolhivel;
+  const outras = estado.cfg.avisos_recolhidos.filter((r) => r !== id);
+  mudarConfig({ avisos_recolhidos: recolher ? [...outras, id] : outras });
+}
+
+function mostrarQtdAvisos(faixa, qtd, singular = "aviso", plural = "avisos") {
+  faixa.hidden = qtd === 0;
+  faixa.querySelector(".faixa-qtd").textContent = `${qtd} ${qtd === 1 ? singular : plural}`;
+}
+
 /* ---------- Notificações ---------- */
 
 function mostrarToast(texto, { erro = false, acoes: botoes = [] } = {}) {
@@ -275,6 +323,11 @@ Object.assign(acoes, {
   "fonte-mais": () => mudarFonte(1),
   "fonte-menos": () => mudarFonte(-1),
   "alternar-inicio": alternarInicioAutomatico,
+  "alternar-avisos": (alvo) => {
+    const faixa = alvo.closest("[data-recolhivel]");
+    recolherFaixa(faixa, !faixa.classList.contains("recolhida"));
+  },
+  "abrir-pasta-dados": () => api().abrir_pasta_dados(),
 });
 
 function ligarEventos() {

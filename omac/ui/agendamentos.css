@@ -1,0 +1,21 @@
+/* OMAC — módulo de agendamentos. Tokens e componentes vêm de estilo.css. */
+
+.ag-qtd:empty { display: none; }
+.ag-qtd { color: var(--acento); font-variant-numeric: tabular-nums; }
+.ag-filtros { align-self: flex-start; flex-wrap: wrap; }
+.ag-filtros .escolha { flex: 0 1 auto; min-height: 2.2rem; padding: .3rem .9rem; }
+
+.c-confere { width: 5.5rem; text-align: center !important; }
+.confere { width: 1.3rem; height: 1.3rem; accent-color: var(--acento); cursor: pointer; vertical-align: middle; }
+.ag-sem-dado { color: var(--texto-3); }
+.ag-nada { text-align: center !important; color: var(--texto-2); padding: 2rem 1rem !important; }
+
+.ag-tipos { flex-wrap: wrap; }
+.ag-tipos .escolha { flex: 1 1 auto; }
+.ag-sem-pix-corpo { display: flex; flex-wrap: wrap; align-items: center; gap: .6rem; flex: 1; }
+.ag-sem-pix-corpo span { flex: 1 1 14rem; }
+
+.btn-perigo { color: var(--erro); margin-right: auto; }
+
+[data-contraste="alto"] .btn-perigo,
+[data-contraste="alto"] .ag-qtd { color: inherit; }

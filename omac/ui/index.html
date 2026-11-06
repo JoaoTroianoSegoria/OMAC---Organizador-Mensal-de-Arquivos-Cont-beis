@@ -7,6 +7,7 @@
   <link rel="stylesheet" href="estilo.css">
   <link rel="stylesheet" href="extrato.css">
   <link rel="stylesheet" href="whatsapp.css">
+  <link rel="stylesheet" href="agendamentos.css">
 </head>
 <body>
   <!-- Ícones (traço 2px, 24×24) -->
@@ -33,6 +34,8 @@
       <symbol id="i-lapis" viewBox="0 0 24 24"><path d="M4 20l1-4.5L16.5 4a2.1 2.1 0 0 1 3 3L8.5 19z"/><path d="M14.5 6l3 3"/></symbol>
       <symbol id="i-lixeira" viewBox="0 0 24 24"><path d="M4 7h16M9.5 7V4.5h5V7M6 7l1 13.5h10L18 7M10 11v6M14 11v6"/></symbol>
       <symbol id="i-mais" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+      <symbol id="i-agenda" viewBox="0 0 24 24"><rect x="3.5" y="5" width="17" height="15.5" rx="2"/><path d="M3.5 10h17M8 3v4M16 3v4M8.5 15l2.5 2.5 4.5-4.5"/></symbol>
+      <symbol id="i-seta" viewBox="0 0 24 24"><path d="m6 9.5 6 6 6-6"/></symbol>
       <symbol id="i-cadeado" viewBox="0 0 24 24"><rect x="4.5" y="10.5" width="15" height="10" rx="2"/><path d="M8 10.5V7.5a4 4 0 0 1 8 0v3"/></symbol>
     </defs>
   </svg>
@@ -58,6 +61,9 @@
         </button>
         <button class="menu-item" data-view="whatsapp">
           <svg class="ic"><use href="#i-whats"/></svg><span class="rotulo">WhatsApp</span>
+        </button>
+        <button class="menu-item" data-view="agendamentos">
+          <svg class="ic"><use href="#i-agenda"/></svg><span class="rotulo">Agendamentos</span>
         </button>
       </nav>
 
@@ -141,14 +147,30 @@
             </button>
           </div>
 
-          <div class="faixa faixa-info vidro" id="faixa-canceladas" hidden>
+          <div class="faixa faixa-info faixa-recolhivel vidro" id="faixa-canceladas" data-recolhivel="canceladas" data-ver="Ver notas" hidden>
             <svg class="ic"><use href="#i-cancelada"/></svg>
-            <div><strong id="canceladas-titulo"></strong><ul class="lista-simples" id="canceladas-lista"></ul></div>
+            <div class="faixa-corpo">
+              <button type="button" class="faixa-cab" data-acao="alternar-avisos" aria-controls="canceladas-lista">
+                <strong>Canceladas, fora do relatório</strong>
+                <span class="faixa-qtd"></span>
+                <span class="faixa-acao"></span>
+                <svg class="ic faixa-seta"><use href="#i-seta"/></svg>
+              </button>
+              <ul class="lista-simples" id="canceladas-lista"></ul>
+            </div>
           </div>
 
-          <div class="faixa faixa-aviso vidro" id="faixa-avisos" hidden tabindex="-1">
+          <div class="faixa faixa-aviso faixa-recolhivel vidro" id="faixa-avisos" data-recolhivel="notas" hidden tabindex="-1">
             <svg class="ic"><use href="#i-alerta"/></svg>
-            <div><strong>Confira antes de mandar para a contabilidade</strong><ul class="lista-simples" id="avisos-lista"></ul></div>
+            <div class="faixa-corpo">
+              <button type="button" class="faixa-cab" data-acao="alternar-avisos" aria-controls="avisos-lista">
+                <strong>Confira antes de mandar para a contabilidade</strong>
+                <span class="faixa-qtd"></span>
+                <span class="faixa-acao"></span>
+                <svg class="ic faixa-seta"><use href="#i-seta"/></svg>
+              </button>
+              <ul class="lista-simples" id="avisos-lista"></ul>
+            </div>
           </div>
 
           <div class="tabela-caixa vidro" id="tabela-caixa">
@@ -263,9 +285,17 @@
             </button>
           </div>
 
-          <div class="faixa faixa-aviso vidro" id="ext-faixa-avisos" hidden>
+          <div class="faixa faixa-aviso faixa-recolhivel vidro" id="ext-faixa-avisos" data-recolhivel="extrato" hidden>
             <svg class="ic"><use href="#i-alerta"/></svg>
-            <div><strong>Confira antes de mandar para a contabilidade</strong><ul class="lista-simples" id="ext-avisos"></ul></div>
+            <div class="faixa-corpo">
+              <button type="button" class="faixa-cab" data-acao="alternar-avisos" aria-controls="ext-avisos">
+                <strong>Confira antes de mandar para a contabilidade</strong>
+                <span class="faixa-qtd"></span>
+                <span class="faixa-acao"></span>
+                <svg class="ic faixa-seta"><use href="#i-seta"/></svg>
+              </button>
+              <ul class="lista-simples" id="ext-avisos"></ul>
+            </div>
           </div>
 
           <div class="escolhas ext-filtros" id="ext-filtros">
@@ -451,6 +481,91 @@
         </div>
       </section>
 
+      <!-- ============ AGENDAMENTOS ============ -->
+      <section class="view" id="view-agendamentos" aria-labelledby="t-agenda" hidden>
+        <header class="topo">
+          <div>
+            <h1 id="t-agenda">Agendamentos</h1>
+            <p class="sub">Manutenção dos pacientes de ortodontia em <strong id="ag-mes"></strong></p>
+          </div>
+          <div class="topo-acoes">
+            <button class="btn btn-primario" data-acao="ag-novo"><svg class="ic"><use href="#i-mais"/></svg><span>Novo paciente</span></button>
+          </div>
+        </header>
+
+        <div class="escolhas abas" id="ag-abas">
+          <button class="escolha" data-acao="ag-aba" data-aba="ativos" aria-pressed="true">Em tratamento <span class="ag-qtd" id="ag-qtd-ativos"></span></button>
+          <button class="escolha" data-acao="ag-aba" data-aba="finalizados" aria-pressed="false">Finalizados <span class="ag-qtd" id="ag-qtd-finalizados"></span></button>
+        </div>
+
+        <!-- Em tratamento -->
+        <div class="painel-coluna" id="ag-ativos">
+          <div class="resumo" id="ag-resumo">
+            <div class="cartao vidro">
+              <span class="cartao-rotulo">Já agendados no mês</span>
+              <strong class="cartao-valor" id="ag-feitos">0</strong>
+            </div>
+            <div class="cartao vidro">
+              <span class="cartao-rotulo">Falta conferir</span>
+              <strong class="cartao-valor" id="ag-faltam">0</strong>
+            </div>
+          </div>
+
+          <div class="escolhas ag-filtros" id="ag-filtros">
+            <button class="escolha" data-acao="ag-filtro" data-filtro="todos">Todos</button>
+            <button class="escolha" data-acao="ag-filtro" data-filtro="pendentes">Falta conferir</button>
+            <button class="escolha" data-acao="ag-filtro" data-filtro="agendados">Já agendados</button>
+          </div>
+
+          <div class="tabela-caixa vidro" id="ag-ativos-caixa">
+            <table class="tabela">
+              <caption class="so-leitor">Pacientes em tratamento</caption>
+              <thead>
+                <tr>
+                  <th scope="col" class="c-confere" title="Marque quando a manutenção do mês já estiver agendada. Recomeça todo dia 1.">Confere</th>
+                  <th scope="col">Paciente</th>
+                  <th scope="col" class="c-telefone">Telefone</th>
+                  <th scope="col" class="c-valor">Manutenção</th>
+                  <th scope="col" class="c-acoes-regra"><span class="so-leitor">Ações</span></th>
+                </tr>
+              </thead>
+              <tbody id="ag-ativos-corpo"></tbody>
+            </table>
+          </div>
+          <p class="dica" id="ag-dica">O confere recomeça sozinho todo dia 1, para você conferir os pacientes de novo a cada mês.</p>
+
+          <div class="vazio vidro" id="ag-ativos-vazio" hidden>
+            <span class="vazio-icone"><svg class="ic"><use href="#i-agenda"/></svg></span>
+            <h2>Nenhum paciente em tratamento</h2>
+            <p>Adicione os pacientes de ortodontia. Eles ficam só neste computador.</p>
+            <button class="btn btn-primario" data-acao="ag-novo"><svg class="ic"><use href="#i-mais"/></svg><span>Novo paciente</span></button>
+          </div>
+        </div>
+
+        <!-- Finalizados -->
+        <div class="painel-coluna" id="ag-finalizados" hidden>
+          <div class="tabela-caixa vidro" id="ag-finalizados-caixa">
+            <table class="tabela">
+              <caption class="so-leitor">Pacientes que finalizaram o tratamento</caption>
+              <thead>
+                <tr>
+                  <th scope="col">Paciente</th>
+                  <th scope="col" class="c-telefone">Telefone</th>
+                  <th scope="col" class="c-data">Finalizado em</th>
+                  <th scope="col" class="c-acoes-regra"><span class="so-leitor">Ações</span></th>
+                </tr>
+              </thead>
+              <tbody id="ag-finalizados-corpo"></tbody>
+            </table>
+          </div>
+          <div class="vazio vidro" id="ag-finalizados-vazio" hidden>
+            <span class="vazio-icone"><svg class="ic"><use href="#i-ok"/></svg></span>
+            <h2>Nenhum tratamento finalizado</h2>
+            <p>Para finalizar, clique no lápis ao lado do paciente e ligue <strong>Tratamento finalizado</strong>.</p>
+          </div>
+        </div>
+      </section>
+
       <!-- ============ CONFIGURAÇÕES ============ -->
       <section class="view" id="view-config" aria-labelledby="t-config" hidden>
         <header class="topo"><div><h1 id="t-config">Configurações</h1><p class="sub">As mudanças são salvas na hora</p></div></header>
@@ -522,7 +637,7 @@
                 <span class="pasta-texto" id="cfg-pasta-texto" data-pasta="pasta_notas">Nenhuma pasta escolhida</span>
                 <button class="btn btn-peq" data-acao="escolher-pasta" data-chave="pasta_notas">Alterar</button>
               </div>
-              <p class="dica">Notas canceladas vão para a subpasta <strong>Canceladas</strong> e ficam fora do relatório.</p>
+              <p class="dica">Notas canceladas ficam fora do relatório. O OMAC só lê os PDFs: nenhum arquivo desta pasta é movido ou alterado.</p>
             </div>
             <fieldset class="opcao">
               <legend>Formato padrão da planilha</legend>
@@ -552,6 +667,11 @@
               <label class="rotulo-campo" for="cfg-assistente">Nome do assistente</label>
               <input id="cfg-assistente" type="text" autocomplete="off" data-config-campo="assistente_nome" placeholder="Seu nome">
               <p class="dica">Assina as mensagens: <strong>Assistente Fulano:</strong> Olá…</p>
+            </div>
+            <div class="campo campo-texto">
+              <label class="rotulo-campo" for="cfg-pix">Chave Pix</label>
+              <input id="cfg-pix" type="text" autocomplete="off" data-config-campo="chave_pix" placeholder="CPF, CNPJ, e-mail, telefone ou chave aleatória">
+              <p class="dica">Vai na mensagem de cobrança da manutenção, em Agendamentos.</p>
             </div>
             <fieldset class="opcao">
               <legend>Abrir as conversas no</legend>
@@ -586,6 +706,18 @@
             <p class="dica" id="inicio-indisponivel" hidden>Disponível só no .exe, dentro do Windows.</p>
           </section>
 
+          <section class="grupo vidro" aria-labelledby="g-atualizacao">
+            <h2 id="g-atualizacao">Atualizações</h2>
+            <div class="opcao opcao-chave">
+              <svg class="ic ic-suave"><use href="#i-atualizar"/></svg>
+              <span class="opcao-texto"><strong id="l-atualizacao">Procurar versão nova ao abrir</strong><small>Se houver, o OMAC pergunta antes de instalar</small></span>
+              <button class="chave" role="switch" aria-checked="true" aria-labelledby="l-atualizacao" data-config-bool="atualizacao_automatica"><span></span></button>
+            </div>
+            <div><button class="btn btn-peq" id="atualizacao-procurar" data-acao="atualizacao-procurar"><svg class="ic"><use href="#i-atualizar"/></svg><span>Procurar agora</span></button></div>
+            <p class="dica" id="atualizacao-indisponivel" hidden>Disponível só no .exe, dentro do Windows.</p>
+            <p class="dica">Para procurar, o OMAC só consulta o GitHub. Nenhum dado seu vai junto.</p>
+          </section>
+
           <section class="grupo vidro" aria-labelledby="g-sobre">
             <h2 id="g-sobre">Sobre</h2>
             <div class="sobre">
@@ -596,7 +728,9 @@
               </div>
             </div>
             <p class="privacidade"><svg class="ic ic-suave"><use href="#i-cadeado"/></svg>
-              <span>Tudo fica neste computador. O OMAC não envia nada sozinho: ele só abre a conversa no WhatsApp, e quem envia é você.</span></p>
+              <span>Tudo fica neste computador. O OMAC não envia nenhum dado seu: ele só abre a conversa no WhatsApp, e quem envia é você.</span></p>
+            <p class="dica">Configurações, regras, contatos e pacientes ficam em uma pasta separada do programa e continuam lá quando você baixa uma versão nova. Para ter um backup, copie essa pasta.</p>
+            <div><button class="btn btn-peq" data-acao="abrir-pasta-dados"><svg class="ic"><use href="#i-pasta"/></svg><span>Abrir a pasta dos meus dados</span></button></div>
           </section>
         </div>
       </section>
@@ -649,11 +783,96 @@
     </div>
   </dialog>
 
+  <!-- Versão nova -->
+  <dialog class="modal vidro" id="atualizacao" aria-labelledby="atualizacao-titulo">
+    <div class="modal-corpo">
+      <h2 id="atualizacao-titulo"></h2>
+      <ul class="lista-simples lembretes-lista" id="atualizacao-novidades"></ul>
+      <p>Suas configurações, regras, contatos e pacientes continuam como estão. O OMAC fecha e abre de novo sozinho.</p>
+      <div class="atualizacao-progresso" id="atualizacao-progresso" hidden>
+        <span id="atualizacao-progresso-texto"></span>
+        <div class="trilho" role="progressbar" aria-label="Baixando a versão nova" aria-valuemin="0" aria-valuemax="100" id="atualizacao-barra"><div class="trilho-cheio" id="atualizacao-cheio"></div></div>
+      </div>
+      <p class="modal-erro" id="atualizacao-erro" role="alert" hidden></p>
+      <div class="modal-acoes" id="atualizacao-acoes">
+        <button class="btn" type="button" id="atualizacao-pagina" data-acao="atualizacao-pagina" hidden>Abrir a página de download</button>
+        <button class="btn" type="button" data-acao="atualizacao-agora-nao">Agora não</button>
+        <button class="btn btn-primario" type="button" data-acao="atualizacao-instalar"><svg class="ic"><use href="#i-baixar"/></svg><span>Atualizar</span></button>
+      </div>
+    </div>
+  </dialog>
+
+  <!-- Novo paciente / alterar paciente -->
+  <dialog class="modal vidro" id="ag-paciente" aria-labelledby="ag-paciente-titulo">
+    <form id="form-paciente" class="modal-corpo">
+      <h2 id="ag-paciente-titulo"></h2>
+      <div class="campo campo-texto">
+        <label class="rotulo-campo" for="ag-nome">Nome</label>
+        <input id="ag-nome" type="text" autocomplete="off" required>
+      </div>
+      <div class="form-conta-campos">
+        <div class="campo campo-texto">
+          <label class="rotulo-campo" for="ag-telefone">Telefone com DDD</label>
+          <input id="ag-telefone" type="tel" autocomplete="off" placeholder="(61) 90000-0000">
+        </div>
+        <div class="campo campo-texto">
+          <label class="rotulo-campo" for="ag-valor">Valor da manutenção</label>
+          <input id="ag-valor" type="text" inputmode="decimal" autocomplete="off" placeholder="0,00">
+        </div>
+      </div>
+      <div class="opcao opcao-chave" id="ag-finalizado-linha">
+        <svg class="ic ic-suave"><use href="#i-ok"/></svg>
+        <span class="opcao-texto"><strong id="l-finalizado">Tratamento finalizado</strong><small>O paciente vai para a aba Finalizados</small></span>
+        <button class="chave" id="ag-finalizado" type="button" role="switch" aria-checked="false" aria-labelledby="l-finalizado" data-acao="ag-alternar-finalizado"><span></span></button>
+      </div>
+      <p class="modal-erro" id="ag-paciente-erro" role="alert" hidden></p>
+      <div class="modal-acoes">
+        <button class="btn btn-perigo" type="button" id="ag-excluir" data-acao="ag-excluir"><svg class="ic"><use href="#i-lixeira"/></svg><span>Excluir paciente</span></button>
+        <button class="btn" type="button" data-acao="ag-fechar-paciente">Cancelar</button>
+        <button class="btn btn-primario" type="submit">Salvar</button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- Mensagem para o paciente -->
+  <dialog class="modal vidro" id="ag-mensagem" aria-labelledby="ag-mensagem-titulo">
+    <form id="form-ag-mensagem" class="modal-corpo">
+      <h2 id="ag-mensagem-titulo"></h2>
+      <div class="escolhas ag-tipos" role="group" aria-label="Qual mensagem">
+        <button class="escolha" type="button" data-acao="ag-tipo" data-tipo="agendar">Agendar manutenção</button>
+        <button class="escolha" type="button" data-acao="ag-tipo" data-tipo="cobrar">Cobrar manutenção</button>
+        <button class="escolha" type="button" data-acao="ag-tipo" data-tipo="retorno">Agendar retorno</button>
+      </div>
+      <div class="campo campo-texto">
+        <label class="rotulo-campo" for="ag-msg-telefone">Telefone com DDD</label>
+        <input id="ag-msg-telefone" type="tel" autocomplete="off" placeholder="(61) 90000-0000">
+      </div>
+      <div class="campo campo-texto" id="ag-msg-texto-campo">
+        <label class="rotulo-campo" for="ag-msg-texto">Mensagem</label>
+        <textarea id="ag-msg-texto" rows="6"></textarea>
+      </div>
+      <div class="faixa faixa-aviso" id="ag-sem-pix" hidden>
+        <svg class="ic"><use href="#i-alerta"/></svg>
+        <div class="ag-sem-pix-corpo">
+          <span>Para cobrar, preencha a chave Pix nas Configurações.</span>
+          <button class="btn btn-peq" type="button" data-acao="ag-abrir-config">Abrir Configurações</button>
+        </div>
+      </div>
+      <p class="modal-erro" id="ag-mensagem-erro" role="alert" hidden></p>
+      <div class="modal-acoes">
+        <button class="btn" type="button" data-acao="ag-fechar-mensagem">Cancelar</button>
+        <button class="btn btn-primario" type="submit" id="ag-enviar"><svg class="ic"><use href="#i-whats"/></svg><span>Abrir o WhatsApp</span></button>
+      </div>
+    </form>
+  </dialog>
+
   <div class="avisos-flutuantes" id="toasts" aria-live="polite"></div>
 
   <script src="nucleo.js"></script>
   <script src="notas.js"></script>
   <script src="extrato.js"></script>
   <script src="whatsapp.js"></script>
+  <script src="agendamentos.js"></script>
+  <script src="atualizacao.js"></script>
 </body>
 </html>
