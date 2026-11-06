@@ -31,7 +31,24 @@ const api = () => window.pywebview.api;
 
 /* ---------- Início ---------- */
 
+/* Um script vazio ou cortado não gera erro nenhum: sem esta conferência, a tela fica muda. */
+const MODULOS_ESPERADOS = ["notas", "extrato", "whatsapp", "agendamentos", "atualizacao"];
+
+async function conferirModulos() {
+  for (const nome of MODULOS_ESPERADOS.filter((m) => !modulos[m])) {
+    let detalhe = "";
+    try {
+      const resposta = await fetch(`${nome}.js`);
+      detalhe = `HTTP ${resposta.status}, ${(await resposta.text()).length} letras`;
+    } catch (e) {
+      detalhe = `não abriu (${e.message})`;
+    }
+    omacMostrarErroDeTela(`Módulo ${nome} não rodou: ${detalhe}`);
+  }
+}
+
 async function iniciar() {
+  conferirModulos();
   const r = await api().estado();
   if (r.erro) return mostrarToast(r.erro, { erro: true });
   estado.cfg = r.config;

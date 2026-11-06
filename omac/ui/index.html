@@ -17,7 +17,8 @@
       const faixa = document.getElementById("erro-de-tela");
       if (!faixa) return;
       faixa.hidden = false;
-      faixa.querySelector("code").textContent = window.omacErrosDeTela.slice(0, 5).join(" | ");
+      const motor = (navigator.userAgent.match(/Chrome\/(\d+)/) || [])[1] || "?";
+      faixa.querySelector("code").textContent = window.omacErrosDeTela.slice(0, 5).join(" | ") + " | motor " + motor;
     }
     window.addEventListener("error", function (e) {
       const alvo = e.target;
@@ -807,7 +808,7 @@
     <div class="modal-corpo">
       <h2 id="atualizacao-titulo"></h2>
       <ul class="lista-simples lembretes-lista" id="atualizacao-novidades"></ul>
-      <p>O download abre no navegador. Depois é só usar o arquivo novo no lugar do antigo: suas configurações, regras, contatos e pacientes continuam como estão.</p>
+      <p>O download abre no navegador. Depois é só extrair a pasta nova e usar no lugar da antiga: suas configurações, regras, contatos e pacientes continuam como estão.</p>
       <div class="modal-acoes">
         <button class="btn" type="button" data-acao="atualizacao-agora-nao">Agora não</button>
         <button class="btn btn-primario" type="button" data-acao="atualizacao-pagina"><svg class="ic"><use href="#i-baixar"/></svg><span>Baixar a versão nova</span></button>
