@@ -147,17 +147,9 @@
             </button>
           </div>
 
-          <div class="faixa faixa-info faixa-recolhivel vidro" id="faixa-canceladas" data-recolhivel="canceladas" data-ver="Ver notas" hidden>
+          <div class="faixa faixa-info vidro" id="faixa-canceladas" hidden>
             <svg class="ic"><use href="#i-cancelada"/></svg>
-            <div class="faixa-corpo">
-              <button type="button" class="faixa-cab" data-acao="alternar-avisos" aria-controls="canceladas-lista">
-                <strong>Canceladas, fora do relatório</strong>
-                <span class="faixa-qtd"></span>
-                <span class="faixa-acao"></span>
-                <svg class="ic faixa-seta"><use href="#i-seta"/></svg>
-              </button>
-              <ul class="lista-simples" id="canceladas-lista"></ul>
-            </div>
+            <div><strong id="canceladas-titulo"></strong><ul class="lista-simples" id="canceladas-lista"></ul></div>
           </div>
 
           <div class="faixa faixa-aviso faixa-recolhivel vidro" id="faixa-avisos" data-recolhivel="notas" hidden tabindex="-1">
@@ -637,7 +629,7 @@
                 <span class="pasta-texto" id="cfg-pasta-texto" data-pasta="pasta_notas">Nenhuma pasta escolhida</span>
                 <button class="btn btn-peq" data-acao="escolher-pasta" data-chave="pasta_notas">Alterar</button>
               </div>
-              <p class="dica">Notas canceladas ficam fora do relatório. O OMAC só lê os PDFs: nenhum arquivo desta pasta é movido ou alterado.</p>
+              <p class="dica">Notas canceladas vão para a subpasta <strong>Canceladas</strong> e ficam fora do relatório.</p>
             </div>
             <fieldset class="opcao">
               <legend>Formato padrão da planilha</legend>
@@ -710,7 +702,7 @@
             <h2 id="g-atualizacao">Atualizações</h2>
             <div class="opcao opcao-chave">
               <svg class="ic ic-suave"><use href="#i-atualizar"/></svg>
-              <span class="opcao-texto"><strong id="l-atualizacao">Procurar versão nova ao abrir</strong><small>Se houver, o OMAC pergunta antes de instalar</small></span>
+              <span class="opcao-texto"><strong id="l-atualizacao">Procurar versão nova ao abrir</strong><small>Se houver, o OMAC avisa e você decide se baixa</small></span>
               <button class="chave" role="switch" aria-checked="true" aria-labelledby="l-atualizacao" data-config-bool="atualizacao_automatica"><span></span></button>
             </div>
             <div><button class="btn btn-peq" id="atualizacao-procurar" data-acao="atualizacao-procurar"><svg class="ic"><use href="#i-atualizar"/></svg><span>Procurar agora</span></button></div>
@@ -788,16 +780,10 @@
     <div class="modal-corpo">
       <h2 id="atualizacao-titulo"></h2>
       <ul class="lista-simples lembretes-lista" id="atualizacao-novidades"></ul>
-      <p>Suas configurações, regras, contatos e pacientes continuam como estão. O OMAC fecha e abre de novo sozinho.</p>
-      <div class="atualizacao-progresso" id="atualizacao-progresso" hidden>
-        <span id="atualizacao-progresso-texto"></span>
-        <div class="trilho" role="progressbar" aria-label="Baixando a versão nova" aria-valuemin="0" aria-valuemax="100" id="atualizacao-barra"><div class="trilho-cheio" id="atualizacao-cheio"></div></div>
-      </div>
-      <p class="modal-erro" id="atualizacao-erro" role="alert" hidden></p>
-      <div class="modal-acoes" id="atualizacao-acoes">
-        <button class="btn" type="button" id="atualizacao-pagina" data-acao="atualizacao-pagina" hidden>Abrir a página de download</button>
+      <p>O download abre no navegador. Depois é só usar o arquivo novo no lugar do antigo: suas configurações, regras, contatos e pacientes continuam como estão.</p>
+      <div class="modal-acoes">
         <button class="btn" type="button" data-acao="atualizacao-agora-nao">Agora não</button>
-        <button class="btn btn-primario" type="button" data-acao="atualizacao-instalar"><svg class="ic"><use href="#i-baixar"/></svg><span>Atualizar</span></button>
+        <button class="btn btn-primario" type="button" data-acao="atualizacao-pagina"><svg class="ic"><use href="#i-baixar"/></svg><span>Baixar a versão nova</span></button>
       </div>
     </div>
   </dialog>

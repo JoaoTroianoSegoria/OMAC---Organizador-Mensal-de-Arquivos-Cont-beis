@@ -71,7 +71,7 @@ async function carregarNotas() {
 }
 
 function desenharNotas() {
-  const { notas, total_centavos, avisos, canceladas } = notasEstado.dados;
+  const { notas, total_centavos, avisos, canceladas_movidas } = notasEstado.dados;
   $("#sem-pasta").hidden = true;
   $("#painel-notas").hidden = false;
 
@@ -158,10 +158,16 @@ function desenharNotas() {
   $("#res-avisos").textContent = String(itens.length);
   $("#res-avisos-cartao").classList.toggle("tem", itens.length > 0);
 
-  // Canceladas do mês: o PDF continua na pasta, só não entra no relatório.
-  mostrarQtdAvisos($("#faixa-canceladas"), canceladas.length, "nota", "notas");
-  $("#canceladas-lista").replaceChildren(...canceladas.map((a) =>
-    Object.assign(document.createElement("li"), { textContent: a })));
+  // Canceladas movidas nesta leitura
+  $("#faixa-canceladas").hidden = canceladas_movidas.length === 0;
+  if (canceladas_movidas.length) {
+    const n = canceladas_movidas.length;
+    $("#canceladas-titulo").textContent = n === 1
+      ? "1 nota cancelada foi movida para a pasta “Canceladas”:"
+      : `${n} notas canceladas foram movidas para a pasta “Canceladas”:`;
+    $("#canceladas-lista").replaceChildren(...canceladas_movidas.map((a) =>
+      Object.assign(document.createElement("li"), { textContent: a })));
+  }
 
   $$('[data-acao="exportar"]').forEach((b) => { b.disabled = notas.length === 0; });
 }

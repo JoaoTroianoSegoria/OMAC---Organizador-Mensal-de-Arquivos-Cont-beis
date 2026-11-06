@@ -262,7 +262,7 @@ function desenharFaixasRecolhiveis() {
     faixa.querySelector(".lista-simples").hidden = recolhida;
     const cabecalho = faixa.querySelector(".faixa-cab");
     cabecalho.setAttribute("aria-expanded", String(!recolhida));
-    cabecalho.querySelector(".faixa-acao").textContent = recolhida ? (faixa.dataset.ver || "Ver avisos") : "Minimizar";
+    cabecalho.querySelector(".faixa-acao").textContent = recolhida ? "Ver avisos" : "Minimizar";
   });
 }
 
@@ -272,9 +272,9 @@ function recolherFaixa(faixa, recolher) {
   mudarConfig({ avisos_recolhidos: recolher ? [...outras, id] : outras });
 }
 
-function mostrarQtdAvisos(faixa, qtd, singular = "aviso", plural = "avisos") {
+function mostrarQtdAvisos(faixa, qtd) {
   faixa.hidden = qtd === 0;
-  faixa.querySelector(".faixa-qtd").textContent = `${qtd} ${qtd === 1 ? singular : plural}`;
+  faixa.querySelector(".faixa-qtd").textContent = `${qtd} ${qtd === 1 ? "aviso" : "avisos"}`;
 }
 
 /* ---------- Notificações ---------- */

@@ -36,7 +36,6 @@
 .modal .faixa { padding: .85rem 1rem; border-radius: var(--raio-p); }
 .lembretes-lista { margin: 0; gap: .45rem; font-size: 1.05rem; }
 .lembretes-lista:empty { display: none; }
-.atualizacao-progresso { display: flex; flex-direction: column; gap: .5rem; }
 
 [data-contraste="alto"] .modal-erro { color: var(--texto); }
 [data-contraste="alto"] #whats-qtd { color: inherit; }
