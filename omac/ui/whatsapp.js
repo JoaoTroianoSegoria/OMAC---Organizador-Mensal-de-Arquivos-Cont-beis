@@ -47,18 +47,6 @@ Object.assign(acoes, {
   "whats-enviar-lembrete": enviarLembrete,
 });
 
-function botaoIcone(acao, icone, rotulo, dados) {
-  const b = document.createElement("button");
-  b.type = "button";
-  b.className = "btn-linha";
-  b.dataset.acao = acao;
-  Object.assign(b.dataset, dados);
-  b.title = rotulo;
-  b.setAttribute("aria-label", rotulo);
-  b.innerHTML = `<svg class="ic"><use href="#${icone}"/></svg>`;
-  return b;
-}
-
 /* ---------- Abas ---------- */
 
 function mostrarAbaWhats(aba) {
@@ -276,11 +264,6 @@ async function carregarContatos() {
   const r = await api().whatsapp_contatos();
   if (r.erro) return mostrarToast(r.erro, { erro: true });
   desenharContatos(r.contatos);
-}
-
-function telefoneBR(digitos) {
-  const m = /^55(\d{2})(\d{4,5})(\d{4})$/.exec(digitos);
-  return m ? `(${m[1]}) ${m[2]}-${m[3]}` : digitos;
 }
 
 function desenharContatos(contatos) {

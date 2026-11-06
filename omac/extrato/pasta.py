@@ -114,6 +114,9 @@ def varrer(pasta: Path) -> Consolidado:
             extratos.append(ler_extrato(arquivo))
         except ExtratoIlegivel as e:
             avisos.append({"arquivo": arquivo.name, "mensagem": f"Ficou de fora: {e}."})
+        except (ValueError, ArithmeticError, OSError) as e:
+            # Data ou valor impossível no PDF: perde este arquivo, não a tela inteira.
+            avisos.append({"arquivo": arquivo.name, "mensagem": f"Ficou de fora: não consegui entender o PDF ({e})."})
     c = consolidar(extratos)
     c.avisos = avisos
     return c

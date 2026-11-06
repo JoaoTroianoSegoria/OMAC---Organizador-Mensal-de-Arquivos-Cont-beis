@@ -27,6 +27,10 @@
 .modal-corpo { display: flex; flex-direction: column; gap: 1rem; padding: 1.5rem; }
 .modal h2 { font-size: 1.25rem; }
 .modal .campo-texto { flex: none; }
+/* O campo de vidro some no fundo sólido da janela: aqui ele precisa de borda. */
+.modal .campo-texto input, .modal .campo-texto textarea {
+  background: var(--solido-2); border: 1px solid var(--solido-borda); box-shadow: none;
+}
 .modal-acoes { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: .6rem; margin-top: .25rem; }
 .modal-erro { color: var(--erro); font-weight: 600; }
 .modal .faixa { padding: .85rem 1rem; border-radius: var(--raio-p); }
@@ -34,3 +38,4 @@
 .lembretes-lista:empty { display: none; }
 
 [data-contraste="alto"] .modal-erro { color: var(--texto); }
+[data-contraste="alto"] #whats-qtd { color: inherit; }

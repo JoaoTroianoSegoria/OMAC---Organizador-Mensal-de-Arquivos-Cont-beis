@@ -43,6 +43,9 @@ VARIANTES = [
     ("whatsapp-lembretes", "notas", {"tema": "escuro", "visual": "bonito"}, {"whats": "lembretes"}),
     ("whatsapp-envio-otimizado", "whatsapp", {"tema": "escuro", "visual": "otimizado"}, {"whats": "janela"}),
     ("whatsapp-lembretes-contraste", "notas", {"tema": "claro", "alto_contraste": True}, {"whats": "lembretes"}),
+    ("agendamentos", "agendamentos", {"tema": "claro", "visual": "bonito"}, {"agenda": "lista"}),
+    ("agendamentos-mensagem", "agendamentos", {"tema": "escuro", "visual": "bonito"}, {"agenda": "mensagem"}),
+    ("notas-avisos-minimizados", "notas", {"tema": "claro", "visual": "bonito", "avisos_recolhidos": ["notas"]}, {}),
     ("config-whatsapp", "config", {"tema": "claro", "visual": "bonito"}, {"rolar": "#g-whats"}),
     ("config-claro", "config", {"tema": "claro", "visual": "bonito"}, {}),
     ("config-escuro", "config", {"tema": "escuro", "visual": "bonito"}, {}),
@@ -62,6 +65,24 @@ def _preparar_whatsapp(api, caso: str | None) -> None:
             d["ultima_abertura"] = ""
         else:
             d["ultima_abertura"] = hoje.isoformat()  # sem a janela de lembretes por cima
+
+
+def _preparar_agendamentos(api) -> None:
+    from datetime import date
+
+    from omac.agendamentos.pacientes import adicionar as adicionar_paciente
+
+    with api._agenda() as d:
+        if d["pacientes"]:
+            return
+        for nome, telefone, valor, agendado in (
+            ("ANA BEATRIZ MOREIRA", "61900000001", "250,00", True),
+            ("CARLOS EDUARDO LIMA", "61900000002", "250,00", False),
+            ("LUCAS COSTA RIBEIRO", "", "180,00", False),
+            ("MARIANA ALVES SOUZA", "61900000004", "300,00", True),
+        ):
+            p = adicionar_paciente(d["pacientes"], {"nome": nome, "telefone": telefone, "valor": valor})
+            p["agendado_em"] = date.today().isoformat() if agendado else ""
 
 
 def main() -> None:
@@ -90,7 +111,9 @@ def main() -> None:
                                  "alto_contraste": False, "lembrete_fechamento_dia": 0,
                                  "assistente_nome": "Exemplo", "lembrete_nome": "Dra. Exemplo",
                                  "lembrete_telefone": "61900000000", **cfg})
+                api._cfg["chave_pix"] = "chave@exemplo.com"
                 _preparar_whatsapp(api, extras.get("whats"))
+                _preparar_agendamentos(api)
 
                 def chamar(metodo, args, api=api):
                     return json.dumps(getattr(api, metodo)(*json.loads(args)))
@@ -115,6 +138,11 @@ def main() -> None:
                     if extras["whats"] == "janela":
                         pagina.click('#whats-corpo [data-acao="whats-enviar"]')
                         pagina.wait_for_selector("#envio[open]")
+                if "agenda" in extras:
+                    pagina.wait_for_selector("#ag-ativos-corpo tr")
+                    if extras["agenda"] == "mensagem":
+                        pagina.click('#ag-ativos-corpo [data-acao="ag-mensagem"]')
+                        pagina.click('[data-acao="ag-tipo"][data-tipo="cobrar"]')
                 if extras.get("whats") == "lembretes":
                     pagina.wait_for_selector("#lembretes[open]")
                 if "rolar" in extras:

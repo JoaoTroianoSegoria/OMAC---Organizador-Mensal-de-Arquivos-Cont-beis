@@ -118,6 +118,10 @@ _RE_TOMADOR = re.compile(
 )
 _RE_DEPENDENTE = re.compile(r"\bdependente\b\s*[:\-]?\s*(.+)", re.IGNORECASE | re.DOTALL)
 _RE_CANCELADA = re.compile(r"\bcancelad[ao]\b", re.IGNORECASE)
+# A marca de cancelamento fica sozinha na linha: "CANCELADA", "NFS-e cancelada".
+_RE_MARCA_CANCELADA = re.compile(
+    r"^\s*(?:(?:nfs-?e|nota(?:\s+fiscal)?)\s+)?cancelad[ao]\s*$", re.IGNORECASE | re.MULTILINE
+)
 
 
 def extrair_texto(caminho: Path) -> str:
@@ -153,7 +157,10 @@ def interpretar_texto(texto: str, nome_arquivo: str) -> Nota:
         raise NotaIlegivel("não encontrei " + ", ".join(faltando) + " no PDF")
 
     situacao = _buscar(_RE_SITUACAO, texto) or ""
-    cancelada = bool(_RE_CANCELADA.search(situacao) or _RE_CANCELADA.search(texto))
+    cancelada = bool(_RE_CANCELADA.search(situacao) or _RE_MARCA_CANCELADA.search(texto))
+    if not cancelada and _RE_CANCELADA.search(texto):
+        # Pode ser só a descrição do serviço: a nota continua valendo, mas alguém precisa olhar.
+        avisos.append("A palavra “cancelada” aparece no texto da nota. Ela continua no relatório: confira se vale mesmo.")
 
     descricao = " ".join((_buscar(_RE_DESCRICAO, texto) or "").split())
     if "tratamento odontol" not in _sem_acentos(descricao).lower():
