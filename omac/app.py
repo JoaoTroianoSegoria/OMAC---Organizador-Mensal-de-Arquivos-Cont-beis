@@ -9,6 +9,10 @@ import traceback
 from pathlib import Path
 
 from . import APP_NOME, APP_NOME_COMPLETO, __version__, fechamento, sistema
+from .agendamentos.api import AgendamentosApi
+from .armazem import salvar_json
+from .atualizacao import instalar
+from .atualizacao.api import AtualizacaoApi
 from .extrato import regras as rg
 from .extrato.api import ExtratoApi
 from .extrato.pasta import varrer as varrer_extratos
@@ -20,7 +24,7 @@ from .whatsapp.api import WhatsappApi
 PASTA_EXTRATOS_TESTE = "Extratos"
 
 
-class Api(NotasApi, ExtratoApi, WhatsappApi):
+class Api(NotasApi, ExtratoApi, WhatsappApi, AgendamentosApi, AtualizacaoApi):
     """Tudo o que a interface pode chamar. Módulo novo entra nesta lista de classes."""
 
 
@@ -40,7 +44,7 @@ def autoteste(pasta: str, saida: str) -> int:
 def _autoteste(pasta: str, saida: str) -> int:
     v = varrer(Path(pasta))
     relatorio = {"versao": __version__, "notas": len(v.notas), "avisos": v.avisos,
-                 "canceladas_movidas": v.canceladas_movidas, "arquivos": []}
+                 "canceladas": [n.arquivo for n in v.canceladas], "arquivos": []}
     for ano, mes, _ in v.competencias():
         notas = v.do_mes(ano, mes)
         for formato in ("xlsx", "csv"):
@@ -63,9 +67,37 @@ def _autoteste(pasta: str, saida: str) -> int:
     return 0
 
 
+def autoteste_atualizacao(novo: str, saida: str) -> int:
+    """Faz a troca de verdade com este .exe aberto (usado no GitHub Actions, no Windows)."""
+    try:
+        executavel = Path(sys.executable)
+        instalar.trocar_executavel(executavel, Path(novo))
+        instalar.abrir_programa(executavel, "--confirmar-atualizacao", saida, getattr(sys, "_MEIPASS", ""))
+        return 0
+    except Exception:  # noqa: BLE001
+        salvar_json(Path(saida), {"erro": traceback.format_exc()})
+        return 1
+
+
+def confirmar_atualizacao(saida: str, pasta_do_anterior: str) -> int:
+    """Segunda metade do autoteste: roda no .exe novo, depois que ele assumiu o lugar."""
+    executavel = Path(sys.executable)
+    salvar_json(Path(saida), {
+        "versao": __version__,
+        "executavel": str(executavel),
+        "limpou": instalar.limpar_restos(executavel),
+        "pasta_separada": getattr(sys, "_MEIPASS", "") != pasta_do_anterior,
+    })
+    return 0
+
+
 def main() -> int:
     if len(sys.argv) == 4 and sys.argv[1] == "--autoteste":
         return autoteste(sys.argv[2], sys.argv[3])
+    if len(sys.argv) == 4 and sys.argv[1] == "--autoteste-atualizacao":
+        return autoteste_atualizacao(sys.argv[2], sys.argv[3])
+    if len(sys.argv) == 4 and sys.argv[1] == "--confirmar-atualizacao":
+        return confirmar_atualizacao(sys.argv[2], sys.argv[3])
 
     if not sistema.webview2_instalado():
         sistema.avisar_sem_webview2()
@@ -74,6 +106,8 @@ def main() -> int:
     import webview
 
     sistema.corrigir_inicio_automatico()
+    if sistema.rodando_como_exe():
+        instalar.limpar_restos_em_segundo_plano(Path(sys.executable))
     api = Api()
     cfg = api._cfg
     escuro = cfg["tema"] == "escuro"

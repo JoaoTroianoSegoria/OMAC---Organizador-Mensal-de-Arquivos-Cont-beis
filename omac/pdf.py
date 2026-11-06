@@ -14,7 +14,7 @@ def extrair_paginas(caminho: Path, limite: int | None = None) -> list[str]:
     import pypdfium2 as pdfium
 
     try:
-        # Lê os bytes antes: assim o arquivo não fica preso e pode ser movido.
+        # Lê os bytes antes: assim o arquivo não fica preso por este programa.
         dados = Path(caminho).read_bytes()
         pdf = pdfium.PdfDocument(dados)
     except Exception as e:  # pdfium levanta PdfiumError, OSError, etc.
