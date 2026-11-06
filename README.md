@@ -25,7 +25,7 @@ extrato do banco precisavam ser passadas à mão para uma planilha que vai para 
 - **Lê a pasta de PDFs das notas do ano** (ex.: `NFS-e 2026`) e monta a planilha do mês em um clique, em **Excel (.xlsx)** ou **CSV**.
 - **Filtra pela data de competência**, não pela de emissão. Uma nota emitida em 03/11 com competência em outubro entra no relatório de outubro.
 - **Nome do paciente:** vem do nome do arquivo. Se a descrição do serviço disser *"tratamento odontológico referente ao dependente FULANO"*, o nome do dependente tem prioridade (caso de nota no CPF do responsável).
-- **Notas canceladas** ficam fora do relatório e da planilha. O OMAC não move nem altera nenhum PDF.
+- **Notas canceladas** ficam fora do relatório e são movidas sozinhas para a subpasta `Canceladas`.
 - **Avisos antes de mandar para a contabilidade:** descrição sem "tratamento odontológico", número do arquivo diferente do número da nota, nota repetida, PDF ilegível, nome de arquivo fora do padrão.
 - **Rápido em PC antigo:** cada nota é lida uma única vez (≈5 ms) e fica em cache. Nas próximas vezes, só as notas novas são lidas.
 
@@ -71,7 +71,7 @@ extrato do banco precisavam ser passadas à mão para uma planilha que vai para 
 - **Visual "Otimizado"**, sem transparências nem animações, para computador fraco. Ele já vem ligado sozinho na primeira vez em PCs com pouca memória.
 - **Acessibilidade:** texto de 100% a 200% (também com <kbd>Ctrl</kbd> + <kbd>+</kbd> / <kbd>−</kbd> / <kbd>0</kbd>), alto contraste, opção de reduzir animações, navegação por teclado e leitores de tela.
 - **Avisos que minimizam:** a faixa de avisos fica só com a quantidade, sem sumir, e abre de novo com um clique.
-- **Atualização pelo próprio app:** quando sai uma versão nova, o OMAC pergunta, baixa, confere o arquivo e abre de novo, sem mexer nos dados.
+- **Aviso de versão nova:** o OMAC avisa e abre o download no navegador. Trocar o `.exe` não mexe nos dados.
 - **Menu lateral preparado para novos módulos.**
 
 <p align="center">
@@ -144,7 +144,7 @@ O GitHub Actions roda os testes, gera o `.exe` de 64 e 32 bits, executa um **aut
 
 ### Publicar uma versão
 
-Mude `__version__` em `omac/__init__.py` e leve para a `main`. O GitHub Actions testa, gera os `.exe` e publica a Release sozinho; na próxima abertura, o app oferece a atualização. Um merge sem mudar o número não publica nada.
+Mude `__version__` em `omac/__init__.py` e leve para a `main`. O GitHub Actions testa, gera os `.exe` e publica a Release sozinho; na próxima abertura, o app avisa que há versão nova. Um merge sem mudar o número não publica nada.
 
 ### Estrutura
 
@@ -162,7 +162,7 @@ omac/
 ├── extrato/          leitor.py · pasta.py · regras.py · exportar.py · api.py
 ├── whatsapp/         mensagens.py · lembretes.py · dados.py · api.py
 ├── agendamentos/     pacientes.py · mensagens.py · api.py
-├── atualizacao/      github.py · instalar.py · api.py
+├── atualizacao/      github.py · api.py
 └── ui/               index.html, estilo.css, nucleo.js + um .js/.css por módulo
 tests/                testes + gerador de notas e extratos de exemplo
 ```
