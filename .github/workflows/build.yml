@@ -54,6 +54,23 @@ jobs:
           if (-not (Test-Path 'Notas fiscais - Outubro 2026.xlsx')) { exit 1 }
           if (-not (Test-Path 'Fechamento - Outubro 2026.xlsx')) { exit 1 }
 
+      - name: Autoteste da tela (.exe e WebView2 de verdade)
+        shell: pwsh
+        run: |
+          $saida = Join-Path $PWD 'tela.json'
+          $p = Start-Process -FilePath dist\OMAC.exe -ArgumentList '--autoteste-tela', 'exemplo', "`"$saida`"" -PassThru
+          for ($i = 0; $i -lt 120 -and -not (Test-Path $saida); $i++) { Start-Sleep 1 }
+          if (-not (Test-Path $saida)) {
+            Stop-Process -Id $p.Id -Force -ErrorAction SilentlyContinue
+            echo "::error title=Tela ${{ matrix.bits }} bits::a janela não respondeu em 120 s"
+            exit 1
+          }
+          Start-Sleep 2
+          $texto = (Get-Content $saida -Raw -Encoding utf8) -replace '[\r\n]+', ' '
+          echo "::notice title=Tela ${{ matrix.bits }} bits::$texto"
+          python -c "import json,sys; r=json.load(open(sys.argv[1],encoding='utf-8')); e=r.get('extrato') or {}; sys.exit('erro' in r or e.get('erros') or e.get('meses')!=12 or not e.get('lancamentos'))" $saida
+          if ($LASTEXITCODE -ne 0) { exit 1 }
+
       - name: Renomear
         shell: pwsh
         run: Move-Item dist\OMAC.exe "dist\OMAC-${{ matrix.bits }}bits.exe"
