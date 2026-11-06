@@ -7,7 +7,7 @@ from omac.app import Api
 from omac.atualizacao import github as gh
 
 
-def _release(tag="v99.0.0", arquivo="OMAC-64bits.exe"):
+def _release(tag="v99.0.0", arquivo="OMAC-64bits.zip"):
     return {
         "tag_name": tag,
         "body": "## What's Changed\n* Nova tela by @alguem in https://exemplo/1\n\n**Full Changelog**: https://exemplo",
