@@ -35,7 +35,7 @@ def numero_da_versao(texto: str) -> tuple[int, ...] | None:
 
 
 def nome_do_arquivo(bits: int | None = None) -> str:
-    return f"OMAC-{bits or struct.calcsize('P') * 8}bits.exe"
+    return f"OMAC-{bits or struct.calcsize('P') * 8}bits.zip"
 
 
 def novidades(corpo: str | None) -> list[str]:
