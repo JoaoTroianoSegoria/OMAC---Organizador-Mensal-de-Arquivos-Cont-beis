@@ -8,6 +8,29 @@
   <link rel="stylesheet" href="extrato.css">
   <link rel="stylesheet" href="whatsapp.css">
   <link rel="stylesheet" href="agendamentos.css">
+  <script>
+    /* Antes de tudo: se um script não carregar ou quebrar, a tela diz qual, em vez de ficar muda. */
+    window.omacErrosDeTela = [];
+    function omacMostrarErroDeTela(texto) {
+      window.omacErrosDeTela.push(texto);
+      console.error(texto);
+      const faixa = document.getElementById("erro-de-tela");
+      if (!faixa) return;
+      faixa.hidden = false;
+      faixa.querySelector("code").textContent = window.omacErrosDeTela.slice(0, 5).join(" | ");
+    }
+    window.addEventListener("error", function (e) {
+      const alvo = e.target;
+      if (alvo && alvo !== window && (alvo.src || alvo.href)) {
+        omacMostrarErroDeTela("Não carregou: " + String(alvo.src || alvo.href).split("/").pop());
+      } else {
+        omacMostrarErroDeTela(e.message + " (" + String(e.filename || "").split("/").pop() + ":" + e.lineno + ")");
+      }
+    }, true);
+    window.addEventListener("unhandledrejection", function (e) {
+      omacMostrarErroDeTela("Erro: " + (e.reason && e.reason.message || e.reason));
+    });
+  </script>
 </head>
 <body>
   <!-- Ícones (traço 2px, 24×24) -->
@@ -39,6 +62,10 @@
       <symbol id="i-cadeado" viewBox="0 0 24 24"><rect x="4.5" y="10.5" width="15" height="10" rx="2"/><path d="M8 10.5V7.5a4 4 0 0 1 8 0v3"/></symbol>
     </defs>
   </svg>
+
+  <div class="erro-de-tela" id="erro-de-tela" role="alert" hidden>
+    <strong>Parte do OMAC não carregou. Mande um print desta mensagem:</strong> <code></code>
+  </div>
 
   <div class="fundo" aria-hidden="true"></div>
 

@@ -396,6 +396,12 @@ button { cursor: pointer; }
 .faixa-aviso::after { background: linear-gradient(160deg, var(--aviso-borda), transparent 50%, var(--aviso-borda)); }
 .faixa-info { background: var(--info-fundo); color: var(--info-texto); }
 .faixa-info::after { background: linear-gradient(160deg, var(--info-borda), transparent 50%, var(--info-borda)); }
+.erro-de-tela {
+  position: fixed; inset: .5rem .5rem auto; z-index: 1000;
+  padding: .6rem .9rem; border-radius: .6rem;
+  color: #fff; background: #b3261e; font-size: .9rem; overflow-wrap: anywhere;
+}
+.erro-de-tela code { font-family: inherit; }
 .faixa-corpo { flex: 1; min-width: 0; }
 .faixa-cab {
   display: flex; align-items: center; flex-wrap: wrap; gap: .25rem .7rem;
