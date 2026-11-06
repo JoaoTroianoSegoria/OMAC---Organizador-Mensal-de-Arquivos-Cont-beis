@@ -2,12 +2,13 @@
 
 - Lê só os PDFs que estão direto na pasta (não entra em subpastas).
 - Guarda o resultado num cache, então cada nota só é lida uma vez.
-- Nota cancelada fica fora do relatório. Nenhum arquivo da pasta é movido ou alterado.
+- Nota cancelada vai para a subpasta "Canceladas" e fica fora do relatório.
 """
 
 from __future__ import annotations
 
 import json
+import shutil
 import time
 from collections import Counter
 from dataclasses import dataclass, field
@@ -16,13 +17,15 @@ from typing import Callable
 
 from .leitor import VERSAO_LEITOR, Nota, NotaIlegivel, ler_nota
 
+PASTA_CANCELADAS = "Canceladas"
+
 
 @dataclass
 class Varredura:
     notas: list[Nota] = field(default_factory=list)
     # Avisos que não são de uma nota específica: PDF ilegível, número repetido…
     avisos: list[dict] = field(default_factory=list)
-    canceladas: list[Nota] = field(default_factory=list)
+    canceladas_movidas: list[str] = field(default_factory=list)
 
     def do_mes(self, ano: int, mes: int) -> list[Nota]:
         """Notas cuja competência cai no mês/ano pedido, em ordem de número."""
@@ -30,9 +33,6 @@ class Varredura:
             (n for n in self.notas if n.competencia.year == ano and n.competencia.month == mes),
             key=lambda n: n.numero,
         )
-
-    def canceladas_do_mes(self, ano: int, mes: int) -> list[Nota]:
-        return [n for n in self.canceladas if n.competencia.year == ano and n.competencia.month == mes]
 
     def competencias(self) -> list[tuple[int, int, int]]:
         """(ano, mês, quantidade de notas) de cada competência encontrada."""
@@ -97,6 +97,7 @@ def varrer(
     pasta: Path,
     cache: Cache | None = None,
     progresso: Callable[[int, int], None] | None = None,
+    mover_canceladas: bool = True,
 ) -> Varredura:
     pasta = Path(pasta)
     if not pasta.is_dir():
@@ -122,12 +123,15 @@ def varrer(
                     {"arquivo": arquivo.name, "mensagem": f"Não consegui ler o arquivo ({e.strerror or e})."}
                 )
                 nota = None
-            if nota:
+            if nota and not nota.cancelada:
                 cache.guardar(arquivo, nota)
 
-        if nota:
+        if nota and nota.cancelada:
+            if mover_canceladas:
+                _mover_cancelada(arquivo, pasta, resultado)
+        elif nota:
             presentes.add(Cache._chave(arquivo))
-            (resultado.canceladas if nota.cancelada else resultado.notas).append(nota)
+            resultado.notas.append(nota)
 
         agora = time.monotonic()
         if progresso and (agora - ultimo_aviso > 0.1 or i == total):
@@ -144,3 +148,29 @@ def varrer(
             {"arquivo": None, "mensagem": f"A nota nº {num} aparece em mais de um arquivo: {nomes}."}
         )
     return resultado
+
+
+def _mover_cancelada(arquivo: Path, pasta: Path, resultado: Varredura) -> None:
+    destino_pasta = pasta / PASTA_CANCELADAS
+    destino = destino_pasta / arquivo.name
+    if destino.exists():
+        resultado.avisos.append(
+            {
+                "arquivo": arquivo.name,
+                "mensagem": f"Nota cancelada, mas já existe um arquivo com esse nome em “{PASTA_CANCELADAS}”. "
+                "Ficou fora do relatório e não foi movida.",
+            }
+        )
+        return
+    try:
+        destino_pasta.mkdir(exist_ok=True)
+        shutil.move(str(arquivo), str(destino))
+        resultado.canceladas_movidas.append(arquivo.name)
+    except OSError as e:
+        resultado.avisos.append(
+            {
+                "arquivo": arquivo.name,
+                "mensagem": "Nota cancelada; ficou fora do relatório, mas não consegui movê-la "
+                f"(o PDF está aberto em outro programa?). Detalhe: {e.strerror or e}",
+            }
+        )
