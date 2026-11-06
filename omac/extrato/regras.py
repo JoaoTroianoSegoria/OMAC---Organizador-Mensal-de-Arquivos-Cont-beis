@@ -11,6 +11,7 @@ import json
 import re
 from pathlib import Path
 
+from ..armazem import salvar_json
 from ..texto import normalizar
 from .leitor import Lancamento
 
@@ -83,8 +84,7 @@ def carregar(caminho: Path) -> list[dict]:
 
 
 def salvar(caminho: Path, regras: list[dict]) -> None:
-    caminho.parent.mkdir(parents=True, exist_ok=True)
-    caminho.write_text(json.dumps({"regras": regras}, ensure_ascii=False, indent=2), encoding="utf-8")
+    salvar_json(caminho, {"regras": regras})
 
 
 def importar(regras: list[dict], arquivo: Path) -> tuple[list[dict], int]:
