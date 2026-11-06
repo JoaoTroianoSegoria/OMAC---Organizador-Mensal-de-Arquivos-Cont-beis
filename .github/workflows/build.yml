@@ -3,12 +3,11 @@ name: Testes e .exe
 on:
   push:
     branches: [main]
-    tags: ["v*"]
   pull_request:
   workflow_dispatch:
 
 permissions:
-  contents: write  # para publicar a Release quando houver uma tag v*
+  contents: write  # para publicar a Release quando o número da versão mudar
 
 jobs:
   windows:
@@ -50,10 +49,27 @@ jobs:
           python -m tests.fabrica exemplo
           $p = Start-Process -FilePath dist\OMAC.exe -ArgumentList '--autoteste', 'exemplo', 'relatorio.json' -Wait -PassThru
           Get-Content relatorio.json
-          python -c "import json,sys; r=json.load(open('relatorio.json',encoding='utf-8')); sys.exit('erro' in r or r['notas']!=12 or len(r['canceladas_movidas'])!=1 or r['lancamentos']==0)"
+          python -c "import json,sys; r=json.load(open('relatorio.json',encoding='utf-8')); sys.exit('erro' in r or r['notas']!=12 or len(r['canceladas'])!=1 or r['lancamentos']==0)"
           if ($LASTEXITCODE -ne 0 -or $p.ExitCode -ne 0) { exit 1 }
           if (-not (Test-Path 'Notas fiscais - Outubro 2026.xlsx')) { exit 1 }
           if (-not (Test-Path 'Fechamento - Outubro 2026.xlsx')) { exit 1 }
+
+      - name: Autoteste da atualização (troca o .exe aberto de verdade)
+        shell: pwsh
+        run: |
+          $pasta = Join-Path $PWD 'teste-atualizacao'
+          New-Item -ItemType Directory $pasta | Out-Null
+          Copy-Item dist\OMAC.exe "$pasta\OMAC.exe"
+          Copy-Item dist\OMAC.exe "$pasta\OMAC.exe.novo"
+          $saida = Join-Path $PWD 'atualizacao.json'
+          Start-Process -FilePath "$pasta\OMAC.exe" -ArgumentList '--autoteste-atualizacao', "`"$pasta\OMAC.exe.novo`"", "`"$saida`""
+          for ($i = 0; $i -lt 90 -and -not (Test-Path $saida); $i++) { Start-Sleep 1 }
+          Get-Content $saida
+          python -c "import json,sys; r=json.load(open(sys.argv[1],encoding='utf-8')); sys.exit('erro' in r or not r['limpou'] or not r['pasta_separada'])" $saida
+          if ($LASTEXITCODE -ne 0) { exit 1 }
+          if (-not (Test-Path "$pasta\OMAC.exe")) { exit 1 }
+          if (Test-Path "$pasta\OMAC.exe.novo") { exit 1 }
+          if (Test-Path "$pasta\OMAC.exe.antigo") { exit 1 }
 
       - name: Renomear
         shell: pwsh
@@ -65,16 +81,35 @@ jobs:
           path: dist/OMAC-${{ matrix.bits }}bits.exe
 
   release:
-    name: Publicar Release
-    if: startsWith(github.ref, 'refs/tags/v')
+    name: Publicar versão
+    # Sobe sozinho quando chega na main com um número de versão que ainda não foi publicado.
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     needs: windows
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v4
+
+      - name: Ver se a versão é nova
+        id: versao
+        run: |
+          versao=$(sed -n 's/^__version__ = "\(.*\)"$/\1/p' omac/__init__.py)
+          echo "tag=v$versao" >> "$GITHUB_OUTPUT"
+          if git ls-remote --exit-code --tags origin "refs/tags/v$versao"; then
+            echo "nova=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "nova=true" >> "$GITHUB_OUTPUT"
+          fi
+
       - uses: actions/download-artifact@v4
+        if: steps.versao.outputs.nova == 'true'
         with:
           path: dist
           merge-multiple: true
+
       - uses: softprops/action-gh-release@v2
+        if: steps.versao.outputs.nova == 'true'
         with:
+          tag_name: ${{ steps.versao.outputs.tag }}
+          target_commitish: ${{ github.sha }}
           files: dist/*.exe
           generate_release_notes: true
