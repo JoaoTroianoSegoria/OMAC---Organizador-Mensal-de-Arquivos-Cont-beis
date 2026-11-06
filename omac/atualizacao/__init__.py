@@ -1,4 +1,6 @@
-"""Módulo de atualização: procura uma versão nova no GitHub e troca o .exe.
+"""Módulo de atualização: procura uma versão nova no GitHub e avisa.
 
-É sempre opcional. A pasta de dados do usuário fica em outro lugar e não é alterada.
+O download fica com o navegador: o app não baixa nem troca o próprio .exe, porque
+esse jeito de atualizar é suspeito para o antivírus. Os dados do usuário ficam em
+outra pasta e não mudam ao trocar de versão.
 """

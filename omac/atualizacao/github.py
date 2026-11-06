@@ -12,8 +12,6 @@ from urllib.request import Request, urlopen
 from .. import REPOSITORIO, __version__
 
 URL_ULTIMA = f"https://api.github.com/repos/{REPOSITORIO}/releases/latest"
-# Só baixa daqui, mesmo que a resposta aponte para outro lugar.
-PREFIXO_DOWNLOAD = f"https://github.com/{REPOSITORIO}/releases/download/"
 PAGINA_RELEASES = f"https://github.com/{REPOSITORIO}/releases/latest"
 AGENTE = "OMAC-atualizador"
 TEMPO_LIMITE = 10  # segundos
@@ -21,15 +19,12 @@ MAX_NOVIDADES = 8
 
 
 class ErroDeAtualizacao(Exception):
-    """Algo deu errado. A mensagem é para mostrar na tela, e o programa atual segue intacto."""
+    """Algo deu errado. A mensagem é para mostrar na tela."""
 
 
 @dataclass(frozen=True)
 class VersaoNova:
     numero: str
-    url: str
-    tamanho: int
-    sha256: str
     novidades: list[str] = field(default_factory=list)
 
 
@@ -54,25 +49,16 @@ def novidades(corpo: str | None) -> list[str]:
 
 
 def interpretar(release: dict, atual: str = __version__, bits: int | None = None) -> VersaoNova | None:
-    """A versão para instalar, ou None se não houver nada mais novo e confiável."""
+    """A versão para oferecer, ou None se não houver nada mais novo para baixar."""
     numero = numero_da_versao(release.get("tag_name", ""))
     if numero is None or numero <= (numero_da_versao(atual) or ()):
         return None
     if release.get("draft") or release.get("prerelease"):
         return None
-
-    nome = nome_do_arquivo(bits)
-    for arquivo in release.get("assets", []):
-        if arquivo.get("name") != nome:
-            continue
-        url = str(arquivo.get("browser_download_url", ""))
-        digest = str(arquivo.get("digest") or "")
-        # A publicação ainda pode estar em andamento: sem hash ou sem tamanho, não instala.
-        if not url.startswith(PREFIXO_DOWNLOAD) or not digest.startswith("sha256:") or not arquivo.get("size"):
-            return None
-        return VersaoNova(".".join(map(str, numero)), url, int(arquivo["size"]),
-                          digest.removeprefix("sha256:").lower(), novidades(release.get("body")))
-    return None
+    # A publicação pode estar em andamento: sem o arquivo ainda não há o que baixar.
+    if not any(a.get("name") == nome_do_arquivo(bits) for a in release.get("assets", [])):
+        return None
+    return VersaoNova(".".join(map(str, numero)), novidades(release.get("body")))
 
 
 def procurar() -> VersaoNova | None:
