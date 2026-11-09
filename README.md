@@ -63,6 +63,8 @@ extrato do banco precisavam ser passadas à mão para uma planilha que vai para 
 - **Lista dos pacientes de ortodontia:** nome, telefone e valor da manutenção. Dá para alterar ou excluir, com a opção de desfazer.
 - **Três mensagens prontas:** agendar a manutenção do mês, cobrar com a chave Pix das Configurações e agendar o retorno. O texto pode ser ajustado antes de abrir a conversa.
 - **Confere do mês:** marca quem já está agendado e recomeça sozinho todo dia 1, mesmo que o app esteja fechado nesse dia.
+- **Responsáveis:** paciente criança pode ter pai e mãe no cadastro, com a escolha de quem sempre recebe as mensagens. O texto já sai falando com o responsável.
+- **Alta temporária:** com o dia em que foi dada e o dia em que acaba. Enquanto durar, o paciente fica fora do confere, e o OMAC avisa quando a alta termina.
 - **Finalizados:** quem termina o tratamento vai para outra aba e pode voltar para a lista se precisar.
 
 ### Interface
