@@ -28,6 +28,7 @@ class AgendamentosApi(ApiBase):
         with self._trava_agenda:
             caminho = config.caminho_agendamentos()
             dados = carregar_json(caminho, PADRAO, "Os pacientes")
+            dados["pacientes"] = [pc.completar(p) for p in dados["pacientes"]]
             antes = json.dumps(dados, sort_keys=True)
             yield dados
             if json.dumps(dados, sort_keys=True) != antes:
@@ -36,12 +37,19 @@ class AgendamentosApi(ApiBase):
     def _lista(self, dados: dict) -> dict:
         hoje = date.today()
         ordenados = sorted(dados["pacientes"], key=lambda p: normalizar(p["nome"]))
+
+        def vista(p: dict) -> dict:
+            return {**p, "situacao": pc.situacao(p), "destino": pc.destino(p)}
+
+        na_situacao = lambda s: [p for p in ordenados if pc.situacao(p) == s]  # noqa: E731
         return {
             "ano": hoje.year,
             "mes": hoje.month,
-            "ativos": [{**p, "agendado": pc.agendado_no_mes(p, hoje)}
-                       for p in ordenados if not p["finalizado_em"]],
-            "finalizados": [p for p in ordenados if p["finalizado_em"]],
+            "ativos": [{**vista(p), "agendado": pc.agendado_no_mes(p, hoje)} for p in na_situacao(pc.ATIVO)],
+            # A alta que acaba primeiro aparece primeiro.
+            "altas": [{**vista(p), "terminou": pc.alta_terminou(p, hoje)}
+                      for p in sorted(na_situacao(pc.ALTA), key=lambda p: p["alta_fim"])],
+            "finalizados": [vista(p) for p in na_situacao(pc.FINALIZADO)],
         }
 
     @seguro
@@ -56,6 +64,12 @@ class AgendamentosApi(ApiBase):
                 pc.alterar(d["pacientes"], paciente_id, dados, date.today())
             else:
                 pc.adicionar(d["pacientes"], dados)
+            return self._lista(d)
+
+    @seguro
+    def agendamentos_voltar_ao_tratamento(self, paciente_id: str):
+        with self._agenda() as d:
+            pc.voltar_ao_tratamento(pc.buscar(d["pacientes"], paciente_id))
             return self._lista(d)
 
     @seguro
@@ -81,19 +95,21 @@ class AgendamentosApi(ApiBase):
     def agendamentos_preparar_mensagens(self, paciente_id: str):
         with self._agenda() as d:
             p = pc.buscar(d["pacientes"], paciente_id)
+        destino = pc.destino(p)
         return {
             "id": p["id"],
             "nome": p["nome"],
-            "telefone": p["telefone"],
+            "destino": destino,
             "mensagens": msg.todas(self._cfg["assistente_nome"], p["nome"], date.today(),
-                                   p["valor_centavos"], self._cfg["chave_pix"]),
+                                   p["valor_centavos"], self._cfg["chave_pix"],
+                                   destino["nome"] if destino["papel"] else ""),
         }
 
     @seguro
     def agendamentos_enviar(self, paciente_id: str, telefone: str, mensagem: str):
         telefone = normalizar_telefone(telefone)
         with self._agenda() as d:
-            pc.buscar(d["pacientes"], paciente_id)["telefone"] = telefone
+            pc.guardar_telefone(pc.buscar(d["pacientes"], paciente_id), telefone)
             lista = self._lista(d)
         abrir_conversa(telefone, mensagem, self._cfg["whatsapp_destino"])
         return lista
