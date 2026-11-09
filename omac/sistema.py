@@ -71,9 +71,13 @@ def copiar_arquivo(caminho: str | Path) -> bool:
 _CHAVE_INICIO = r"Software\Microsoft\Windows\CurrentVersion\Run"
 
 
-def inicio_automatico_disponivel() -> bool:
-    """Só o .exe no Windows: rodando pelo Python não há um programa para registrar."""
+def rodando_como_exe() -> bool:
+    """Só o .exe no Windows: rodando pelo Python não há um programa para registrar ou trocar."""
     return sys.platform == "win32" and bool(getattr(sys, "frozen", False))
+
+
+def inicio_automatico_disponivel() -> bool:
+    return rodando_como_exe()
 
 
 def _comando_de_inicio() -> str:

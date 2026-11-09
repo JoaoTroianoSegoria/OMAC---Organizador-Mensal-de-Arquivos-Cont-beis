@@ -1,0 +1,36 @@
+/* OMAC — módulo de agendamentos. Tokens e componentes vêm de estilo.css. */
+
+.ag-qtd:empty { display: none; }
+.ag-qtd { color: var(--acento); font-variant-numeric: tabular-nums; }
+.ag-filtros { align-self: flex-start; flex-wrap: wrap; }
+.ag-filtros .escolha { flex: 0 1 auto; min-height: 2.2rem; padding: .3rem .9rem; }
+
+.c-confere { width: 5.5rem; text-align: center !important; }
+.confere { width: 1.3rem; height: 1.3rem; accent-color: var(--acento); cursor: pointer; vertical-align: middle; }
+.ag-sem-dado { color: var(--texto-3); }
+.ag-nada { text-align: center !important; color: var(--texto-2); padding: 2rem 1rem !important; }
+
+.c-acoes-alta { width: 9rem; text-align: right !important; white-space: nowrap; padding-left: 0 !important; padding-right: .75rem !important; }
+.ag-terminou { margin-left: .5rem; }
+.ag-faixa-altas { align-items: center; }
+.ag-faixa-altas strong { flex: 1; }
+
+.ag-caixa { display: flex; align-items: center; gap: .6rem; font-weight: 600; cursor: pointer; }
+.ag-bloco { display: flex; flex-wrap: wrap; flex-direction: column; gap: .85rem; padding: .85rem; border: 1px solid var(--solido-borda); border-radius: var(--raio-p); }
+#ag-alta-campos { flex-direction: row; }
+/* Nome e telefone lado a lado: o 16rem padrão não cabe duas vezes na janela. */
+.ag-bloco .campo-texto, #ag-alta-campos .campo-texto { flex: 1 1 11rem; }
+.ag-envia-para { align-self: flex-start; }
+.ag-envia-para .escolha { min-width: 5rem; }
+.ag-situacoes .escolha { flex: 1 1 auto; }
+[data-tema="escuro"] .modal input[type="date"] { color-scheme: dark; }
+
+.ag-tipos { flex-wrap: wrap; }
+.ag-tipos .escolha { flex: 1 1 auto; }
+.ag-sem-pix-corpo { display: flex; flex-wrap: wrap; align-items: center; gap: .6rem; flex: 1; }
+.ag-sem-pix-corpo span { flex: 1 1 14rem; }
+
+.btn-perigo { color: var(--erro); margin-right: auto; }
+
+[data-contraste="alto"] .btn-perigo,
+[data-contraste="alto"] .ag-qtd { color: inherit; }

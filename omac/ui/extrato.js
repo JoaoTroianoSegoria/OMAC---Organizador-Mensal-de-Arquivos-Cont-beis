@@ -91,7 +91,7 @@ function desenharExtrato() {
 
   const itens = d.avisos.map((a) => [a.arquivo, a.mensagem]);
   $("#ext-avisos").replaceChildren(...listaDeAvisos(itens));
-  $("#ext-faixa-avisos").hidden = itens.length === 0;
+  mostrarQtdAvisos($("#ext-faixa-avisos"), itens.length);
 
   $("#ext-resumo").hidden = vazio;
   $("#ext-filtros").hidden = vazio;

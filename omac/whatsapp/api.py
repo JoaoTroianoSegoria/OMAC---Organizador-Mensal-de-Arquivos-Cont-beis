@@ -53,14 +53,7 @@ class WhatsappApi(ApiBase):
         return nota
 
     def _abrir_conversa(self, telefone: str, texto: str) -> None:
-        erro = None
-        for link in msg.links(telefone, texto, self._cfg["whatsapp_destino"]):
-            try:
-                sistema.abrir_link(link)
-                return
-            except OSError as e:
-                erro = e
-        raise ValueError("Não consegui abrir o WhatsApp.") from erro
+        msg.abrir_conversa(telefone, texto, self._cfg["whatsapp_destino"])
 
     # --- Envio da nota ---------------------------------------------------------
 

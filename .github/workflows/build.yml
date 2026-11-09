@@ -3,12 +3,11 @@ name: Testes e .exe
 on:
   push:
     branches: [main]
-    tags: ["v*"]
   pull_request:
   workflow_dispatch:
 
 permissions:
-  contents: write  # para publicar a Release quando houver uma tag v*
+  contents: write  # para publicar a Release quando o número da versão mudar
 
 jobs:
   windows:
@@ -48,33 +47,74 @@ jobs:
         shell: pwsh
         run: |
           python -m tests.fabrica exemplo
-          $p = Start-Process -FilePath dist\OMAC.exe -ArgumentList '--autoteste', 'exemplo', 'relatorio.json' -Wait -PassThru
+          $p = Start-Process -FilePath dist\OMAC\OMAC.exe -ArgumentList '--autoteste', 'exemplo', 'relatorio.json' -Wait -PassThru
           Get-Content relatorio.json
           python -c "import json,sys; r=json.load(open('relatorio.json',encoding='utf-8')); sys.exit('erro' in r or r['notas']!=12 or len(r['canceladas_movidas'])!=1 or r['lancamentos']==0)"
           if ($LASTEXITCODE -ne 0 -or $p.ExitCode -ne 0) { exit 1 }
           if (-not (Test-Path 'Notas fiscais - Outubro 2026.xlsx')) { exit 1 }
           if (-not (Test-Path 'Fechamento - Outubro 2026.xlsx')) { exit 1 }
 
-      - name: Renomear
+      - name: Autoteste da tela (.exe e WebView2 de verdade)
         shell: pwsh
-        run: Move-Item dist\OMAC.exe "dist\OMAC-${{ matrix.bits }}bits.exe"
+        run: |
+          $saida = Join-Path $PWD 'tela.json'
+          $p = Start-Process -FilePath dist\OMAC\OMAC.exe -ArgumentList '--autoteste-tela', 'exemplo', "`"$saida`"" -PassThru
+          for ($i = 0; $i -lt 120 -and -not (Test-Path $saida); $i++) { Start-Sleep 1 }
+          if (-not (Test-Path $saida)) {
+            Stop-Process -Id $p.Id -Force -ErrorAction SilentlyContinue
+            echo "::error title=Tela ${{ matrix.bits }} bits::a janela não respondeu em 120 s"
+            exit 1
+          }
+          Start-Sleep 2
+          $texto = (Get-Content $saida -Raw -Encoding utf8) -replace '[\r\n]+', ' '
+          echo "::notice title=Tela ${{ matrix.bits }} bits::$texto"
+          python -c "import json,sys; r=json.load(open(sys.argv[1],encoding='utf-8')); e=r.get('extrato') or {}; sys.exit('erro' in r or e.get('erros') or e.get('meses')!=12 or not e.get('lancamentos'))" $saida
+          if ($LASTEXITCODE -ne 0) { exit 1 }
 
       - uses: actions/upload-artifact@v4
         with:
           name: OMAC-${{ matrix.bits }}bits
-          path: dist/OMAC-${{ matrix.bits }}bits.exe
+          path: dist/OMAC/
 
   release:
-    name: Publicar Release
-    if: startsWith(github.ref, 'refs/tags/v')
+    name: Publicar versão
+    # Sobe sozinho quando chega na main com um número de versão que ainda não foi publicado.
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     needs: windows
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v4
+
+      - name: Ver se a versão é nova
+        id: versao
+        run: |
+          versao=$(sed -n 's/^__version__ = "\(.*\)"$/\1/p' omac/__init__.py)
+          echo "tag=v$versao" >> "$GITHUB_OUTPUT"
+          if git ls-remote --exit-code --tags origin "refs/tags/v$versao"; then
+            echo "nova=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "nova=true" >> "$GITHUB_OUTPUT"
+          fi
+
       - uses: actions/download-artifact@v4
+        if: steps.versao.outputs.nova == 'true'
         with:
           path: dist
-          merge-multiple: true
+
+      - name: Montar os .zip
+        if: steps.versao.outputs.nova == 'true'
+        run: |
+          cd dist
+          for bits in 32 64; do
+            mv "OMAC-${bits}bits" OMAC
+            zip -qr "OMAC-${bits}bits.zip" OMAC
+            rm -r OMAC
+          done
+
       - uses: softprops/action-gh-release@v2
+        if: steps.versao.outputs.nova == 'true'
         with:
-          files: dist/*.exe
+          tag_name: ${{ steps.versao.outputs.tag }}
+          target_commitish: ${{ github.sha }}
+          files: dist/*.zip
           generate_release_notes: true

@@ -15,7 +15,10 @@ Object.assign(acoes, {
   "abrir-nota": (alvo) => abrirNota(alvo.dataset.arquivo),
   "ver-avisos": () => {
     const faixa = $("#faixa-avisos");
-    if (!faixa.hidden) { faixa.scrollIntoView({ behavior: "smooth", block: "center" }); faixa.focus({ preventScroll: true }); }
+    if (faixa.hidden) return;
+    recolherFaixa(faixa, false);
+    faixa.scrollIntoView({ behavior: "smooth", block: "center" });
+    faixa.focus({ preventScroll: true });
   },
 });
 
@@ -151,7 +154,7 @@ function desenharNotas() {
   for (const n of notas) for (const a of n.avisos) itens.push([`Nota nº ${n.numero}`, a]);
   for (const a of avisos) itens.push([a.arquivo || "", a.mensagem]);
   $("#avisos-lista").replaceChildren(...listaDeAvisos(itens));
-  $("#faixa-avisos").hidden = itens.length === 0;
+  mostrarQtdAvisos($("#faixa-avisos"), itens.length);
   $("#res-avisos").textContent = String(itens.length);
   $("#res-avisos-cartao").classList.toggle("tem", itens.length > 0);
 

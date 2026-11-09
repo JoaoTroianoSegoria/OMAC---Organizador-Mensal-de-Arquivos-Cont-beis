@@ -8,6 +8,7 @@ import sys
 from pathlib import Path
 
 from . import sistema
+from .armazem import salvar_json
 
 PADRAO = {
     "pasta_notas": "",
@@ -24,6 +25,10 @@ PADRAO = {
     "lembrete_nome": "",  # quem recebe os lembretes de contas
     "lembrete_telefone": "",
     "lembrete_fechamento_dia": 1,  # dia do mês para lembrar do fechamento; 0 = desligado
+    "chave_pix": "",  # vai na mensagem de cobrança da manutenção
+    "avisos_recolhidos": [],  # faixas minimizadas: "notas", "extrato"
+    "atualizacao_automatica": True,  # procura versão nova ao abrir (instalar é sempre opcional)
+    "atualizacao_adiada_em": "",  # dia em que a pessoa clicou em "Agora não"
 }
 
 _VALIDOS = {
@@ -53,6 +58,10 @@ def caminho_regras() -> Path:
     return pasta_dados() / "regras-extrato.json"
 
 
+def caminho_agendamentos() -> Path:
+    return pasta_dados() / "agendamentos.json"
+
+
 def carregar() -> dict:
     cfg = dict(PADRAO)
     arquivo = pasta_dados() / "config.json"
@@ -69,9 +78,7 @@ def carregar() -> dict:
 
 def salvar(cfg: dict) -> dict:
     cfg = normalizar(cfg)
-    arquivo = pasta_dados() / "config.json"
-    arquivo.parent.mkdir(parents=True, exist_ok=True)
-    arquivo.write_text(json.dumps(cfg, ensure_ascii=False, indent=2), encoding="utf-8")
+    salvar_json(pasta_dados() / "config.json", cfg)
     return cfg
 
 
@@ -84,13 +91,16 @@ def normalizar(cfg: dict) -> dict:
         limpo["escala_fonte"] = min(2.0, max(1.0, float(limpo["escala_fonte"])))
     except (TypeError, ValueError):
         limpo["escala_fonte"] = 1.0
-    for chave in ("alto_contraste", "reduzir_movimento"):
+    for chave in ("alto_contraste", "reduzir_movimento", "atualizacao_automatica"):
         limpo[chave] = bool(limpo[chave])
     for chave in ("pasta_notas", "pasta_extratos", "pasta_saida",
-                  "assistente_nome", "lembrete_nome", "lembrete_telefone"):
+                  "assistente_nome", "lembrete_nome", "lembrete_telefone", "chave_pix",
+                  "atualizacao_adiada_em"):
         limpo[chave] = str(limpo[chave] or "")
     try:
         limpo["lembrete_fechamento_dia"] = min(28, max(0, int(limpo["lembrete_fechamento_dia"])))
     except (TypeError, ValueError):
         limpo["lembrete_fechamento_dia"] = PADRAO["lembrete_fechamento_dia"]
+    recolhidos = limpo["avisos_recolhidos"]
+    limpo["avisos_recolhidos"] = [str(r) for r in recolhidos] if isinstance(recolhidos, list) else []
     return limpo

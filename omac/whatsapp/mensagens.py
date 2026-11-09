@@ -6,6 +6,8 @@ import re
 from datetime import date
 from urllib.parse import quote
 
+from .. import sistema
+
 SERVICO_PADRAO = "tratamento odontológico"
 
 
@@ -30,6 +32,18 @@ def links(telefone: str, texto: str, destino: str) -> list[str]:
         return [f"https://web.whatsapp.com/send?phone={telefone}&text={t}"]
     # O wa.me é a segunda opção, para quando o aplicativo não está instalado.
     return [f"whatsapp://send?phone={telefone}&text={t}", f"https://wa.me/{telefone}?text={t}"]
+
+
+def abrir_conversa(telefone: str, texto: str, destino: str) -> None:
+    """Tenta cada link até um abrir. Quem aperta enviar é sempre a pessoa."""
+    erro = None
+    for link in links(telefone, texto, destino):
+        try:
+            sistema.abrir_link(link)
+            return
+        except OSError as e:
+            erro = e
+    raise ValueError("Não consegui abrir o WhatsApp.") from erro
 
 
 def assinatura(assistente: str) -> str:

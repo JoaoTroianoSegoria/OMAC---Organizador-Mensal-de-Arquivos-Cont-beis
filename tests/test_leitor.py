@@ -130,6 +130,23 @@ def test_marca_dagua_cancelada():
     assert interpretar_texto(texto_nota() + "\nCANCELADA\n", ARQUIVO).cancelada
 
 
+def test_marca_com_o_nome_do_documento_na_linha():
+    assert interpretar_texto(texto_nota() + "\nNFS-e CANCELADA\n", ARQUIVO).cancelada
+
+
+@pytest.mark.parametrize("trecho", [
+    "Consulta cancelada dia 03 reagendada", "Paciente Cancelado Exemplo", "cancelado pela operadora: glosa",
+])
+def test_palavra_solta_nao_tira_a_nota_do_relatorio(trecho):
+    nota = interpretar_texto(texto_nota() + f"\n{trecho}\n", ARQUIVO)
+    assert not nota.cancelada
+    assert any("cancelada" in a for a in nota.avisos)
+
+
+def test_nota_normal_nao_ganha_aviso_de_cancelada():
+    assert not any("cancelada" in a for a in interpretar_texto(texto_nota(), ARQUIVO).avisos)
+
+
 def test_campos_faltando():
     with pytest.raises(NotaIlegivel, match="competência"):
         interpretar_texto(texto_nota().replace("COMPETÊNCIA DA NFS-E", "XXX"), ARQUIVO)

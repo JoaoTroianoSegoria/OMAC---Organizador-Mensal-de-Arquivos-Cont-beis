@@ -271,3 +271,22 @@ def test_resumo_tem_saldos_e_uma_linha_por_operacao(tmp_path):
     linhas = {r[0].value: r[1].value for r in ws.iter_rows()}
     assert float(linhas["Saldo no início do mês"]) == 10459.75
     assert float(linhas["Saldo no fim do mês"]) == float(itens[-1][0].saldo)
+
+
+@pytest.mark.parametrize("erro", [ValueError("day is out of range for month"), ArithmeticError("x"), OSError("em uso")])
+def test_pdf_com_problema_nao_derruba_os_outros(tmp_path, monkeypatch, erro):
+    from omac.extrato import pasta as modulo
+
+    pasta = criar_pasta_extratos(tmp_path)
+    real = modulo.ler_extrato
+    primeiro = sorted(p.name for p in pasta.glob("*.pdf"))[0]
+
+    def ler(caminho):
+        if caminho.name == primeiro:
+            raise erro
+        return real(caminho)
+
+    monkeypatch.setattr(modulo, "ler_extrato", ler)
+    c = varrer(pasta)
+    assert any(a["arquivo"] == primeiro and "Ficou de fora" in a["mensagem"] for a in c.avisos)
+    assert c.lancamentos

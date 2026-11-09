@@ -93,6 +93,13 @@ class ApiBase:
         return {}
 
     @seguro
+    def abrir_pasta_dados(self):
+        pasta = config.pasta_dados()
+        pasta.mkdir(parents=True, exist_ok=True)
+        sistema.abrir(str(pasta))
+        return {}
+
+    @seguro
     def abrir(self, caminho: str):
         sistema.abrir(caminho)
         return {}
