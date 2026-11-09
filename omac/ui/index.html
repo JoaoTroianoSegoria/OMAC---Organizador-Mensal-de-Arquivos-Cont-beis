@@ -515,11 +515,18 @@
 
         <div class="escolhas abas" id="ag-abas">
           <button class="escolha" data-acao="ag-aba" data-aba="ativos" aria-pressed="true">Em tratamento <span class="ag-qtd" id="ag-qtd-ativos"></span></button>
+          <button class="escolha" data-acao="ag-aba" data-aba="altas" aria-pressed="false">Alta temporária <span class="ag-qtd" id="ag-qtd-altas"></span></button>
           <button class="escolha" data-acao="ag-aba" data-aba="finalizados" aria-pressed="false">Finalizados <span class="ag-qtd" id="ag-qtd-finalizados"></span></button>
         </div>
 
         <!-- Em tratamento -->
         <div class="painel-coluna" id="ag-ativos">
+          <div class="faixa faixa-aviso vidro ag-faixa-altas" id="ag-altas-terminadas" hidden>
+            <svg class="ic"><use href="#i-alerta"/></svg>
+            <strong id="ag-altas-terminadas-texto"></strong>
+            <button class="btn btn-peq" data-acao="ag-aba" data-aba="altas">Ver altas</button>
+          </div>
+
           <div class="resumo" id="ag-resumo">
             <div class="cartao vidro">
               <span class="cartao-rotulo">Já agendados no mês</span>
@@ -562,6 +569,30 @@
           </div>
         </div>
 
+        <!-- Alta temporária -->
+        <div class="painel-coluna" id="ag-altas" hidden>
+          <div class="tabela-caixa vidro" id="ag-altas-caixa">
+            <table class="tabela">
+              <caption class="so-leitor">Pacientes em alta temporária</caption>
+              <thead>
+                <tr>
+                  <th scope="col">Paciente</th>
+                  <th scope="col" class="c-telefone">Telefone</th>
+                  <th scope="col" class="c-data">Alta dada em</th>
+                  <th scope="col" class="c-data">Acaba em</th>
+                  <th scope="col" class="c-acoes-alta"><span class="so-leitor">Ações</span></th>
+                </tr>
+              </thead>
+              <tbody id="ag-altas-corpo"></tbody>
+            </table>
+          </div>
+          <div class="vazio vidro" id="ag-altas-vazio" hidden>
+            <span class="vazio-icone"><svg class="ic"><use href="#i-agenda"/></svg></span>
+            <h2>Nenhum paciente em alta temporária</h2>
+            <p>Para dar uma alta, clique no lápis ao lado do paciente e escolha <strong>Alta temporária</strong>. Enquanto ela durar, ele fica fora do confere do mês.</p>
+          </div>
+        </div>
+
         <!-- Finalizados -->
         <div class="painel-coluna" id="ag-finalizados" hidden>
           <div class="tabela-caixa vidro" id="ag-finalizados-caixa">
@@ -581,7 +612,7 @@
           <div class="vazio vidro" id="ag-finalizados-vazio" hidden>
             <span class="vazio-icone"><svg class="ic"><use href="#i-ok"/></svg></span>
             <h2>Nenhum tratamento finalizado</h2>
-            <p>Para finalizar, clique no lápis ao lado do paciente e ligue <strong>Tratamento finalizado</strong>.</p>
+            <p>Para finalizar, clique no lápis ao lado do paciente e escolha <strong>Finalizado</strong>.</p>
           </div>
         </div>
       </section>
@@ -825,7 +856,7 @@
         <input id="ag-nome" type="text" autocomplete="off" required>
       </div>
       <div class="form-conta-campos">
-        <div class="campo campo-texto">
+        <div class="campo campo-texto" id="ag-telefone-campo">
           <label class="rotulo-campo" for="ag-telefone">Telefone com DDD</label>
           <input id="ag-telefone" type="tel" autocomplete="off" placeholder="(61) 90000-0000">
         </div>
@@ -834,10 +865,56 @@
           <input id="ag-valor" type="text" inputmode="decimal" autocomplete="off" placeholder="0,00">
         </div>
       </div>
-      <div class="opcao opcao-chave" id="ag-finalizado-linha">
-        <svg class="ic ic-suave"><use href="#i-ok"/></svg>
-        <span class="opcao-texto"><strong id="l-finalizado">Tratamento finalizado</strong><small>O paciente vai para a aba Finalizados</small></span>
-        <button class="chave" id="ag-finalizado" type="button" role="switch" aria-checked="false" aria-labelledby="l-finalizado" data-acao="ag-alternar-finalizado"><span></span></button>
+      <label class="ag-caixa">
+        <input type="checkbox" class="confere" id="ag-tem-responsaveis">
+        <span>Tem responsáveis (paciente criança)</span>
+      </label>
+      <div class="ag-bloco" id="ag-responsaveis" hidden>
+        <div class="form-conta-campos">
+          <div class="campo campo-texto">
+            <label class="rotulo-campo" for="ag-pai-nome">Nome do pai</label>
+            <input id="ag-pai-nome" type="text" autocomplete="off">
+          </div>
+          <div class="campo campo-texto">
+            <label class="rotulo-campo" for="ag-pai-telefone">Telefone do pai</label>
+            <input id="ag-pai-telefone" type="tel" autocomplete="off" placeholder="(61) 90000-0000">
+          </div>
+        </div>
+        <div class="form-conta-campos">
+          <div class="campo campo-texto">
+            <label class="rotulo-campo" for="ag-mae-nome">Nome da mãe</label>
+            <input id="ag-mae-nome" type="text" autocomplete="off">
+          </div>
+          <div class="campo campo-texto">
+            <label class="rotulo-campo" for="ag-mae-telefone">Telefone da mãe</label>
+            <input id="ag-mae-telefone" type="tel" autocomplete="off" placeholder="(61) 90000-0000">
+          </div>
+        </div>
+        <fieldset class="opcao">
+          <legend>As mensagens vão sempre para</legend>
+          <div class="escolhas ag-envia-para">
+            <button class="escolha" type="button" data-acao="ag-envia-para" data-papel="mae">Mãe</button>
+            <button class="escolha" type="button" data-acao="ag-envia-para" data-papel="pai">Pai</button>
+          </div>
+        </fieldset>
+      </div>
+      <fieldset class="opcao">
+        <legend>Situação</legend>
+        <div class="escolhas ag-situacoes">
+          <button class="escolha" type="button" data-acao="ag-situacao" data-situacao="ativo">Em tratamento</button>
+          <button class="escolha" type="button" data-acao="ag-situacao" data-situacao="alta">Alta temporária</button>
+          <button class="escolha" type="button" data-acao="ag-situacao" data-situacao="finalizado">Finalizado</button>
+        </div>
+      </fieldset>
+      <div class="form-conta-campos ag-bloco" id="ag-alta-campos" hidden>
+        <div class="campo campo-texto">
+          <label class="rotulo-campo" for="ag-alta-inicio">Alta dada em</label>
+          <input id="ag-alta-inicio" type="date">
+        </div>
+        <div class="campo campo-texto">
+          <label class="rotulo-campo" for="ag-alta-fim">Acaba em</label>
+          <input id="ag-alta-fim" type="date">
+        </div>
       </div>
       <p class="modal-erro" id="ag-paciente-erro" role="alert" hidden></p>
       <div class="modal-acoes">

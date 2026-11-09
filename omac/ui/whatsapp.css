@@ -24,6 +24,9 @@
   background: var(--solido);
 }
 .modal::backdrop { background: rgba(0, 0, 0, .45); }
+/* O brilho da borda do vidro não acompanha a rolagem e sobra no meio da janela longa. */
+.modal.vidro::after { content: none; }
+.modal { border: 1px solid var(--solido-borda); }
 .modal-corpo { display: flex; flex-direction: column; gap: 1rem; padding: 1.5rem; }
 .modal h2 { font-size: 1.25rem; }
 .modal .campo-texto { flex: none; }
