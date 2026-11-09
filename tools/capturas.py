@@ -75,6 +75,16 @@ def _preparar_agendamentos(api) -> None:
     with api._agenda() as d:
         if d["pacientes"]:
             return
+        adicionar_paciente(d["pacientes"], {
+            "nome": "JOANA RIBEIRO LIMA", "valor": "250,00", "situacao": "alta",
+            "alta_inicio": "2026-10-01", "alta_fim": "2027-01-15",
+        })
+        filho = adicionar_paciente(d["pacientes"], {
+            "nome": "PEDRO ALVES SOUZA", "valor": "220,00",
+            "responsaveis": {"pai": {"nome": "Carlos Souza", "telefone": ""},
+                             "mae": {"nome": "Helena Alves", "telefone": "61900000005"}, "envia_para": "mae"},
+        })
+        filho["agendado_em"] = ""
         for nome, telefone, valor, agendado in (
             ("ANA BEATRIZ MOREIRA", "61900000001", "250,00", True),
             ("CARLOS EDUARDO LIMA", "61900000002", "250,00", False),
