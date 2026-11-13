@@ -20,6 +20,23 @@ extrato do banco precisavam ser passadas à mão para uma planilha que vai para 
 
 ## O que o OMAC faz
 
+### Início
+
+<p align="center">
+  <img src="docs/capturas/inicio.png" alt="Tela inicial com os cartões do dia" width="49%">
+  <img src="docs/capturas/resumo.png" alt="Resumo do ano" width="49%">
+</p>
+
+- **O dia numa tela só:** contas que vencem (com o botão **Paga** ali mesmo), pacientes de ortodontia para agendar e atender, a ficha do mês, notas a enviar, o fechamento do mês anterior e o resumo do ano.
+- **Pendências dos meses anteriores:** contas e atendimentos que ficaram sem pagar e pacientes que não vieram. Cada linha leva direto para a tela certa.
+- **Personalizável:** no botão **Personalizar** dá para arrastar os cartões (ou usar as setas, pelo teclado), esconder os que não interessam e deixar um cartão largo. Nas Configurações escolhe-se abrir o app no Início ou direto nas notas.
+
+### Resumo do ano
+
+- **Faturamento das notas mês a mês** em gráfico, com o total, a média por mês, o melhor e o pior mês e a comparação com o mês anterior.
+- **Tabela completa:** notas, faturamento, entradas e saídas do banco e o recebido e pendente da ficha de pagamentos.
+- **Mês sem dado fica em branco**, com um aviso de quais meses não têm nota lida. O mês atual não entra na média, porque ainda não acabou.
+
 ### Notas fiscais
 
 - **Lê a pasta de PDFs das notas do ano** (ex.: `NFS-e 2026`) e monta a planilha do mês em um clique, em **Excel (.xlsx)** ou **CSV**.
@@ -61,9 +78,14 @@ extrato do banco precisavam ser passadas à mão para uma planilha que vai para 
   <img src="docs/capturas/agendamentos-mensagem.png" alt="Janela de mensagem com as três opções" width="49%">
 </p>
 
+<p align="center">
+  <img src="docs/capturas/agendamentos-historico.png" alt="Histórico de atendimentos mês a mês" width="70%">
+</p>
+
 - **Lista dos pacientes de ortodontia:** nome, telefone e valor da manutenção. Dá para alterar ou excluir, com a opção de desfazer.
 - **Três mensagens prontas:** agendar a manutenção do mês, cobrar com a chave Pix das Configurações e agendar o retorno. O texto pode ser ajustado antes de abrir a conversa.
 - **Confere do mês:** marca quem já está agendado e recomeça sozinho todo dia 1, mesmo que o app esteja fechado nesse dia.
+- **Atendido no mês e histórico:** marque quem já foi atendido. A aba **Histórico** mostra, mês a mês, quem veio, quem não veio e quem estava de alta, e o nome de cada paciente abre o histórico completo dele ("veio em 8 de 10 meses"). Dá para corrigir um mês que passou com um clique.
 - **Responsáveis:** paciente criança pode ter pai e mãe no cadastro, com a escolha de quem sempre recebe as mensagens. O texto já sai falando com o responsável.
 - **Alta temporária:** com o dia em que foi dada e o dia em que acaba. Enquanto durar, o paciente fica fora do confere, e o OMAC avisa quando a alta termina.
 - **Finalizados:** quem termina o tratamento vai para outra aba e pode voltar para a lista se precisar.
@@ -180,6 +202,8 @@ omac/
 ├── whatsapp/         mensagens.py · lembretes.py · dados.py · api.py
 ├── agendamentos/     pacientes.py · mensagens.py · api.py
 ├── pagamentos/       ficha.py · exportar.py · api.py
+├── resumo/           ano.py · api.py
+├── inicio/           api.py (junta o que os outros módulos já leem)
 ├── atualizacao/      github.py · api.py
 └── ui/               index.html, estilo.css, nucleo.js + um .js/.css por módulo
 tests/                testes + gerador de notas e extratos de exemplo
@@ -194,5 +218,5 @@ Para criar um módulo: uma pasta em `omac/` com a classe da API (herdando de `Ap
 - [x] **WhatsApp:** envio de notas e lembretes de contas pelo link oficial.
 - [x] **Agendamentos:** pacientes de ortodontia, mensagens e confere do mês.
 - [x] **Ficha de pagamentos** e contas pagas nos lembretes.
-- [ ] **Tela inicial personalizável** e **resumo do ano**.
+- [x] **Tela inicial personalizável**, **resumo do ano** e **histórico de atendimentos** da ortodontia.
 - [ ] **Backup** das notas, extratos e dados.
