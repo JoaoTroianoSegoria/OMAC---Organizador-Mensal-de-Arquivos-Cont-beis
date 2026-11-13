@@ -8,6 +8,7 @@ const whats = {
   contatos: [],
   atual: null, // nota aberta na janela de envio
   contaEditando: null,
+  mesContas: "", // "AAAA-MM" da coluna "este mês" das contas
   lembrete: null,
 };
 
@@ -39,6 +40,8 @@ Object.assign(acoes, {
   "whats-proxima": () => concluirEnvio(true),
   "whats-conta-editar": (alvo) => editarConta(whats.contas[Number(alvo.dataset.indice)]),
   "whats-conta-apagar": (alvo) => apagarConta(whats.contas[Number(alvo.dataset.indice)]),
+  "whats-conta-paga": marcarContaPaga,
+  "whats-lembrete-paga": marcarPagaNoLembrete,
   "whats-conta-cancelar": limparFormularioConta,
   "whats-contato-apagar": (alvo) => apagarContato(whats.contatos[Number(alvo.dataset.indice)]),
   "whats-ver-lembretes": () => verLembretesDoDia(true),
@@ -195,12 +198,18 @@ async function marcarSemEnviar(numero) {
 async function carregarContas() {
   const r = await api().whatsapp_contas();
   if (r.erro) return mostrarToast(r.erro, { erro: true });
-  desenharContas(r.contas);
+  desenharContas(r);
 }
 
-function desenharContas(contas) {
+const SITUACAO_DA_CONTA = { paga: "Paga", nao_paga: "Não paga", em_aberto: "Em aberto", "": "—" };
+
+function desenharContas(r) {
+  const contas = r.contas;
   whats.contas = contas;
+  whats.mesContas = r.mes;
   $("#contas-tabela").hidden = contas.length === 0;
+  $("#contas-th-mes").textContent = r.nome_mes;
+  $("#contas-th-passado").textContent = r.nome_mes_passado;
   $("#whats-contato-dica").textContent = estado.cfg.lembrete_telefone
     ? ""
     : "Falta dizer quem recebe os lembretes: preencha o nome e o telefone em Configurações.";
@@ -208,13 +217,45 @@ function desenharContas(contas) {
     const tr = document.createElement("tr");
     const tdNome = Object.assign(document.createElement("td"), { textContent: c.nome });
     const tdDia = Object.assign(document.createElement("td"), { className: "c-data", textContent: `Dia ${c.dia}` });
+
+    // Este mês: a caixa marca como paga; sem marcar e já vencida, ganha a etiqueta.
+    const tdMes = document.createElement("td");
+    tdMes.className = "c-paga";
+    const rotulo = Object.assign(document.createElement("label"), { className: "paga-caixa" });
+    const caixa = Object.assign(document.createElement("input"), { type: "checkbox", className: "confere", checked: c.este_mes === "paga" });
+    caixa.dataset.acao = "whats-conta-paga";
+    caixa.dataset.indice = i;
+    rotulo.append(caixa, Object.assign(document.createElement("span"), { textContent: "Paga" }));
+    tdMes.append(rotulo);
+    if (c.este_mes !== "paga" && c.venceu) {
+      tdMes.append(Object.assign(document.createElement("span"), {
+        className: "etiqueta etiqueta-aviso", textContent: `venceu ${dataBR(c.vencimento).slice(0, 5)}`,
+      }));
+    }
+
+    const tdPassado = Object.assign(document.createElement("td"), { className: "c-paga" });
+    tdPassado.append(Object.assign(document.createElement("span"), {
+      className: c.mes_passado === "nao_paga" ? "etiqueta etiqueta-erro" : (c.mes_passado ? "" : "ag-sem-dado"),
+      textContent: SITUACAO_DA_CONTA[c.mes_passado],
+    }));
+
     const tdAcoes = document.createElement("td");
     tdAcoes.className = "c-acoes-regra";
     tdAcoes.append(botaoIcone("whats-conta-editar", "i-lapis", `Alterar ${c.nome}`, { indice: i }),
       botaoIcone("whats-conta-apagar", "i-lixeira", `Apagar ${c.nome}`, { indice: i }));
-    tr.append(tdNome, tdDia, tdAcoes);
+    tr.append(tdNome, tdDia, tdMes, tdPassado, tdAcoes);
     return tr;
   }));
+}
+
+async function marcarContaPaga(caixa) {
+  const conta = whats.contas[Number(caixa.dataset.indice)];
+  const r = await api().whatsapp_marcar_paga(conta.nome, whats.mesContas, caixa.checked);
+  if (r.erro) {
+    caixa.checked = !caixa.checked;
+    return mostrarToast(r.erro, { erro: true });
+  }
+  desenharContas(r);
 }
 
 function limparFormularioConta() {
@@ -243,17 +284,17 @@ async function salvarConta(e) {
     { nome: $("#conta-nome").value, dia: Number($("#conta-dia").value) }, whats.contaEditando);
   if (r.erro) return mostrarToast(r.erro, { erro: true });
   limparFormularioConta();
-  desenharContas(r.contas);
+  desenharContas(r);
 }
 
 async function apagarConta(conta) {
   const r = await api().whatsapp_apagar_conta(conta.nome);
   if (r.erro) return mostrarToast(r.erro, { erro: true });
-  desenharContas(r.contas);
+  desenharContas(r);
   mostrarToast(`Conta apagada: ${conta.nome}`, {
     acoes: [["Desfazer", async () => {
       const volta = await api().whatsapp_salvar_conta(conta, null);
-      if (!volta.erro) desenharContas(volta.contas);
+      if (!volta.erro) desenharContas(volta);
     }]],
   });
 }
@@ -306,17 +347,48 @@ async function verLembretesDoDia(pedidoNaTela = false) {
   }
   whats.lembrete = r;
 
-  $("#lembretes-contas").replaceChildren(...r.contas.map((c) => {
+  $("#lembretes-contas").replaceChildren(...r.contas.map((c, i) => {
     const li = document.createElement("li");
-    li.append(Object.assign(document.createElement("b"), { textContent: `${c.nome}: ` }), c.situacao);
+    li.className = "lembrete-conta";
+    const texto = document.createElement("span");
+    texto.append(Object.assign(document.createElement("b"), { textContent: `${c.nome}: ` }), c.situacao);
+    const paga = Object.assign(document.createElement("button"), { type: "button", className: "btn btn-peq" });
+    paga.dataset.acao = "whats-lembrete-paga";
+    paga.dataset.indice = i;
+    paga.setAttribute("aria-pressed", "false");
+    paga.setAttribute("aria-label", `${c.nome} já foi paga`);
+    paga.innerHTML = '<svg class="ic"><use href="#i-ok"/></svg><span>Paga</span>';
+    li.append(texto, paga);
     return li;
   }));
   $("#lembretes-fechamento").hidden = !r.fechamento;
   $("#lembretes-fechamento-texto").textContent = r.fechamento;
   $("#lembretes-ir-extrato").hidden = !r.fechamento;
-  $("#lembretes-enviar").hidden = r.contas.length === 0;
+  desenharBotaoDoLembrete();
   $("#lembretes-enviar-texto").textContent = r.destinatario ? `Enviar para ${r.destinatario}` : "Enviar";
   $("#lembretes").showModal();
+}
+
+/* Conta marcada como paga sai da mensagem e para de avisar neste mês. */
+async function marcarPagaNoLembrete(botao) {
+  const conta = whats.lembrete.contas[Number(botao.dataset.indice)];
+  const paga = botao.getAttribute("aria-pressed") !== "true";
+  const r = await api().whatsapp_marcar_paga(conta.nome, conta.mes, paga);
+  if (r.erro) return mostrarToast(r.erro, { erro: true });
+  conta.paga = paga;
+  botao.setAttribute("aria-pressed", String(paga));
+  botao.closest("li").classList.toggle("paga", paga);
+  if (whats.contas.length) desenharContas(r);
+  const abertas = whats.lembrete.contas.filter((c) => !c.paga);
+  if (abertas.length) {
+    const texto = await api().whatsapp_texto_lembrete(abertas);
+    if (!texto.erro) whats.lembrete.mensagem = texto.mensagem;
+  }
+  desenharBotaoDoLembrete();
+}
+
+function desenharBotaoDoLembrete() {
+  $("#lembretes-enviar").hidden = !whats.lembrete.contas.some((c) => !c.paga);
 }
 
 async function enviarLembrete() {

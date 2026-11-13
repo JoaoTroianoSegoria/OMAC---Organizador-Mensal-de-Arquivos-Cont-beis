@@ -1,0 +1,34 @@
+/* OMAC — ficha de pagamentos. Tokens e componentes vêm de estilo.css. */
+
+.pg-barra { align-items: flex-end; }
+.pg-barra-dica { flex: 1 1 14rem; margin: 0 0 .55rem; }
+.pg-faixa-corpo { display: flex; flex-wrap: wrap; align-items: center; gap: .6rem; flex: 1; }
+.pg-faixa-corpo span { flex: 1 1 14rem; }
+
+/* Colunas estreitas: o nome do paciente é o que mais precisa de espaço. */
+#pg-caixa .c-data { width: 4.5rem; }
+.pg-c-tratamento { width: 9rem; }
+.pg-c-forma { width: 8.5rem; white-space: nowrap; }
+.pg-c-nota { width: 5rem; white-space: nowrap; }
+.pg-ok { width: 1rem; height: 1rem; color: var(--acento); vertical-align: -.15rem; }
+.pg-nao { margin-left: .35rem; }
+
+.pg-formas { flex-wrap: wrap; }
+.pg-formas .escolha { flex: 1 1 auto; }
+.pg-campo-curto { flex: 0 1 10rem !important; }
+#pg-parcelas-campo { align-self: flex-start; min-width: 11rem; }
+.pg-nota-achada { display: flex; align-items: center; gap: .5rem; font-weight: 600; color: var(--acento); }
+
+.pg-chips { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: .5rem; }
+.pg-chip {
+  display: inline-flex; align-items: center; gap: .15rem;
+  padding: .15rem .2rem .15rem .8rem; border-radius: 99px;
+  background: var(--acento-suave); font-weight: 600;
+}
+.pg-chip .btn-linha { width: 1.8rem; height: 1.8rem; }
+.pg-novo-tratamento { display: flex; flex-wrap: wrap; align-items: flex-end; gap: .75rem; }
+.pg-novo-tratamento .campo-texto { flex: 1 1 14rem; }
+
+[data-contraste="alto"] .pg-chip { background: none; border: 1px solid currentColor; }
+[data-contraste="alto"] .pg-ok,
+[data-contraste="alto"] .pg-nota-achada { color: inherit; }

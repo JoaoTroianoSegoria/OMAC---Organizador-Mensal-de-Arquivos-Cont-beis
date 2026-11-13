@@ -32,7 +32,7 @@ const api = () => window.pywebview.api;
 /* ---------- Início ---------- */
 
 /* Um script vazio ou cortado não gera erro nenhum: sem esta conferência, a tela fica muda. */
-const MODULOS_ESPERADOS = ["notas", "extrato", "whatsapp", "agendamentos", "atualizacao"];
+const MODULOS_ESPERADOS = ["notas", "extrato", "whatsapp", "agendamentos", "pagamentos", "atualizacao"];
 
 async function conferirModulos() {
   for (const nome of MODULOS_ESPERADOS.filter((m) => !modulos[m])) {
@@ -150,11 +150,15 @@ async function alternarInicioAutomatico(chave) {
   desenharInicioAutomatico(r);
 }
 
-/* Menu lateral só com ícones quando não cabe (janela estreita ou letra grande). */
+/* Menu lateral só com ícones quando não cabe (janela estreita ou letra grande),
+ * e com os itens mais juntos quando a janela é baixa, para não precisar rolar. */
 function ajustarTrilho() {
-  const larguraEmRem = window.innerWidth / (16 * (estado.cfg ? estado.cfg.escala_fonte : 1));
-  if (larguraEmRem < 58) document.documentElement.dataset.trilho = "1";
-  else delete document.documentElement.dataset.trilho;
+  const rem = 16 * (estado.cfg ? estado.cfg.escala_fonte : 1);
+  const html = document.documentElement;
+  if (window.innerWidth / rem < 58) html.dataset.trilho = "1";
+  else delete html.dataset.trilho;
+  if (window.innerHeight / rem < 30) html.dataset.menuCompacto = "1";
+  else delete html.dataset.menuCompacto;
 }
 window.addEventListener("resize", ajustarTrilho);
 
@@ -264,6 +268,10 @@ function botaoIcone(acao, icone, rotulo, dados) {
   b.setAttribute("aria-label", rotulo);
   b.innerHTML = `<svg class="ic"><use href="#${icone}"/></svg>`;
   return b;
+}
+
+function celula(texto, classe = "") {
+  return Object.assign(document.createElement("td"), { className: classe, textContent: texto });
 }
 
 function telefoneBR(digitos) {
