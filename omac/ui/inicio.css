@@ -1,0 +1,93 @@
+/* OMAC — tela inicial e resumo do ano. Tokens e componentes vêm de estilo.css. */
+
+/* ---------- Início ---------- */
+.ini-grade {
+  display: grid; gap: 1rem;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 19rem), 1fr));
+  align-items: start;
+}
+.ini-cartao { display: flex; flex-direction: column; gap: .85rem; padding: 1.1rem 1.25rem; min-width: 0; }
+.ini-largo { grid-column: 1 / -1; }
+.ini-cab { display: flex; align-items: center; justify-content: space-between; gap: .5rem; flex-wrap: wrap; }
+.ini-cab h2 { display: flex; align-items: center; gap: .55rem; font-size: 1.05rem; }
+.ini-cab h2 .ic { color: var(--acento); }
+.ini-corpo { display: flex; flex-direction: column; gap: .75rem; min-width: 0; }
+.ini-rodape { display: flex; flex-wrap: wrap; gap: .5rem; margin-top: auto; }
+
+.ini-saudacao { font-size: 1.35rem; font-weight: 700; }
+.ini-subtitulo { font-weight: 600; color: var(--texto-2); }
+.ini-tudo-certo { color: var(--texto-2); }
+.ini-grande { font-size: 2.2rem; font-weight: 700; line-height: 1; font-variant-numeric: tabular-nums; }
+.ini-alerta { color: var(--aviso-texto); }
+
+.ini-numeros { display: grid; grid-template-columns: repeat(auto-fit, minmax(7.5rem, 1fr)); gap: .75rem; margin: 0; }
+.ini-numeros dt { font-size: .8rem; color: var(--texto-2); font-weight: 500; }
+.ini-numeros dd { margin: .15rem 0 0; font-size: 1.15rem; font-weight: 700; font-variant-numeric: tabular-nums; }
+
+.ini-lista { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: .4rem; }
+.ini-lista-aviso li { color: var(--aviso-texto); font-weight: 600; }
+.ini-conta { display: flex; align-items: center; gap: .5rem; flex-wrap: wrap; }
+.ini-conta > span:first-child { font-weight: 600; flex: 1 1 6rem; }
+.ini-link {
+  border: 0; background: none; padding: .25rem 0; font: inherit; color: inherit; text-align: left; cursor: pointer;
+  text-decoration: underline; text-decoration-color: var(--linha); text-underline-offset: .2em;
+}
+.ini-link:hover { text-decoration-color: currentColor; }
+.ini-lista-links li { display: flex; gap: .5rem; }
+.ini-lista-links li::before { content: "•"; color: var(--acento); font-weight: 700; padding-top: .25rem; }
+
+/* Personalizar */
+.ini-editando-corpo { display: flex; flex-wrap: wrap; align-items: center; gap: .6rem; flex: 1; }
+.ini-editando-corpo span { flex: 1 1 18rem; }
+.ini-ferramentas { display: flex; gap: .15rem; }
+.ini-ferramentas .btn-linha[aria-pressed="true"] { color: var(--acento); }
+.ini-editando .ini-cartao { cursor: grab; outline: 2px dashed var(--linha); outline-offset: -2px; }
+.ini-editando .ini-escondido { opacity: .5; }
+.ini-arrastando { opacity: .35; }
+
+/* ---------- Resumo do ano ---------- */
+.rs-campo-ano { min-width: 7rem; }
+.rs-grafico-caixa { gap: .5rem; }
+.rs-grafico { min-width: 0; }
+.rs-barras {
+  position: relative; display: grid; grid-template-columns: repeat(12, 1fr); gap: 2px;
+  height: 15rem; padding: 1.6rem 0 0 3.6rem;
+}
+.rs-compacto { height: 6rem; padding: .25rem 0 0; }
+.rs-grade { position: absolute; left: 3.6rem; right: 0; border-top: 1px solid var(--linha); pointer-events: none; }
+.rs-grade span { position: absolute; right: calc(100% + .4rem); top: -.55rem; font-size: .7rem; color: var(--texto-3); white-space: nowrap; }
+.rs-coluna { display: flex; flex-direction: column; align-items: stretch; min-width: 0; outline-offset: 2px; border-radius: 4px; }
+.rs-coluna:focus-visible { outline: 2px solid var(--acento); }
+.rs-trilho { flex: 1; display: flex; align-items: flex-end; justify-content: center; border-bottom: 1px solid var(--linha); }
+.rs-barra {
+  position: relative; width: min(70%, 2.6rem);
+  background: var(--acento); border-radius: 4px 4px 0 0;
+}
+.rs-andamento { background: repeating-linear-gradient(135deg, var(--acento) 0 4px, color-mix(in srgb, var(--acento) 45%, transparent) 4px 8px); }
+.rs-vazia { height: 0; }
+.rs-rotulo {
+  position: absolute; bottom: calc(100% + .25rem); left: 50%; transform: translateX(-50%);
+  font-size: .72rem; font-weight: 700; white-space: nowrap; color: var(--texto);
+}
+.rs-mes { text-align: center; font-size: .75rem; color: var(--texto-2); padding-top: .35rem; height: 1.6rem; text-transform: capitalize; }
+.rs-compacto .rs-mes { font-size: .65rem; height: 1.3rem; }
+.rs-coluna:hover .rs-barra { filter: brightness(1.12); }
+.rs-dica {
+  position: absolute; top: 0; z-index: 2; pointer-events: none;
+  padding: .3rem .6rem; border-radius: var(--raio-p);
+  background: var(--solido); color: var(--texto); border: 1px solid var(--solido-borda);
+  font-size: .8rem; font-weight: 600; white-space: nowrap; box-shadow: 0 .3rem 1rem rgba(0, 0, 0, .15);
+}
+.rs-compacto .rs-dica { top: -1.9rem; }
+.rs-tabela tbody th { font-weight: 500; text-align: left; }
+
+[data-contraste="alto"] .rs-barra { background: var(--texto); }
+[data-contraste="alto"] .rs-andamento { background: repeating-linear-gradient(135deg, var(--texto) 0 3px, transparent 3px 6px); border: 1px solid var(--texto); }
+[data-contraste="alto"] .ini-cab h2 .ic,
+[data-contraste="alto"] .ini-alerta,
+[data-contraste="alto"] .ini-lista-aviso li { color: inherit; }
+[data-visual="otimizado"] .rs-coluna:hover .rs-barra { filter: none; }
+/* Sete colunas: os títulos quebram em duas linhas para a tabela caber sem rolar para o lado. */
+.rs-tabela thead th { white-space: normal; line-height: 1.2; vertical-align: bottom; }
+.rs-tabela th, .rs-tabela td { padding-left: .6rem !important; padding-right: .6rem !important; }
+.rs-tabela th:first-child, .rs-tabela td:first-child { padding-left: 1rem !important; }

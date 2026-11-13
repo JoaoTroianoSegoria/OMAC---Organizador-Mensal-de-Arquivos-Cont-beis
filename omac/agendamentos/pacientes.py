@@ -1,7 +1,11 @@
-"""Cadastro dos pacientes de ortodontia, a situação de cada um e o confere do mês.
+"""Cadastro dos pacientes de ortodontia, a situação de cada um, o confere e o histórico.
 
 O confere não precisa ser apagado todo dia 1: guarda a data em que foi marcado e só
 vale no mês dessa data. Assim ele recomeça mesmo se o app estiver fechado no dia 1.
+
+"Atendido" fica guardado mês a mês ({"AAAA-MM": dia em que foi marcado}), e é isso
+que monta o histórico: em cada mês o paciente veio, não veio, estava de alta, ou
+ainda não era (ou não é mais) paciente.
 """
 
 from __future__ import annotations
@@ -28,7 +32,16 @@ _CAMPOS_PADRAO = {
     "alta_inicio": "",
     "alta_fim": "",
     "responsaveis": None,  # {"pai": {"nome", "telefone"}, "mae": {...}, "envia_para": "pai" | "mae"}
+    "atendidos": {},  # "AAAA-MM" → dia em que foi marcado como atendido
+    "altas": [],  # altas que já acabaram: [{"inicio", "fim"}], para o histórico
+    "criado_em": "",  # primeiro mês do histórico
 }
+
+VEIO = "veio"
+NAO_VEIO = "nao_veio"
+FALTA_VIR = "falta_vir"  # mês atual, ainda sem marcar
+DE_ALTA = "alta"
+FORA = ""  # antes de virar paciente, depois de finalizar, ou mês que ainda não chegou
 
 
 class PacienteInvalido(ValueError):
@@ -36,7 +49,14 @@ class PacienteInvalido(ValueError):
 
 
 def completar(paciente: dict) -> dict:
-    return {**_CAMPOS_PADRAO, **paciente}
+    # Cópia das listas e dicionários: o padrão não pode ser alterado por um paciente.
+    return {**_CAMPOS_PADRAO, "atendidos": {}, "altas": [], **paciente}
+
+
+def registrar_inicio(paciente: dict, hoje: date) -> None:
+    """Paciente de uma versão anterior começa o histórico no dia em que esta abriu."""
+    if not paciente["criado_em"]:
+        paciente["criado_em"] = hoje.isoformat()
 
 
 def valor_em_centavos(texto) -> int | None:
@@ -123,7 +143,14 @@ def alta_terminou(paciente: dict, hoje: date) -> bool:
     return situacao(paciente) == ALTA and paciente["alta_fim"] < hoje.isoformat()
 
 
+def _guardar_alta(paciente: dict) -> None:
+    """A alta que acaba vai para o histórico, senão aqueles meses viram "não veio"."""
+    if paciente["alta_inicio"]:
+        paciente["altas"] = [*paciente["altas"], {"inicio": paciente["alta_inicio"], "fim": paciente["alta_fim"]}]
+
+
 def voltar_ao_tratamento(paciente: dict) -> None:
+    _guardar_alta(paciente)
     paciente.update(alta_inicio="", alta_fim="", finalizado_em="")
 
 
@@ -169,8 +196,9 @@ def buscar(pacientes: list[dict], paciente_id: str) -> dict:
 def adicionar(pacientes: list[dict], dados: dict, hoje: date | None = None) -> dict:
     novo = _validar(dados)
     _conferir_nome(pacientes, novo["nome"])
-    novo.update(_campos_de_situacao(dados, {}, hoje or date.today()))
-    novo = completar({**novo, "id": uuid.uuid4().hex})
+    hoje = hoje or date.today()
+    novo.update(_campos_de_situacao(dados, {}, hoje))
+    novo = completar({**novo, "id": uuid.uuid4().hex, "criado_em": hoje.isoformat()})
     pacientes.append(novo)
     return novo
 
@@ -181,6 +209,8 @@ def alterar(pacientes: list[dict], paciente_id: str, dados: dict, hoje: date) ->
     novos = _validar(dados)
     _conferir_nome(pacientes, novos["nome"], ignorar=paciente_id)
     novos.update(_campos_de_situacao(dados, paciente, hoje))
+    if paciente["alta_inicio"] and novos["alta_inicio"] != paciente["alta_inicio"]:
+        _guardar_alta(paciente)
     paciente.update(novos)
     return paciente
 
@@ -199,3 +229,79 @@ def agendado_no_mes(paciente: dict, hoje: date) -> bool:
 
 def marcar_agendado(paciente: dict, agendado: bool, hoje: date) -> None:
     paciente["agendado_em"] = hoje.isoformat() if agendado else ""
+
+
+# --- Atendido e histórico ----------------------------------------------------------------
+
+
+def chave_do_mes(ano: int, mes: int) -> str:
+    return f"{ano:04d}-{mes:02d}"
+
+
+def meses_ate(ano: int, mes: int, quantos: int) -> list[tuple[int, int]]:
+    """Os `quantos` meses que terminam em (ano, mês), do mais antigo ao mais novo."""
+    total = ano * 12 + mes - 1
+    return [((t // 12), t % 12 + 1) for t in range(total - quantos + 1, total + 1)]
+
+
+def atendido_no_mes(paciente: dict, hoje: date) -> bool:
+    return chave_do_mes(hoje.year, hoje.month) in paciente["atendidos"]
+
+
+def marcar_atendido(paciente: dict, mes: str, atendido: bool, hoje: date) -> None:
+    """`mes` é "AAAA-MM". Dá para marcar um mês que passou, se esqueceu na hora."""
+    if mes > hoje.isoformat()[:7]:
+        raise PacienteInvalido("Esse mês ainda não chegou.")
+    atendidos = {**paciente["atendidos"]}
+    if atendido:
+        atendidos[mes] = hoje.isoformat()
+    else:
+        atendidos.pop(mes, None)
+    paciente["atendidos"] = atendidos
+
+
+def _inicio_do_historico(paciente: dict) -> str:
+    """Primeiro mês do histórico: o do cadastro, ou um atendimento marcado antes dele."""
+    meses = [paciente["criado_em"][:7], *paciente["atendidos"]]
+    meses = [m for m in meses if m]
+    return min(meses) if meses else ""
+
+
+def _de_alta(paciente: dict, mes: str) -> bool:
+    altas = [*paciente["altas"]]
+    if paciente["alta_inicio"]:
+        altas.append({"inicio": paciente["alta_inicio"], "fim": paciente["alta_fim"]})
+    # Quem veio no mês da alta já aparece como "veio": isso é conferido antes.
+    return any(a["inicio"][:7] <= mes <= a["fim"][:7] for a in altas)
+
+
+def situacao_no_mes(paciente: dict, ano: int, mes: int, hoje: date) -> str:
+    chave = chave_do_mes(ano, mes)
+    if chave in paciente["atendidos"]:
+        return VEIO
+    atual = hoje.isoformat()[:7]
+    inicio = _inicio_do_historico(paciente)
+    if chave > atual or not inicio or chave < inicio:
+        return FORA
+    if paciente["finalizado_em"] and chave > paciente["finalizado_em"][:7]:
+        return FORA
+    if _de_alta(paciente, chave):
+        return DE_ALTA
+    return FALTA_VIR if chave == atual else NAO_VEIO
+
+
+def historico_do_paciente(paciente: dict, hoje: date) -> dict:
+    """Todos os meses desde o começo do histórico até hoje, do mais novo ao mais antigo."""
+    inicio = _inicio_do_historico(paciente) or hoje.isoformat()[:7]
+    ano, mes = int(inicio[:4]), int(inicio[5:7])
+    quantos = (hoje.year * 12 + hoje.month) - (ano * 12 + mes) + 1
+    meses = [{"ano": a, "mes": m, "situacao": situacao_no_mes(paciente, a, m, hoje)}
+             for a, m in meses_ate(hoje.year, hoje.month, max(quantos, 1))]
+    meses = [m for m in meses if m["situacao"] != FORA or m["mes"] == hoje.month and m["ano"] == hoje.year]
+    contados = [m for m in meses if m["situacao"] in (VEIO, NAO_VEIO)]
+    return {
+        "meses": list(reversed(meses)),
+        "veio": sum(m["situacao"] == VEIO for m in contados),
+        # O mês atual só entra na conta depois de marcado: ele ainda não acabou.
+        "esperados": len(contados),
+    }

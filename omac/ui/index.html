@@ -9,6 +9,7 @@
   <link rel="stylesheet" href="whatsapp.css">
   <link rel="stylesheet" href="agendamentos.css">
   <link rel="stylesheet" href="pagamentos.css">
+  <link rel="stylesheet" href="inicio.css">
   <script>
     /* Antes de tudo: se um script não carregar ou quebrar, a tela diz qual, em vez de ficar muda. */
     window.omacErrosDeTela = [];
@@ -62,6 +63,14 @@
       <symbol id="i-agenda" viewBox="0 0 24 24"><rect x="3.5" y="5" width="17" height="15.5" rx="2"/><path d="M3.5 10h17M8 3v4M16 3v4M8.5 15l2.5 2.5 4.5-4.5"/></symbol>
       <symbol id="i-seta" viewBox="0 0 24 24"><path d="m6 9.5 6 6 6-6"/></symbol>
       <symbol id="i-dinheiro" viewBox="0 0 24 24"><rect x="2.5" y="6" width="19" height="12" rx="2"/><circle cx="12" cy="12" r="2.6"/><path d="M6 9.5v5M18 9.5v5"/></symbol>
+      <symbol id="i-casa" viewBox="0 0 24 24"><path d="M3.5 11 12 4l8.5 7M5.5 9.5V20h5v-5.5h3V20h5V9.5"/></symbol>
+      <symbol id="i-grafico" viewBox="0 0 24 24"><path d="M4 20h16M7 16.5v-5M12 16.5V7M17 16.5v-8"/></symbol>
+      <symbol id="i-relogio" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/></symbol>
+      <symbol id="i-olho" viewBox="0 0 24 24"><path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12z"/><circle cx="12" cy="12" r="2.8"/></symbol>
+      <symbol id="i-olho-fechado" viewBox="0 0 24 24"><path d="M4 4l16 16M9.9 6A9.6 9.6 0 0 1 12 5.5c6 0 9.5 6.5 9.5 6.5a17 17 0 0 1-2.6 3.4M6.4 7.6A16.6 16.6 0 0 0 2.5 12S6 18.5 12 18.5a9 9 0 0 0 4.3-1.1M10 10a2.8 2.8 0 0 0 4 4"/></symbol>
+      <symbol id="i-cima" viewBox="0 0 24 24"><path d="m6 14.5 6-6 6 6"/></symbol>
+      <symbol id="i-largura" viewBox="0 0 24 24"><path d="M3.5 12h17M7 8.5 3.5 12 7 15.5M17 8.5l3.5 3.5-3.5 3.5"/></symbol>
+      <symbol id="i-x" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="m9 9 6 6M15 9l-6 6"/></symbol>
       <symbol id="i-cadeado" viewBox="0 0 24 24"><rect x="4.5" y="10.5" width="15" height="10" rx="2"/><path d="M8 10.5V7.5a4 4 0 0 1 8 0v3"/></symbol>
     </defs>
   </svg>
@@ -83,7 +92,10 @@
       </div>
 
       <nav class="menu">
-        <button class="menu-item" data-view="notas" aria-current="page">
+        <button class="menu-item" data-view="inicio">
+          <svg class="ic"><use href="#i-casa"/></svg><span class="rotulo">Início</span>
+        </button>
+        <button class="menu-item" data-view="notas">
           <svg class="ic"><use href="#i-notas"/></svg><span class="rotulo">Notas fiscais</span>
         </button>
         <button class="menu-item" data-view="extrato">
@@ -98,6 +110,9 @@
         <button class="menu-item" data-view="pagamentos">
           <svg class="ic"><use href="#i-dinheiro"/></svg><span class="rotulo">Pagamentos</span>
         </button>
+        <button class="menu-item" data-view="resumo">
+          <svg class="ic"><use href="#i-grafico"/></svg><span class="rotulo">Resumo do ano</span>
+        </button>
       </nav>
 
       <div class="lateral-rodape">
@@ -109,8 +124,31 @@
     </aside>
 
     <main class="conteudo" id="conteudo" tabindex="-1">
+      <!-- ============ INÍCIO ============ -->
+      <section class="view" id="view-inicio" aria-labelledby="t-inicio" hidden>
+        <header class="topo">
+          <div>
+            <h1 id="t-inicio">Início</h1>
+            <p class="sub" id="ini-data"></p>
+          </div>
+          <div class="topo-acoes">
+            <button class="btn" data-acao="ini-atualizar"><svg class="ic"><use href="#i-atualizar"/></svg><span>Atualizar</span></button>
+            <button class="btn" data-acao="ini-personalizar" id="ini-personalizar" aria-pressed="false"><svg class="ic"><use href="#i-ajustes"/></svg><span>Personalizar</span></button>
+          </div>
+        </header>
+        <div class="faixa faixa-info vidro" id="ini-editando" hidden>
+          <svg class="ic"><use href="#i-ajustes"/></svg>
+          <div class="ini-editando-corpo">
+            <span>Arraste os cartões, ou use as setas, para mudar a ordem. O olho mostra ou esconde o cartão, e o botão de largura faz ele ocupar a linha toda.</span>
+            <button class="btn btn-peq" data-acao="ini-restaurar">Restaurar padrão</button>
+            <button class="btn btn-peq btn-primario" data-acao="ini-personalizar">Concluir</button>
+          </div>
+        </div>
+        <div class="ini-grade" id="ini-grade"></div>
+      </section>
+
       <!-- ============ NOTAS FISCAIS ============ -->
-      <section class="view" id="view-notas" aria-labelledby="t-notas">
+      <section class="view" id="view-notas" aria-labelledby="t-notas" hidden>
         <header class="topo">
           <div>
             <h1 id="t-notas">Notas fiscais</h1>
@@ -524,6 +562,7 @@
           <button class="escolha" data-acao="ag-aba" data-aba="ativos" aria-pressed="true">Em tratamento <span class="ag-qtd" id="ag-qtd-ativos"></span></button>
           <button class="escolha" data-acao="ag-aba" data-aba="altas" aria-pressed="false">Alta temporária <span class="ag-qtd" id="ag-qtd-altas"></span></button>
           <button class="escolha" data-acao="ag-aba" data-aba="finalizados" aria-pressed="false">Finalizados <span class="ag-qtd" id="ag-qtd-finalizados"></span></button>
+          <button class="escolha" data-acao="ag-aba" data-aba="historico" aria-pressed="false">Histórico</button>
         </div>
 
         <!-- Em tratamento -->
@@ -543,12 +582,17 @@
               <span class="cartao-rotulo">Falta conferir</span>
               <strong class="cartao-valor" id="ag-faltam">0</strong>
             </div>
+            <div class="cartao vidro">
+              <span class="cartao-rotulo">Atendidos no mês</span>
+              <strong class="cartao-valor" id="ag-atendidos">0</strong>
+            </div>
           </div>
 
           <div class="escolhas ag-filtros" id="ag-filtros">
             <button class="escolha" data-acao="ag-filtro" data-filtro="todos">Todos</button>
             <button class="escolha" data-acao="ag-filtro" data-filtro="pendentes">Falta conferir</button>
             <button class="escolha" data-acao="ag-filtro" data-filtro="agendados">Já agendados</button>
+            <button class="escolha" data-acao="ag-filtro" data-filtro="nao_atendidos">Falta atender</button>
           </div>
 
           <div class="tabela-caixa vidro" id="ag-ativos-caixa">
@@ -557,6 +601,7 @@
               <thead>
                 <tr>
                   <th scope="col" class="c-confere" title="Marque quando a manutenção do mês já estiver agendada. Recomeça todo dia 1.">Confere</th>
+                  <th scope="col" class="c-confere" title="Marque quando o paciente for atendido no mês. Fica guardado no histórico.">Atendido</th>
                   <th scope="col">Paciente</th>
                   <th scope="col" class="c-telefone">Telefone</th>
                   <th scope="col" class="c-valor">Manutenção</th>
@@ -566,7 +611,7 @@
               <tbody id="ag-ativos-corpo"></tbody>
             </table>
           </div>
-          <p class="dica" id="ag-dica">O confere recomeça sozinho todo dia 1, para você conferir os pacientes de novo a cada mês.</p>
+          <p class="dica" id="ag-dica">O confere e o atendido recomeçam sozinhos todo dia 1. O atendido de cada mês fica guardado na aba <strong>Histórico</strong>.</p>
 
           <div class="vazio vidro" id="ag-ativos-vazio" hidden>
             <span class="vazio-icone"><svg class="ic"><use href="#i-agenda"/></svg></span>
@@ -620,6 +665,35 @@
             <span class="vazio-icone"><svg class="ic"><use href="#i-ok"/></svg></span>
             <h2>Nenhum tratamento finalizado</h2>
             <p>Para finalizar, clique no lápis ao lado do paciente e escolha <strong>Finalizado</strong>.</p>
+          </div>
+        </div>
+
+        <!-- Histórico -->
+        <div class="painel-coluna" id="ag-historico" hidden>
+          <div class="barra vidro ag-hist-barra">
+            <button class="btn btn-peq" data-acao="ag-hist-mover" data-passo="-6"><svg class="ic ag-seta-esq"><use href="#i-seta"/></svg><span>Meses anteriores</span></button>
+            <strong class="ag-hist-periodo" id="ag-hist-periodo" aria-live="polite"></strong>
+            <button class="btn btn-peq" data-acao="ag-hist-mover" data-passo="6" id="ag-hist-avancar"><span>Meses seguintes</span><svg class="ic ag-seta-dir"><use href="#i-seta"/></svg></button>
+          </div>
+          <div class="tabela-caixa vidro" id="ag-hist-caixa">
+            <table class="tabela ag-hist">
+              <caption class="so-leitor">Se cada paciente veio em cada mês</caption>
+              <thead><tr id="ag-hist-cab"></tr></thead>
+              <tbody id="ag-hist-corpo"></tbody>
+            </table>
+          </div>
+          <p class="dica" id="ag-hist-dica">Clique num mês para marcar ou desmarcar se o paciente veio. Clique no nome para ver todos os meses dele.</p>
+          <ul class="ag-legenda" aria-label="Legenda">
+            <li><span class="ag-marca ag-veio"><svg class="ic"><use href="#i-ok"/></svg></span>veio</li>
+            <li><span class="ag-marca ag-nao_veio"><svg class="ic"><use href="#i-x"/></svg></span>não veio</li>
+            <li><span class="ag-marca ag-falta_vir">…</span>ainda não veio neste mês</li>
+            <li><span class="ag-marca ag-alta">alta</span>de alta temporária</li>
+            <li><span class="ag-marca ag-fora">—</span>ainda não era (ou não é mais) paciente</li>
+          </ul>
+          <div class="vazio vidro" id="ag-hist-vazio" hidden>
+            <span class="vazio-icone"><svg class="ic"><use href="#i-relogio"/></svg></span>
+            <h2>Nenhum paciente nesses meses</h2>
+            <p>O histórico começa no mês em que o paciente foi cadastrado. Marque <strong>Atendido</strong> em Em tratamento a cada mês.</p>
           </div>
         </div>
       </section>
@@ -708,6 +782,71 @@
           <p>Lance aqui os atendimentos que precisam ser pagos, como na ficha de papel. Eles ficam só neste computador.</p>
           <button class="btn btn-primario" data-acao="pg-novo"><svg class="ic"><use href="#i-mais"/></svg><span>Novo atendimento</span></button>
         </div>
+      </section>
+
+      <!-- ============ RESUMO DO ANO ============ -->
+      <section class="view" id="view-resumo" aria-labelledby="t-resumo" hidden>
+        <header class="topo">
+          <div>
+            <h1 id="t-resumo">Resumo do ano</h1>
+            <p class="sub">Notas fiscais, extrato e ficha de pagamentos, mês a mês</p>
+          </div>
+          <div class="topo-acoes">
+            <div class="campo rs-campo-ano">
+              <label class="rotulo-campo" for="rs-ano">Ano</label>
+              <span class="select"><select id="rs-ano"></select></span>
+            </div>
+          </div>
+        </header>
+
+        <div class="faixa faixa-aviso vidro" id="rs-sem-notas" hidden>
+          <svg class="ic"><use href="#i-alerta"/></svg>
+          <span id="rs-sem-notas-texto"></span>
+        </div>
+
+        <div class="resumo">
+          <div class="cartao vidro">
+            <span class="cartao-rotulo">Faturamento no ano</span>
+            <strong class="cartao-valor" id="rs-total"></strong>
+          </div>
+          <div class="cartao vidro">
+            <span class="cartao-rotulo" id="rs-media-rotulo">Média por mês</span>
+            <strong class="cartao-valor" id="rs-media"></strong>
+          </div>
+          <div class="cartao vidro">
+            <span class="cartao-rotulo">Melhor mês</span>
+            <strong class="cartao-valor" id="rs-melhor"></strong>
+          </div>
+          <div class="cartao vidro">
+            <span class="cartao-rotulo">Pior mês</span>
+            <strong class="cartao-valor" id="rs-pior"></strong>
+          </div>
+        </div>
+
+        <section class="grupo vidro rs-grafico-caixa" aria-labelledby="rs-grafico-titulo">
+          <h2 id="rs-grafico-titulo">Faturamento das notas por mês</h2>
+          <p class="dica" id="rs-comparacao"></p>
+          <div class="rs-grafico" id="rs-grafico"></div>
+        </section>
+
+        <div class="tabela-caixa vidro">
+          <table class="tabela rs-tabela">
+            <caption class="so-leitor">Resumo de cada mês</caption>
+            <thead>
+              <tr>
+                <th scope="col">Mês</th>
+                <th scope="col" class="c-valor">Notas</th>
+                <th scope="col" class="c-valor">Faturamento</th>
+                <th scope="col" class="c-valor">Entradas no banco</th>
+                <th scope="col" class="c-valor">Saídas do banco</th>
+                <th scope="col" class="c-valor">Recebido na ficha</th>
+                <th scope="col" class="c-valor">Pendente na ficha</th>
+              </tr>
+            </thead>
+            <tbody id="rs-corpo"></tbody>
+          </table>
+        </div>
+        <p class="dica">Mês sem dado fica em branco: sem nota lida, sem extrato na pasta ou sem atendimento na ficha. O mês atual ainda está em andamento e não entra na média.</p>
       </section>
 
       <!-- ============ CONFIGURAÇÕES ============ -->
@@ -838,6 +977,18 @@
               <label class="rotulo-campo" for="cfg-fechamento">Lembrar de gerar o fechamento</label>
               <span class="select"><select id="cfg-fechamento" data-config-campo="lembrete_fechamento_dia" data-tipo="numero"></select></span>
             </div>
+          </section>
+
+          <section class="grupo vidro" aria-labelledby="g-inicio">
+            <h2 id="g-inicio">Tela inicial</h2>
+            <fieldset class="opcao">
+              <legend>Ao abrir o OMAC, mostrar</legend>
+              <div class="escolhas" data-config="abrir_em">
+                <button class="escolha" data-valor="inicio">Início</button>
+                <button class="escolha" data-valor="notas">Notas fiscais</button>
+              </div>
+            </fieldset>
+            <p class="dica">Os cartões do Início são escolhidos e organizados no botão <strong>Personalizar</strong>, na própria tela.</p>
           </section>
 
           <section class="grupo vidro" aria-labelledby="g-pagamentos">
@@ -1028,10 +1179,23 @@
       <p class="modal-erro" id="ag-paciente-erro" role="alert" hidden></p>
       <div class="modal-acoes">
         <button class="btn btn-perigo" type="button" id="ag-excluir" data-acao="ag-excluir"><svg class="ic"><use href="#i-lixeira"/></svg><span>Excluir paciente</span></button>
+        <button class="btn" type="button" id="ag-ver-historico" data-acao="ag-ver-historico"><svg class="ic"><use href="#i-relogio"/></svg><span>Histórico</span></button>
         <button class="btn" type="button" data-acao="ag-fechar-paciente">Cancelar</button>
         <button class="btn btn-primario" type="submit">Salvar</button>
       </div>
     </form>
+  </dialog>
+
+  <!-- Histórico de um paciente -->
+  <dialog class="modal vidro" id="ag-hist-paciente" aria-labelledby="ag-hist-titulo">
+    <div class="modal-corpo">
+      <h2 id="ag-hist-titulo"></h2>
+      <p class="ag-hist-conta" id="ag-hist-conta"></p>
+      <ul class="ag-hist-lista" id="ag-hist-lista"></ul>
+      <div class="modal-acoes">
+        <button class="btn" type="button" data-acao="ag-fechar-hist" autofocus>Fechar</button>
+      </div>
+    </div>
   </dialog>
 
   <!-- Mensagem para o paciente -->
@@ -1133,6 +1297,8 @@
   <script src="whatsapp.js"></script>
   <script src="agendamentos.js"></script>
   <script src="pagamentos.js"></script>
+  <script src="resumo.js"></script>
+  <script src="inicio.js"></script>
   <script src="atualizacao.js"></script>
 </body>
 </html>

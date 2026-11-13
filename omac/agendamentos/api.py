@@ -30,6 +30,9 @@ class AgendamentosApi(ApiBase):
             dados = carregar_json(caminho, PADRAO, "Os pacientes")
             dados["pacientes"] = [pc.completar(p) for p in dados["pacientes"]]
             antes = json.dumps(dados, sort_keys=True)
+            # Depois do "antes": o começo do histórico dos pacientes antigos é gravado uma vez só.
+            for p in dados["pacientes"]:
+                pc.registrar_inicio(p, date.today())
             yield dados
             if json.dumps(dados, sort_keys=True) != antes:
                 salvar_json(caminho, dados)
@@ -45,7 +48,8 @@ class AgendamentosApi(ApiBase):
         return {
             "ano": hoje.year,
             "mes": hoje.month,
-            "ativos": [{**vista(p), "agendado": pc.agendado_no_mes(p, hoje)} for p in na_situacao(pc.ATIVO)],
+            "ativos": [{**vista(p), "agendado": pc.agendado_no_mes(p, hoje), "atendido": pc.atendido_no_mes(p, hoje)}
+                       for p in na_situacao(pc.ATIVO)],
             # A alta que acaba primeiro aparece primeiro.
             "altas": [{**vista(p), "terminou": pc.alta_terminou(p, hoje)}
                       for p in sorted(na_situacao(pc.ALTA), key=lambda p: p["alta_fim"])],
@@ -90,6 +94,40 @@ class AgendamentosApi(ApiBase):
         with self._agenda() as d:
             pc.marcar_agendado(pc.buscar(d["pacientes"], paciente_id), bool(agendado), date.today())
             return self._lista(d)
+
+    @seguro
+    def agendamentos_marcar_atendido(self, paciente_id: str, mes: str, atendido: bool):
+        """`mes` é "AAAA-MM". Devolve a lista e o histórico, que mudam juntos."""
+        with self._agenda() as d:
+            pc.marcar_atendido(pc.buscar(d["pacientes"], paciente_id), str(mes)[:7], bool(atendido), date.today())
+            return self._lista(d)
+
+    @seguro
+    def agendamentos_historico(self, ano: int, mes: int, quantos: int = 6):
+        """Os `quantos` meses que terminam em (ano, mês): uma coluna por mês, uma linha por paciente."""
+        hoje = date.today()
+        meses = pc.meses_ate(int(ano), int(mes), max(1, min(int(quantos), 12)))
+        with self._agenda() as d:
+            pacientes = sorted(d["pacientes"], key=lambda p: normalizar(p["nome"]))
+        linhas = []
+        for p in pacientes:
+            celulas = [pc.situacao_no_mes(p, a, m, hoje) for a, m in meses]
+            if any(celulas):  # quem não era paciente em nenhum desses meses fica de fora
+                linhas.append({"id": p["id"], "nome": p["nome"], "situacao": pc.situacao(p), "meses": celulas})
+        colunas = []
+        for i, (a, m) in enumerate(meses):
+            do_mes = [linha["meses"][i] for linha in linhas]
+            colunas.append({"ano": a, "mes": m, "chave": pc.chave_do_mes(a, m),
+                            "veio": do_mes.count(pc.VEIO),
+                            "esperados": sum(c in (pc.VEIO, pc.NAO_VEIO, pc.FALTA_VIR) for c in do_mes)})
+        return {"meses": colunas, "pacientes": linhas,
+                "hoje": pc.chave_do_mes(hoje.year, hoje.month)}
+
+    @seguro
+    def agendamentos_historico_paciente(self, paciente_id: str):
+        with self._agenda() as d:
+            p = pc.buscar(d["pacientes"], paciente_id)
+        return {"id": p["id"], "nome": p["nome"], **pc.historico_do_paciente(p, date.today())}
 
     @seguro
     def agendamentos_preparar_mensagens(self, paciente_id: str):
