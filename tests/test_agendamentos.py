@@ -405,8 +405,14 @@ def test_so_abrir_a_lista_nao_regrava_o_arquivo(api):
     arquivo.parent.mkdir(parents=True, exist_ok=True)
     original = json.dumps({"pacientes": [{"id": "a", "nome": "Maria", "agendado_em": "", "finalizado_em": ""}]})
     arquivo.write_text(original, encoding="utf-8")
+    # A primeira abertura grava uma vez o começo do histórico de quem veio da versão anterior...
     api.agendamentos_listar()
-    assert arquivo.read_text(encoding="utf-8") == original
+    gravado = arquivo.read_text(encoding="utf-8")
+    assert json.loads(gravado)["pacientes"][0]["criado_em"] == date.today().isoformat()
+    # ...e depois só abrir não regrava mais.
+    api.agendamentos_listar()
+    api.agendamentos_historico(2026, 11)
+    assert arquivo.read_text(encoding="utf-8") == gravado
 
 
 def test_desfazer_exclusao_de_quem_esta_de_alta(api):
