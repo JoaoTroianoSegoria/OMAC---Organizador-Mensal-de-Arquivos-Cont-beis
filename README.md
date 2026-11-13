@@ -51,6 +51,7 @@ extrato do banco precisavam ser passadas à mão para uma planilha que vai para 
 - **Enviar a nota ao paciente:** a mensagem sai pronta e assinada, o PDF é copiado e a conversa abre no aplicativo ou no WhatsApp Web. A pessoa cola o PDF e aperta enviar.
 - **Lista "Notas a enviar":** as notas novas ficam ali, em qualquer mês, até serem enviadas. Dá para seguir direto para a próxima.
 - **Lembretes de contas:** na primeira abertura do dia, uma janela mostra o que vence amanhã ou hoje, e um clique deixa a mensagem pronta para quem cuida dos pagamentos.
+- **Conta paga:** um botão **Paga** no próprio lembrete faz a conta parar de avisar naquele mês. Na lista de contas aparece o mês atual e o anterior; o que não foi marcado até o fim do mês fica como **não paga**.
 - **Sem automação no WhatsApp:** o OMAC usa o link oficial e nunca envia nada sozinho, para não colocar o número em risco.
 
 ### Agendamentos
@@ -66,6 +67,20 @@ extrato do banco precisavam ser passadas à mão para uma planilha que vai para 
 - **Responsáveis:** paciente criança pode ter pai e mãe no cadastro, com a escolha de quem sempre recebe as mensagens. O texto já sai falando com o responsável.
 - **Alta temporária:** com o dia em que foi dada e o dia em que acaba. Enquanto durar, o paciente fica fora do confere, e o OMAC avisa quando a alta termina.
 - **Finalizados:** quem termina o tratamento vai para outra aba e pode voltar para a lista se precisar.
+
+### Ficha de pagamentos
+
+<p align="center">
+  <img src="docs/capturas/pagamentos.png" alt="Ficha de pagamentos do mês" width="49%">
+  <img src="docs/capturas/pagamentos-atendimento.png" alt="Janela de atendimento" width="49%">
+</p>
+
+- **A ficha de papel, dentro do app:** paciente, tratamento, data, valor, forma de pagamento (Pix PJ, Pix PF, dinheiro, débito ou crédito), em quantas vezes no crédito, pago e nota.
+- **Pago sem esforço:** fica em branco enquanto espera; se o mês acabar sem marcar, aparece como **não pago**. Pagou depois, é só marcar.
+- **Nota marcada sozinha:** o OMAC procura na pasta das notas uma nota do paciente com competência no mês e marca "ok". Se a nota saiu em outro nome, dá para marcar à mão.
+- **Menos digitação:** o campo de paciente sugere os nomes já usados na ficha e os pacientes de ortodontia, que já vêm com a manutenção e o valor. Os tratamentos sugeridos (limpeza, manutenção, botox…) são editáveis nas Configurações.
+- **Resumo do mês:** recebido, a receber, não pago e quantos estão sem nota, com filtros.
+- **Exportar Excel:** a ficha do mês em uma folha deitada, pronta para imprimir.
 
 ### Interface
 
@@ -106,7 +121,7 @@ Dados de saúde são dados sensíveis. O OMAC:
 - não envia nenhum dado seu para a internet: a única saída é a conversa do WhatsApp que a própria pessoa abre e envia;
 - guarda configurações e cache só no computador (`%APPDATA%\OMAC`), em uma pasta separada do programa, que as atualizações não alteram;
 - para procurar versão nova, só consulta o GitHub, sem enviar nenhum dado seu, e dá para desligar nas Configurações;
-- guarda os telefones dos pacientes e os dados de agendamento só no computador;
+- guarda os telefones dos pacientes, os dados de agendamento e a ficha de pagamentos só no computador;
 - deixa o nome de quem mandou Pix fora da planilha do fechamento;
 - guarda as regras do extrato (com nomes de fornecedores) só no computador, nunca no código;
 - tem um `.gitignore` que bloqueia PDF, planilhas e extratos, para nenhum dado real ir parar no GitHub.
@@ -164,12 +179,13 @@ omac/
 ├── extrato/          leitor.py · pasta.py · regras.py · exportar.py · api.py
 ├── whatsapp/         mensagens.py · lembretes.py · dados.py · api.py
 ├── agendamentos/     pacientes.py · mensagens.py · api.py
+├── pagamentos/       ficha.py · exportar.py · api.py
 ├── atualizacao/      github.py · api.py
 └── ui/               index.html, estilo.css, nucleo.js + um .js/.css por módulo
 tests/                testes + gerador de notas e extratos de exemplo
 ```
 
-Para criar um módulo: uma pasta em `omac/` com a classe da API (herdando de `ApiBase`), que entra na lista de `Api` em `app.py`, e um `.js` em `ui/` que se registra em `modulos` e `acoes`.
+Para criar um módulo: uma pasta em `omac/` com a classe da API (herdando de `ApiBase`), que entra na lista de `Api` em `app.py`, e um `.js` em `ui/` que se registra em `modulos` e `acoes`. Os métodos de cada módulo levam o nome dele (`pagamentos_listar`, `_lista_ficha`…): como todos viram uma classe só, dois métodos com o mesmo nome se apagariam sem erro, e um teste confere isso.
 
 ## Próximos passos
 
@@ -177,3 +193,6 @@ Para criar um módulo: uma pasta em `omac/` com a classe da API (herdando de `Ap
 - [ ] **Conciliação:** cruzar Pix recebidos com notas emitidas.
 - [x] **WhatsApp:** envio de notas e lembretes de contas pelo link oficial.
 - [x] **Agendamentos:** pacientes de ortodontia, mensagens e confere do mês.
+- [x] **Ficha de pagamentos** e contas pagas nos lembretes.
+- [ ] **Tela inicial personalizável** e **resumo do ano**.
+- [ ] **Backup** das notas, extratos e dados.
