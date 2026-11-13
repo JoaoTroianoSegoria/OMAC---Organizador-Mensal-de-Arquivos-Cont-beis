@@ -21,7 +21,7 @@ const estado = {
   cfg: null,
   ano: 0,
   mes: 0,
-  view: "notas",
+  view: "",
 };
 
 const modulos = {};
@@ -32,7 +32,7 @@ const api = () => window.pywebview.api;
 /* ---------- Início ---------- */
 
 /* Um script vazio ou cortado não gera erro nenhum: sem esta conferência, a tela fica muda. */
-const MODULOS_ESPERADOS = ["notas", "extrato", "whatsapp", "agendamentos", "pagamentos", "atualizacao"];
+const MODULOS_ESPERADOS = ["inicio", "notas", "extrato", "whatsapp", "agendamentos", "pagamentos", "resumo", "atualizacao"];
 
 async function conferirModulos() {
   for (const nome of MODULOS_ESPERADOS.filter((m) => !modulos[m])) {
@@ -63,7 +63,7 @@ async function iniciar() {
 
   aplicarConfig();
   ligarEventos();
-  mostrarView("notas");
+  mostrarView(estado.cfg.abrir_em === "notas" ? "notas" : "inicio");
   carregarInicioAutomatico();
   Object.values(modulos).forEach((m) => m.aoIniciar?.());
 }

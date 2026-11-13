@@ -1,4 +1,5 @@
-/* OMAC — módulo de agendamentos: pacientes de ortodontia, responsáveis, altas e confere do mês. */
+/* OMAC — módulo de agendamentos: pacientes de ortodontia, responsáveis, altas, confere,
+ * atendido do mês e histórico (quem veio em cada mês). */
 "use strict";
 
 const agenda = {
@@ -13,7 +14,15 @@ const agenda = {
   situacao: "ativo", // escolhida na janela de paciente
   enviaPara: "mae", // escolhida na janela de paciente
   mensagem: null, // dados da janela de mensagem
+  histFim: null, // [ano, mês] da última coluna do histórico (null = mês atual)
+  historico: null,
 };
+
+const HIST_MESES = 6;
+const SITUACAO_NO_MES = {
+  veio: "veio", nao_veio: "não veio", falta_vir: "ainda não veio", alta: "de alta", "": "não era paciente",
+};
+const MESES_CURTOS = ["jan", "fev", "mar", "abr", "mai", "jun", "jul", "ago", "set", "out", "nov", "dez"];
 
 const NOMES_DAS_ABAS = { ativo: "Em tratamento", alta: "Alta temporária", finalizado: "Finalizados" };
 
@@ -32,6 +41,12 @@ const pacienteAgenda = (alvo) =>
 
 Object.assign(acoes, {
   "ag-aba": (alvo) => { agenda.aba = alvo.dataset.aba; desenharAgenda(); },
+  "ag-atendido": marcarAtendido,
+  "ag-hist-mover": (alvo) => moverHistorico(Number(alvo.dataset.passo)),
+  "ag-hist-marcar": marcarNoHistorico,
+  "ag-hist-paciente": (alvo) => abrirHistoricoDoPaciente(alvo.dataset.id),
+  "ag-ver-historico": () => { $("#ag-paciente").close(); abrirHistoricoDoPaciente(agenda.editando.id); },
+  "ag-fechar-hist": () => $("#ag-hist-paciente").close(),
   "ag-filtro": (alvo) => { agenda.filtro = alvo.dataset.filtro; desenharAgenda(); },
   "ag-novo": () => abrirPaciente(null),
   "ag-editar": (alvo) => abrirPaciente(pacienteAgenda(alvo)),
@@ -68,6 +83,8 @@ function desenharAgenda() {
   $("#ag-ativos").hidden = agenda.aba !== "ativos";
   $("#ag-altas").hidden = agenda.aba !== "altas";
   $("#ag-finalizados").hidden = agenda.aba !== "finalizados";
+  $("#ag-historico").hidden = agenda.aba !== "historico";
+  if (agenda.aba === "historico") carregarHistorico();
   $("#ag-mes").textContent = `${MESES[agenda.mes - 1]} de ${agenda.ano}`;
   for (const lista of ["ativos", "altas", "finalizados"]) {
     $(`#ag-qtd-${lista}`).textContent = agenda[lista].length ? `(${agenda[lista].length})` : "";
@@ -114,6 +131,7 @@ function desenharAtivos() {
     : `${terminadas} altas temporárias já terminaram.`;
   $("#ag-feitos").textContent = String(feitos);
   $("#ag-faltam").textContent = String(agenda.ativos.length - feitos);
+  $("#ag-atendidos").textContent = `${agenda.ativos.filter((p) => p.atendido).length} de ${agenda.ativos.length}`;
   $("#ag-resumo").hidden = vazio;
   $("#ag-filtros").hidden = vazio;
   $("#ag-ativos-caixa").hidden = vazio;
@@ -121,14 +139,21 @@ function desenharAtivos() {
   $("#ag-ativos-vazio").hidden = !vazio;
   $$("#ag-filtros .escolha").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.filtro === agenda.filtro)));
 
-  const visiveis = agenda.ativos.filter((p) =>
-    agenda.filtro === "todos" || p.agendado === (agenda.filtro === "agendados"));
+  const filtros = {
+    todos: () => true,
+    pendentes: (p) => !p.agendado,
+    agendados: (p) => p.agendado,
+    nao_atendidos: (p) => !p.atendido,
+  };
+  const visiveis = agenda.ativos.filter(filtros[agenda.filtro] || filtros.todos);
   if (visiveis.length === 0) {
     const tr = document.createElement("tr");
-    const td = celula(agenda.filtro === "pendentes"
-      ? "Todos os pacientes já foram conferidos neste mês."
-      : "Nenhum paciente marcado como agendado neste mês.", "ag-nada");
-    td.colSpan = 5;
+    const td = celula({
+      pendentes: "Todos os pacientes já foram conferidos neste mês.",
+      agendados: "Nenhum paciente marcado como agendado neste mês.",
+      nao_atendidos: "Todos os pacientes já foram atendidos neste mês.",
+    }[agenda.filtro], "ag-nada");
+    td.colSpan = 6;
     tr.append(td);
     $("#ag-ativos-corpo").replaceChildren(tr);
     return;
@@ -142,7 +167,14 @@ function desenharAtivos() {
     caixa.dataset.id = p.id;
     caixa.setAttribute("aria-label", `${p.nome} já tem a manutenção agendada neste mês`);
     tdConfere.append(caixa);
-    tr.append(tdConfere, celulaPaciente(p), celulaTelefone(p),
+    const tdAtendido = document.createElement("td");
+    tdAtendido.className = "c-confere";
+    const atendido = Object.assign(document.createElement("input"), { type: "checkbox", className: "confere", checked: p.atendido });
+    atendido.dataset.acao = "ag-atendido";
+    atendido.dataset.id = p.id;
+    atendido.setAttribute("aria-label", `${p.nome} já foi atendido neste mês`);
+    tdAtendido.append(atendido);
+    tr.append(tdConfere, tdAtendido, celulaPaciente(p), celulaTelefone(p),
       p.valor_centavos == null ? celula("Sem valor", "c-valor ag-sem-dado") : celula(real.format(p.valor_centavos / 100), "c-valor"),
       celulaAcoes(p));
     return tr;
@@ -184,6 +216,136 @@ async function marcarAgendado(caixa) {
     return mostrarToast(r.erro, { erro: true });
   }
   aplicarAgenda(r);
+}
+
+const mesAtualDaAgenda = () => `${agenda.ano}-${String(agenda.mes).padStart(2, "0")}`;
+
+async function marcarAtendido(caixa) {
+  const r = await api().agendamentos_marcar_atendido(caixa.dataset.id, mesAtualDaAgenda(), caixa.checked);
+  if (r.erro) {
+    caixa.checked = !caixa.checked;
+    return mostrarToast(r.erro, { erro: true });
+  }
+  aplicarAgenda(r);
+}
+
+/* ---------- Histórico ---------- */
+
+function fimDoHistorico() {
+  return agenda.histFim || [agenda.ano, agenda.mes];
+}
+
+async function carregarHistorico() {
+  const [ano, mes] = fimDoHistorico();
+  const r = await api().agendamentos_historico(ano, mes, HIST_MESES);
+  if (r.erro) return mostrarToast(r.erro, { erro: true });
+  agenda.historico = r;
+  desenharHistorico();
+}
+
+function moverHistorico(passo) {
+  const [ano, mes] = fimDoHistorico();
+  const total = ano * 12 + (mes - 1) + passo;
+  const atual = agenda.ano * 12 + (agenda.mes - 1);
+  const fim = Math.min(total, atual); // não passa do mês atual
+  agenda.histFim = [Math.floor(fim / 12), (fim % 12) + 1];
+  carregarHistorico();
+}
+
+function marcaDoMes(situacao) {
+  const span = Object.assign(document.createElement("span"), { className: `ag-marca ag-${situacao || "fora"}` });
+  if (situacao === "veio") span.innerHTML = '<svg class="ic"><use href="#i-ok"/></svg>';
+  else if (situacao === "nao_veio") span.innerHTML = '<svg class="ic"><use href="#i-x"/></svg>';
+  else span.textContent = { falta_vir: "…", alta: "alta" }[situacao] || "—";
+  return span;
+}
+
+function desenharHistorico() {
+  const h = agenda.historico;
+  const vazio = h.pacientes.length === 0;
+  const primeiro = h.meses[0];
+  const ultimo = h.meses[h.meses.length - 1];
+  $("#ag-hist-periodo").textContent = `${MESES[primeiro.mes - 1]} de ${primeiro.ano} a ${MESES[ultimo.mes - 1]} de ${ultimo.ano}`;
+  $("#ag-hist-avancar").disabled = ultimo.chave >= h.hoje;
+  $("#ag-hist-caixa").hidden = vazio;
+  $("#ag-hist-vazio").hidden = !vazio;
+
+  const thNome = Object.assign(document.createElement("th"), { scope: "col", textContent: "Paciente" });
+  $("#ag-hist-cab").replaceChildren(thNome, ...h.meses.map((m) => {
+    const th = Object.assign(document.createElement("th"), { scope: "col", className: "ag-hist-mes" });
+    th.append(Object.assign(document.createElement("span"), { textContent: `${MESES_CURTOS[m.mes - 1]}/${String(m.ano).slice(2)}` }));
+    if (m.esperados) {
+      th.append(Object.assign(document.createElement("small"), {
+        textContent: `${m.veio} de ${m.esperados}`, title: `${m.veio} de ${m.esperados} pacientes vieram`,
+      }));
+    }
+    return th;
+  }));
+
+  $("#ag-hist-corpo").replaceChildren(...h.pacientes.map((p) => {
+    const tr = document.createElement("tr");
+    const th = Object.assign(document.createElement("th"), { scope: "row" });
+    const nome = Object.assign(document.createElement("button"), { type: "button", className: "ag-hist-nome", textContent: p.nome });
+    nome.dataset.acao = "ag-hist-paciente";
+    nome.dataset.id = p.id;
+    nome.title = `Ver todos os meses de ${p.nome}`;
+    th.append(nome);
+    if (p.situacao !== "ativo") {
+      th.append(Object.assign(document.createElement("span"), {
+        className: "etiqueta", textContent: p.situacao === "alta" ? "alta" : "finalizado",
+      }));
+    }
+    tr.append(th, ...p.meses.map((situacao, i) => {
+      const m = h.meses[i];
+      const td = document.createElement("td");
+      td.className = "ag-hist-celula";
+      const rotulo = `${p.nome}, ${MESES[m.mes - 1]} de ${m.ano}: ${SITUACAO_NO_MES[situacao]}`;
+      if (m.chave > h.hoje) {
+        td.append(marcaDoMes(""));
+        td.title = rotulo;
+        return td;
+      }
+      // Qualquer mês que já chegou pode ser marcado ou desmarcado, se esqueceu na hora.
+      const b = Object.assign(document.createElement("button"), { type: "button", className: "ag-hist-botao" });
+      b.dataset.acao = "ag-hist-marcar";
+      b.dataset.id = p.id;
+      b.dataset.mes = m.chave;
+      b.setAttribute("aria-pressed", String(situacao === "veio"));
+      b.setAttribute("aria-label", `${rotulo}. Clique para ${situacao === "veio" ? "desmarcar" : "marcar que veio"}.`);
+      b.title = rotulo;
+      b.append(marcaDoMes(situacao));
+      td.append(b);
+      return td;
+    }));
+    return tr;
+  }));
+}
+
+async function marcarNoHistorico(botao) {
+  const veio = botao.getAttribute("aria-pressed") !== "true";
+  const r = await api().agendamentos_marcar_atendido(botao.dataset.id, botao.dataset.mes, veio);
+  if (r.erro) return mostrarToast(r.erro, { erro: true });
+  aplicarAgenda(r); // já recarrega o histórico, que está aberto
+  // O foco volta para a mesma célula, para seguir marcando pelo teclado.
+  const [id, mes] = [botao.dataset.id, botao.dataset.mes];
+  setTimeout(() => $(`.ag-hist-botao[data-id="${id}"][data-mes="${mes}"]`)?.focus(), 150);
+}
+
+async function abrirHistoricoDoPaciente(id) {
+  const r = await api().agendamentos_historico_paciente(id);
+  if (r.erro) return mostrarToast(r.erro, { erro: true });
+  $("#ag-hist-titulo").textContent = `Histórico de ${r.nome}`;
+  $("#ag-hist-conta").textContent = r.esperados
+    ? `Veio em ${r.veio} de ${r.esperados} ${r.esperados === 1 ? "mês" : "meses"}.`
+    : "Ainda não há meses completos no histórico.";
+  $("#ag-hist-lista").replaceChildren(...r.meses.map((m) => {
+    const li = document.createElement("li");
+    li.append(marcaDoMes(m.situacao),
+      Object.assign(document.createElement("span"), { textContent: `${MESES[m.mes - 1]} de ${m.ano}` }),
+      Object.assign(document.createElement("span"), { className: "ag-hist-texto", textContent: SITUACAO_NO_MES[m.situacao] }));
+    return li;
+  }));
+  $("#ag-hist-paciente").showModal();
 }
 
 async function voltarAoTratamento(alvo) {
@@ -235,6 +397,7 @@ function abrirPaciente(p) {
   $("#ag-alta-fim").value = p ? p.alta_fim : "";
   escolherSituacao(p ? p.situacao : "ativo");
   $("#ag-excluir").hidden = !p;
+  $("#ag-ver-historico").hidden = !p;
   $("#ag-paciente-erro").hidden = true;
   $("#ag-paciente").showModal();
   $("#ag-nome").focus();
