@@ -30,13 +30,28 @@ PADRAO = {
     "avisos_recolhidos": [],  # faixas minimizadas: "notas", "extrato"
     "atualizacao_automatica": True,  # procura versão nova ao abrir (instalar é sempre opcional)
     "atualizacao_adiada_em": "",  # dia em que a pessoa clicou em "Agora não"
+    "abrir_em": "inicio",  # tela ao abrir: "inicio" | "notas"
+    "inicio_cartoes": [],  # ordem e escolhas dos cartões da tela inicial (vazio = padrão)
 }
+
+# Cartões da tela inicial, na ordem padrão. "largo" ocupa a linha toda.
+CARTOES_INICIO = [
+    {"id": "hoje", "visivel": True, "largo": True},
+    {"id": "contas", "visivel": True, "largo": False},
+    {"id": "orto", "visivel": True, "largo": False},
+    {"id": "ficha", "visivel": True, "largo": False},
+    {"id": "notas_enviar", "visivel": True, "largo": False},
+    {"id": "fechamento", "visivel": True, "largo": False},
+    {"id": "avisos", "visivel": True, "largo": False},
+    {"id": "resumo", "visivel": True, "largo": True},
+]
 
 _VALIDOS = {
     "visual": {"bonito", "otimizado"},
     "tema": {"sistema", "claro", "escuro"},
     "formato": {"xlsx", "csv"},
     "whatsapp_destino": {"app", "web"},
+    "abrir_em": {"inicio", "notas"},
 }
 
 
@@ -107,6 +122,7 @@ def normalizar(cfg: dict) -> dict:
     except (TypeError, ValueError):
         limpo["lembrete_fechamento_dia"] = PADRAO["lembrete_fechamento_dia"]
     limpo["tratamentos"] = _lista_de_nomes(limpo["tratamentos"], PADRAO["tratamentos"])
+    limpo["inicio_cartoes"] = _cartoes(limpo["inicio_cartoes"])
     recolhidos = limpo["avisos_recolhidos"]
     limpo["avisos_recolhidos"] = [str(r) for r in recolhidos] if isinstance(recolhidos, list) else []
     return limpo
@@ -125,3 +141,15 @@ def _lista_de_nomes(valor, padrao: list[str]) -> list[str]:
             vistos.add(normalizar(nome))
             limpos.append(nome)
     return limpos
+
+
+def _cartoes(valor) -> list[dict]:
+    """Mantém a ordem e as escolhas da pessoa; cartão novo de uma versão futura entra no fim."""
+    padrao = {c["id"]: c for c in CARTOES_INICIO}
+    escolhidos, vistos = [], set()
+    for item in valor if isinstance(valor, list) else []:
+        if isinstance(item, dict) and item.get("id") in padrao and item["id"] not in vistos:
+            vistos.add(item["id"])
+            escolhidos.append({"id": item["id"], "visivel": bool(item.get("visivel", True)),
+                               "largo": bool(item.get("largo", False))})
+    return escolhidos + [dict(c) for c in CARTOES_INICIO if c["id"] not in vistos]
