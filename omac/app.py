@@ -18,12 +18,13 @@ from .extrato.pasta import varrer as varrer_extratos
 from .notas import exportar as exp
 from .notas.api import NotasApi
 from .notas.pasta import varrer
+from .pagamentos.api import PagamentosApi
 from .whatsapp.api import WhatsappApi
 
 PASTA_EXTRATOS_TESTE = "Extratos"
 
 
-class Api(NotasApi, ExtratoApi, WhatsappApi, AgendamentosApi, AtualizacaoApi):
+class Api(NotasApi, ExtratoApi, WhatsappApi, AgendamentosApi, PagamentosApi, AtualizacaoApi):
     """Tudo o que a interface pode chamar. Módulo novo entra nesta lista de classes."""
 
 
