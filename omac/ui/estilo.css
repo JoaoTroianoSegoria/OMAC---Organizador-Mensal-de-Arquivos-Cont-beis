@@ -7,6 +7,7 @@
  *   data-tema="claro|escuro"          data-visual="bonito|otimizado"
  *   data-contraste="alto"             data-movimento="reduzido"
  *   data-trilho="1"  (menu lateral só com ícones, em janela estreita)
+ *   data-menu-compacto="1"  (itens do menu mais juntos, em janela baixa)
  */
 
 /* ---------- Tokens ---------- */
@@ -276,6 +277,9 @@ button { cursor: pointer; }
 [data-trilho="1"] .versao { display: none; }
 [data-trilho="1"] .menu-item { justify-content: center; padding: .55rem; }
 [data-trilho="1"] .lateral { padding: 1.1rem .5rem; }
+[data-menu-compacto="1"] .marca { padding-bottom: .5rem; }
+[data-menu-compacto="1"] .menu-item { min-height: 2.3rem; padding-block: .35rem; }
+[data-menu-compacto="1"] .lateral-rodape { padding-top: .5rem; }
 
 /* ---------- Botões ---------- */
 .btn {
@@ -454,6 +458,7 @@ button { cursor: pointer; }
 }
 .etiqueta-aviso { color: var(--aviso-texto); background: var(--aviso-fundo); display: inline-flex; align-items: center; gap: .25rem; }
 .etiqueta-aviso .ic { width: .85rem; height: .85rem; }
+.etiqueta-erro { color: var(--erro); background: color-mix(in srgb, var(--erro) 12%, transparent); }
 .btn-linha {
   display: inline-grid; place-items: center;
   width: 2.1rem; height: 2.1rem;
@@ -678,5 +683,6 @@ input[type="range"] { flex: 1; accent-color: var(--acento); height: 2rem; cursor
 [data-contraste="alto"] .tabela thead th { background: var(--solido); border-bottom: 2px solid var(--linha); }
 [data-contraste="alto"] .selo-breve { color: var(--texto); }
 [data-contraste="alto"] .etiqueta { border: 1px solid currentColor; }
+[data-contraste="alto"] .etiqueta-erro { color: var(--texto); background: none; }
 [data-contraste="alto"] .logo { background: var(--acento); color: var(--acento-texto); box-shadow: none; }
 [data-contraste="alto"] :focus-visible { outline-width: 4px; }

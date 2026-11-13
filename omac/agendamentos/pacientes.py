@@ -6,11 +6,10 @@ vale no mês dessa data. Assim ele recomeça mesmo se o app estiver fechado no d
 
 from __future__ import annotations
 
-import re
 import uuid
 from datetime import date
-from decimal import Decimal
 
+from .. import texto as tx
 from ..texto import normalizar
 from ..whatsapp.mensagens import TelefoneInvalido, normalizar_telefone
 
@@ -41,21 +40,13 @@ def completar(paciente: dict) -> dict:
 
 
 def valor_em_centavos(texto) -> int | None:
-    """Aceita 250 · 250,5 · 250,00 · 1.250,00 · R$ 250. Vazio quer dizer "sem valor"."""
-    bruto = re.sub(r"(?i)r\$|\s", "", str(texto or ""))
-    if not bruto:
-        return None
-    if re.fullmatch(r"\d{1,3}(\.\d{3})*(,\d{1,2})?", bruto) or re.fullmatch(r"\d+(,\d{1,2})?", bruto):
-        numero = bruto.replace(".", "").replace(",", ".")
-    elif re.fullmatch(r"\d+\.\d{1,2}", bruto):  # 250.50, como vem de uma calculadora
-        numero = bruto
-    else:
-        raise PacienteInvalido("Confira o valor da manutenção: use algo como 250,00.")
-    return int(Decimal(numero) * 100)
+    try:
+        return tx.valor_em_centavos(texto)
+    except tx.ValorInvalido as e:
+        raise PacienteInvalido("Confira o valor da manutenção: use algo como 250,00.") from e
 
 
-def _nome_limpo(texto) -> str:
-    return " ".join(str(texto or "").split())
+_nome_limpo = tx.nome_limpo
 
 
 def _telefone(texto) -> str:

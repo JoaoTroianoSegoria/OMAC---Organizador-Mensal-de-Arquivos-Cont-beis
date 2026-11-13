@@ -26,6 +26,7 @@ PADRAO = {
     "lembrete_telefone": "",
     "lembrete_fechamento_dia": 1,  # dia do mês para lembrar do fechamento; 0 = desligado
     "chave_pix": "",  # vai na mensagem de cobrança da manutenção
+    "tratamentos": ["Limpeza", "Manutenção", "Botox"],  # sugestões da ficha de pagamentos
     "avisos_recolhidos": [],  # faixas minimizadas: "notas", "extrato"
     "atualizacao_automatica": True,  # procura versão nova ao abrir (instalar é sempre opcional)
     "atualizacao_adiada_em": "",  # dia em que a pessoa clicou em "Agora não"
@@ -60,6 +61,10 @@ def caminho_regras() -> Path:
 
 def caminho_agendamentos() -> Path:
     return pasta_dados() / "agendamentos.json"
+
+
+def caminho_pagamentos() -> Path:
+    return pasta_dados() / "pagamentos.json"
 
 
 def carregar() -> dict:
@@ -101,6 +106,22 @@ def normalizar(cfg: dict) -> dict:
         limpo["lembrete_fechamento_dia"] = min(28, max(0, int(limpo["lembrete_fechamento_dia"])))
     except (TypeError, ValueError):
         limpo["lembrete_fechamento_dia"] = PADRAO["lembrete_fechamento_dia"]
+    limpo["tratamentos"] = _lista_de_nomes(limpo["tratamentos"], PADRAO["tratamentos"])
     recolhidos = limpo["avisos_recolhidos"]
     limpo["avisos_recolhidos"] = [str(r) for r in recolhidos] if isinstance(recolhidos, list) else []
     return limpo
+
+
+def _lista_de_nomes(valor, padrao: list[str]) -> list[str]:
+    """Sem nomes vazios nem repetidos (ignorando maiúsculas e acentos). Lista vazia é escolha da pessoa."""
+    from .texto import nome_limpo, normalizar
+
+    if not isinstance(valor, list):
+        return list(padrao)
+    vistos, limpos = set(), []
+    for item in valor:
+        nome = nome_limpo(item)
+        if nome and normalizar(nome) not in vistos:
+            vistos.add(normalizar(nome))
+            limpos.append(nome)
+    return limpos

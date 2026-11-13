@@ -8,6 +8,7 @@
   <link rel="stylesheet" href="extrato.css">
   <link rel="stylesheet" href="whatsapp.css">
   <link rel="stylesheet" href="agendamentos.css">
+  <link rel="stylesheet" href="pagamentos.css">
   <script>
     /* Antes de tudo: se um script não carregar ou quebrar, a tela diz qual, em vez de ficar muda. */
     window.omacErrosDeTela = [];
@@ -60,6 +61,7 @@
       <symbol id="i-mais" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
       <symbol id="i-agenda" viewBox="0 0 24 24"><rect x="3.5" y="5" width="17" height="15.5" rx="2"/><path d="M3.5 10h17M8 3v4M16 3v4M8.5 15l2.5 2.5 4.5-4.5"/></symbol>
       <symbol id="i-seta" viewBox="0 0 24 24"><path d="m6 9.5 6 6 6-6"/></symbol>
+      <symbol id="i-dinheiro" viewBox="0 0 24 24"><rect x="2.5" y="6" width="19" height="12" rx="2"/><circle cx="12" cy="12" r="2.6"/><path d="M6 9.5v5M18 9.5v5"/></symbol>
       <symbol id="i-cadeado" viewBox="0 0 24 24"><rect x="4.5" y="10.5" width="15" height="10" rx="2"/><path d="M8 10.5V7.5a4 4 0 0 1 8 0v3"/></symbol>
     </defs>
   </svg>
@@ -92,6 +94,9 @@
         </button>
         <button class="menu-item" data-view="agendamentos">
           <svg class="ic"><use href="#i-agenda"/></svg><span class="rotulo">Agendamentos</span>
+        </button>
+        <button class="menu-item" data-view="pagamentos">
+          <svg class="ic"><use href="#i-dinheiro"/></svg><span class="rotulo">Pagamentos</span>
         </button>
       </nav>
 
@@ -445,7 +450,7 @@
         <div class="painel-coluna" id="whats-contas" hidden>
           <form class="grupo vidro form-conta" id="form-conta">
             <h2 id="form-conta-titulo">Nova conta</h2>
-            <p class="dica">O lembrete aparece quando o app abre pela primeira vez no dia, um dia antes do vencimento e no próprio dia.</p>
+            <p class="dica">O lembrete aparece quando o app abre pela primeira vez no dia, um dia antes do vencimento e no próprio dia. Conta marcada como paga para de avisar no mês.</p>
             <div class="form-conta-campos">
               <div class="campo campo-texto">
                 <label class="rotulo-campo" for="conta-nome">Conta</label>
@@ -469,6 +474,8 @@
                 <tr>
                   <th scope="col">Conta</th>
                   <th scope="col" class="c-data">Vence todo dia</th>
+                  <th scope="col" class="c-paga" id="contas-th-mes" title="Marque quando a conta deste mês for paga. Sem marcar, ela aparece como não paga no mês seguinte.">Este mês</th>
+                  <th scope="col" class="c-paga" id="contas-th-passado">Mês passado</th>
                   <th scope="col" class="c-acoes-regra"><span class="so-leitor">Ações</span></th>
                 </tr>
               </thead>
@@ -617,6 +624,92 @@
         </div>
       </section>
 
+      <!-- ============ FICHA DE PAGAMENTOS ============ -->
+      <section class="view" id="view-pagamentos" aria-labelledby="t-pag" hidden>
+        <header class="topo">
+          <div>
+            <h1 id="t-pag">Ficha de pagamentos</h1>
+            <p class="sub">Atendimentos que precisam ser pagos em <strong id="pg-mes-nome"></strong></p>
+          </div>
+          <div class="topo-acoes">
+            <button class="btn" data-acao="pg-exportar" id="pg-exportar"><svg class="ic"><use href="#i-baixar"/></svg><span>Exportar Excel</span></button>
+            <button class="btn btn-primario" data-acao="pg-novo"><svg class="ic"><use href="#i-mais"/></svg><span>Novo atendimento</span></button>
+          </div>
+        </header>
+
+        <div class="barra vidro pg-barra">
+          <div class="campo">
+            <label class="rotulo-campo" for="pg-sel-mes">Mês</label>
+            <span class="select"><select id="pg-sel-mes"></select></span>
+          </div>
+          <div class="campo">
+            <label class="rotulo-campo" for="pg-sel-ano">Ano</label>
+            <span class="select"><select id="pg-sel-ano"></select></span>
+          </div>
+          <p class="dica pg-barra-dica">Sem marcar até o fim do mês, o pagamento aparece como <strong>não pago</strong>.</p>
+        </div>
+
+        <div class="resumo" id="pg-resumo">
+          <div class="cartao vidro">
+            <span class="cartao-rotulo">Recebido</span>
+            <strong class="cartao-valor" id="pg-recebido"></strong>
+          </div>
+          <div class="cartao vidro">
+            <span class="cartao-rotulo">A receber</span>
+            <strong class="cartao-valor" id="pg-a-receber"></strong>
+          </div>
+          <div class="cartao vidro">
+            <span class="cartao-rotulo">Não pago</span>
+            <strong class="cartao-valor" id="pg-nao-pago"></strong>
+          </div>
+          <div class="cartao vidro">
+            <span class="cartao-rotulo">Sem nota</span>
+            <strong class="cartao-valor" id="pg-sem-nota"></strong>
+          </div>
+        </div>
+
+        <div class="faixa faixa-info vidro" id="pg-sem-pasta" hidden>
+          <svg class="ic"><use href="#i-notas"/></svg>
+          <div class="pg-faixa-corpo">
+            <span>Escolha a pasta das notas para o OMAC marcar sozinho as notas já emitidas.</span>
+            <button class="btn btn-peq" data-acao="escolher-pasta" data-chave="pasta_notas">Escolher pasta</button>
+          </div>
+        </div>
+
+        <div class="escolhas ag-filtros" id="pg-filtros">
+          <button class="escolha" data-acao="pg-filtro" data-filtro="todos">Todos</button>
+          <button class="escolha" data-acao="pg-filtro" data-filtro="aguardando">Aguardando</button>
+          <button class="escolha" data-acao="pg-filtro" data-filtro="nao_pago">Não pagos</button>
+          <button class="escolha" data-acao="pg-filtro" data-filtro="sem_nota">Sem nota</button>
+        </div>
+
+        <div class="tabela-caixa vidro" id="pg-caixa">
+          <table class="tabela">
+            <caption class="so-leitor">Atendimentos do mês</caption>
+            <thead>
+              <tr>
+                <th scope="col" class="c-confere" title="Marque quando o atendimento for pago">Pago</th>
+                <th scope="col">Paciente</th>
+                <th scope="col" class="pg-c-tratamento">Tratamento</th>
+                <th scope="col" class="c-data">Data</th>
+                <th scope="col" class="c-valor">Valor</th>
+                <th scope="col" class="pg-c-forma">Pagamento</th>
+                <th scope="col" class="pg-c-nota">Nota</th>
+                <th scope="col" class="c-acao"><span class="so-leitor">Alterar</span></th>
+              </tr>
+            </thead>
+            <tbody id="pg-corpo"></tbody>
+          </table>
+        </div>
+
+        <div class="vazio vidro" id="pg-vazio" hidden>
+          <span class="vazio-icone"><svg class="ic"><use href="#i-dinheiro"/></svg></span>
+          <h2 id="pg-vazio-titulo">Nenhum atendimento neste mês</h2>
+          <p>Lance aqui os atendimentos que precisam ser pagos, como na ficha de papel. Eles ficam só neste computador.</p>
+          <button class="btn btn-primario" data-acao="pg-novo"><svg class="ic"><use href="#i-mais"/></svg><span>Novo atendimento</span></button>
+        </div>
+      </section>
+
       <!-- ============ CONFIGURAÇÕES ============ -->
       <section class="view" id="view-config" aria-labelledby="t-config" hidden>
         <header class="topo"><div><h1 id="t-config">Configurações</h1><p class="sub">As mudanças são salvas na hora</p></div></header>
@@ -747,6 +840,22 @@
             </div>
           </section>
 
+          <section class="grupo vidro" aria-labelledby="g-pagamentos">
+            <h2 id="g-pagamentos">Ficha de pagamentos</h2>
+            <div class="campo">
+              <span class="rotulo-campo" id="cfg-tratamentos-rotulo">Tratamentos sugeridos</span>
+              <ul class="pg-chips" id="cfg-tratamentos" aria-labelledby="cfg-tratamentos-rotulo"></ul>
+              <p class="dica">Aparecem ao escrever o tratamento na ficha. Dá para escrever outro mesmo sem estar aqui.</p>
+            </div>
+            <form class="pg-novo-tratamento" id="form-tratamento">
+              <div class="campo campo-texto">
+                <label class="rotulo-campo" for="cfg-tratamento-novo">Novo tratamento</label>
+                <input id="cfg-tratamento-novo" type="text" autocomplete="off" placeholder="Ex.: Clareamento">
+              </div>
+              <button class="btn" type="submit"><svg class="ic"><use href="#i-mais"/></svg><span>Adicionar</span></button>
+            </form>
+          </section>
+
           <section class="grupo vidro" aria-labelledby="g-sistema">
             <h2 id="g-sistema">Inicialização</h2>
             <div class="opcao opcao-chave">
@@ -827,7 +936,7 @@
         <div id="lembretes-fechamento-texto"></div>
       </div>
       <div class="modal-acoes">
-        <button class="btn" type="button" data-acao="whats-fechar-lembretes">Fechar</button>
+        <button class="btn" type="button" data-acao="whats-fechar-lembretes" autofocus>Fechar</button>
         <button class="btn" type="button" id="lembretes-ir-extrato" data-acao="whats-ir-extrato"><svg class="ic"><use href="#i-banco"/></svg><span>Abrir o extrato</span></button>
         <button class="btn btn-primario" type="button" id="lembretes-enviar" data-acao="whats-enviar-lembrete"><svg class="ic"><use href="#i-whats"/></svg><span id="lembretes-enviar-texto">Enviar</span></button>
       </div>
@@ -957,6 +1066,65 @@
     </form>
   </dialog>
 
+  <!-- Novo atendimento / alterar atendimento -->
+  <dialog class="modal vidro" id="pg-atendimento" aria-labelledby="pg-atendimento-titulo">
+    <form id="form-atendimento" class="modal-corpo">
+      <h2 id="pg-atendimento-titulo"></h2>
+      <div class="campo campo-texto">
+        <label class="rotulo-campo" for="pg-nome">Paciente</label>
+        <input id="pg-nome" type="text" autocomplete="off" list="pg-nomes" required>
+        <datalist id="pg-nomes"></datalist>
+      </div>
+      <div class="form-conta-campos">
+        <div class="campo campo-texto">
+          <label class="rotulo-campo" for="pg-tratamento">Tratamento</label>
+          <input id="pg-tratamento" type="text" autocomplete="off" list="pg-tratamentos">
+          <datalist id="pg-tratamentos"></datalist>
+        </div>
+        <div class="campo campo-texto pg-campo-curto">
+          <label class="rotulo-campo" for="pg-data">Data</label>
+          <input id="pg-data" type="date" required>
+        </div>
+        <div class="campo campo-texto pg-campo-curto">
+          <label class="rotulo-campo" for="pg-valor">Valor</label>
+          <input id="pg-valor" type="text" inputmode="decimal" autocomplete="off" placeholder="0,00">
+        </div>
+      </div>
+      <fieldset class="opcao">
+        <legend>Forma de pagamento</legend>
+        <div class="escolhas pg-formas">
+          <button class="escolha" type="button" data-acao="pg-forma" data-forma="pix_pj">Pix PJ</button>
+          <button class="escolha" type="button" data-acao="pg-forma" data-forma="pix_pf">Pix PF</button>
+          <button class="escolha" type="button" data-acao="pg-forma" data-forma="dinheiro">Dinheiro</button>
+          <button class="escolha" type="button" data-acao="pg-forma" data-forma="debito">Débito</button>
+          <button class="escolha" type="button" data-acao="pg-forma" data-forma="credito">Crédito</button>
+        </div>
+      </fieldset>
+      <div class="campo" id="pg-parcelas-campo" hidden>
+        <label class="rotulo-campo" for="pg-parcelas">Dividido em</label>
+        <span class="select"><select id="pg-parcelas"></select></span>
+      </div>
+      <div class="ag-bloco">
+        <label class="ag-caixa">
+          <input type="checkbox" class="confere" id="pg-pago">
+          <span>Já foi pago</span>
+        </label>
+        <p class="pg-nota-achada" id="pg-nota-achada" hidden><svg class="ic"><use href="#i-ok"/></svg><span id="pg-nota-achada-texto"></span></p>
+        <label class="ag-caixa" id="pg-nota-campo">
+          <input type="checkbox" class="confere" id="pg-nota-manual">
+          <span>Nota emitida</span>
+        </label>
+        <p class="dica" id="pg-nota-dica">O OMAC marca sozinho quando acha a nota do paciente na pasta. Marque aqui se ela saiu em outro nome.</p>
+      </div>
+      <p class="modal-erro" id="pg-atendimento-erro" role="alert" hidden></p>
+      <div class="modal-acoes">
+        <button class="btn btn-perigo" type="button" id="pg-excluir" data-acao="pg-excluir"><svg class="ic"><use href="#i-lixeira"/></svg><span>Excluir</span></button>
+        <button class="btn" type="button" data-acao="pg-fechar">Cancelar</button>
+        <button class="btn btn-primario" type="submit">Salvar</button>
+      </div>
+    </form>
+  </dialog>
+
   <div class="avisos-flutuantes" id="toasts" aria-live="polite"></div>
 
   <script src="nucleo.js"></script>
@@ -964,6 +1132,7 @@
   <script src="extrato.js"></script>
   <script src="whatsapp.js"></script>
   <script src="agendamentos.js"></script>
+  <script src="pagamentos.js"></script>
   <script src="atualizacao.js"></script>
 </body>
 </html>

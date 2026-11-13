@@ -31,7 +31,7 @@
 .modal h2 { font-size: 1.25rem; }
 .modal .campo-texto { flex: none; }
 /* O campo de vidro some no fundo sólido da janela: aqui ele precisa de borda. */
-.modal .campo-texto input, .modal .campo-texto textarea {
+.modal .campo-texto input, .modal .campo-texto textarea, .modal .select select {
   background: var(--solido-2); border: 1px solid var(--solido-borda); box-shadow: none;
 }
 .modal-acoes { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: .6rem; margin-top: .25rem; }
@@ -39,6 +39,13 @@
 .modal .faixa { padding: .85rem 1rem; border-radius: var(--raio-p); }
 .lembretes-lista { margin: 0; gap: .45rem; font-size: 1.05rem; }
 .lembretes-lista:empty { display: none; }
+.lembrete-conta { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: .5rem; }
+.lembrete-conta .btn[aria-pressed="true"] { color: var(--acento); border-color: var(--acento); }
+.lembrete-conta.paga > span { text-decoration: line-through; color: var(--texto-3); }
 
-[data-contraste="alto"] .modal-erro { color: var(--texto); }
+.c-paga { width: 9.5rem; white-space: nowrap; }
+.paga-caixa { display: inline-flex; align-items: center; gap: .45rem; cursor: pointer; margin-right: .5rem; }
+
+[data-contraste="alto"] .modal-erro,
+[data-contraste="alto"] .lembrete-conta .btn[aria-pressed="true"] { color: var(--texto); }
 [data-contraste="alto"] #whats-qtd { color: inherit; }

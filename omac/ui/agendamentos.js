@@ -77,10 +77,6 @@ function desenharAgenda() {
   desenharFinalizados();
 }
 
-function celula(texto, classe = "") {
-  return Object.assign(document.createElement("td"), { className: classe, textContent: texto });
-}
-
 function celulaPaciente(p) {
   const td = document.createElement("td");
   const caixa = Object.assign(document.createElement("div"), { className: "paciente" });

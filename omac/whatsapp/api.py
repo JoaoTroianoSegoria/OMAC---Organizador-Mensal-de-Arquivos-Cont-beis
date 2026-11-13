@@ -5,12 +5,13 @@ from __future__ import annotations
 import json
 import threading
 from contextlib import contextmanager
-from datetime import date
+from datetime import date, timedelta
 from pathlib import Path
 
 from .. import config, sistema
 from ..notas.leitor import Nota, ler_nome_arquivo
 from ..nucleo import ApiBase, seguro
+from ..planilha import MESES
 from ..texto import normalizar
 from . import dados as armazem
 from . import lembretes as lb
@@ -34,8 +35,11 @@ class WhatsappApi(ApiBase):
             caminho = config.caminho_whatsapp()
             dados = armazem.carregar(caminho)
             antes = json.dumps(dados, sort_keys=True)
+            hoje = date.today()
             if not dados["inicio"]:
-                dados["inicio"] = date.today().isoformat()
+                dados["inicio"] = hoje.isoformat()
+            # Depois do "antes": a data em que cada conta começou a ser acompanhada é gravada uma vez só.
+            dados["contas"] = [lb.completar_conta(c, hoje) for c in dados["contas"]]
             yield dados
             if json.dumps(dados, sort_keys=True) != antes:
                 armazem.salvar(caminho, dados)
@@ -147,22 +151,54 @@ class WhatsappApi(ApiBase):
 
     # --- Contas e lembretes -----------------------------------------------------
 
+    def _vista_contas(self, contas: list[dict]) -> dict:
+        hoje = date.today()
+        anterior = hoje.replace(day=1) - timedelta(days=1)
+        vista = []
+        for c in sorted(contas, key=lambda c: (c["dia"], normalizar(c["nome"]))):
+            vencimento = lb.vencimento_no_mes(c, hoje.year, hoje.month)
+            vista.append({
+                **c,
+                "este_mes": lb.situacao_no_mes(c, hoje.year, hoje.month, hoje),
+                "mes_passado": lb.situacao_no_mes(c, anterior.year, anterior.month, hoje),
+                "vencimento": vencimento.isoformat(),
+                "venceu": vencimento < hoje,
+            })
+        return {
+            "contas": vista,
+            "mes": f"{hoje:%Y-%m}",
+            "nome_mes": MESES[hoje.month - 1],
+            "nome_mes_passado": MESES[anterior.month - 1],
+        }
+
     @seguro
     def whatsapp_contas(self):
         with self._dados() as d:
-            return {"contas": sorted(d["contas"], key=lambda c: (c["dia"], normalizar(c["nome"])))}
+            return self._vista_contas(d["contas"])
 
     @seguro
     def whatsapp_salvar_conta(self, conta: dict, antiga: dict | None = None):
         with self._dados() as d:
             d["contas"] = lb.adicionar_conta(d["contas"], conta, antiga)
-        return self.whatsapp_contas()
+            return self._vista_contas(d["contas"])
 
     @seguro
     def whatsapp_apagar_conta(self, nome: str):
         with self._dados() as d:
             d["contas"] = lb.remover_conta(d["contas"], nome)
-        return self.whatsapp_contas()
+            return self._vista_contas(d["contas"])
+
+    @seguro
+    def whatsapp_marcar_paga(self, nome: str, mes: str, paga: bool = True):
+        """`mes` é "AAAA-MM", o mês do vencimento."""
+        with self._dados() as d:
+            lb.marcar_paga(lb.buscar_conta(d["contas"], nome), str(mes)[:7], bool(paga), date.today())
+            return self._vista_contas(d["contas"])
+
+    @seguro
+    def whatsapp_texto_lembrete(self, contas: list[dict]):
+        """Refaz a mensagem do lembrete sem as contas que acabaram de ser marcadas como pagas."""
+        return {"mensagem": msg.mensagem_de_lembrete(self._cfg["assistente_nome"], self._cfg["lembrete_nome"], contas)}
 
     @seguro
     def whatsapp_lembretes(self, forcar: bool = False):

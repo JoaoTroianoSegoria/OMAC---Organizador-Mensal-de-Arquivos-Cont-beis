@@ -152,9 +152,9 @@ def test_conta_invalida(ruim):
 def test_editar_e_remover_conta():
     contas = lb.adicionar_conta([], {"nome": "Água", "dia": 5})
     contas = lb.adicionar_conta(contas, {"nome": "agua", "dia": 6})
-    assert contas == [{"nome": "agua", "dia": 6}]
+    assert [(c["nome"], c["dia"]) for c in contas] == [("agua", 6)]
     contas = lb.adicionar_conta(contas, {"nome": "Luz", "dia": 7}, antiga={"nome": "AGUA"})
-    assert contas == [{"nome": "Luz", "dia": 7}]
+    assert [(c["nome"], c["dia"]) for c in contas] == [("Luz", 7)]
     assert lb.remover_conta(contas, "luz") == []
 
 

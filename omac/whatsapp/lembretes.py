@@ -1,7 +1,11 @@
-"""Quais lembretes mostrar ao abrir o app.
+"""Quais lembretes mostrar ao abrir o app, e quais contas já foram pagas.
 
 Cada conta avisa no dia anterior ao vencimento e no próprio dia. Quem ficou com o
-app fechado nesses dias recebe o aviso na próxima vez que abrir.
+app fechado nesses dias recebe o aviso na próxima vez que abrir. Conta marcada como
+paga naquele mês não avisa mais.
+
+Como na ficha de pagamentos, nada é reescrito na virada do mês: conta sem marcar
+fica "em aberto" até o mês acabar e depois aparece como "não paga".
 """
 
 from __future__ import annotations
@@ -32,12 +36,70 @@ def validar_conta(conta: dict) -> dict:
     return {"nome": nome, "dia": dia}
 
 
-def adicionar_conta(contas: list[dict], nova: dict, antiga: dict | None = None) -> list[dict]:
-    nova = validar_conta(nova)
-    fora = {normalizar(nova["nome"])}
+PAGA = "paga"
+EM_ABERTO = "em_aberto"
+NAO_PAGA = "nao_paga"
+
+
+def completar_conta(conta: dict, hoje: date) -> dict:
+    """Conta de uma versão anterior começa a ser acompanhada no dia em que esta abriu."""
+    return {"pagas": {}, "criada_em": hoje.isoformat(), **conta}
+
+
+def _mes(ano: int, mes: int) -> str:
+    return f"{ano:04d}-{mes:02d}"
+
+
+def _historico(conta: dict | None) -> dict:
+    """O que já foi pago e desde quando a conta é acompanhada."""
+    return {k: conta[k] for k in ("pagas", "criada_em") if conta and conta.get(k)}
+
+
+def adicionar_conta(contas: list[dict], nova: dict, antiga: dict | None = None,
+                    hoje: date | None = None) -> list[dict]:
+    """`nova` pode trazer o histórico (desfazer uma exclusão); alterar mantém o da `antiga`."""
+    historico = _historico(nova)
+    validada = validar_conta(nova)
+    fora = {normalizar(validada["nome"])}
     if antiga:
         fora.add(normalizar(antiga["nome"]))
-    return [*(c for c in contas if normalizar(c["nome"]) not in fora), nova]
+    # A conta substituída (a alterada, ou uma com o mesmo nome) passa o histórico adiante.
+    guardada = next((c for c in contas if normalizar(c["nome"]) in fora), None)
+    if guardada and (antiga or not historico):
+        historico = _historico(guardada)
+    validada = completar_conta({**validada, **historico}, hoje or date.today())
+    return [*(c for c in contas if normalizar(c["nome"]) not in fora), validada]
+
+
+def buscar_conta(contas: list[dict], nome: str) -> dict:
+    for c in contas:
+        if normalizar(c["nome"]) == normalizar(nome):
+            return c
+    raise ContaInvalida(f"Não encontrei a conta “{nome}”. Ela pode ter sido apagada.")
+
+
+def marcar_paga(conta: dict, mes: str, paga: bool, hoje: date) -> None:
+    """`mes` é "AAAA-MM", o mês do vencimento."""
+    pagas = {**conta.get("pagas", {})}
+    if paga:
+        pagas[mes] = hoje.isoformat()
+    else:
+        pagas.pop(mes, None)
+    conta["pagas"] = pagas
+
+
+def situacao_no_mes(conta: dict, ano: int, mes: int, hoje: date) -> str:
+    """"" para um mês antes de a conta começar a ser acompanhada."""
+    chave = _mes(ano, mes)
+    if chave in conta.get("pagas", {}):
+        return PAGA
+    if chave < conta.get("criada_em", "")[:7]:
+        return ""
+    return NAO_PAGA if chave < hoje.isoformat()[:7] else EM_ABERTO
+
+
+def vencimento_no_mes(conta: dict, ano: int, mes: int) -> date:
+    return _dia_no_mes(ano, mes, conta["dia"])
 
 
 def remover_conta(contas: list[dict], nome: str) -> list[dict]:
@@ -78,9 +140,12 @@ def contas_a_avisar(contas: list[dict], hoje: date, ultima_abertura: date | None
     for conta in contas:
         for ano, mes in _meses_em_volta(hoje):
             vencimento = _dia_no_mes(ano, mes, conta["dia"])
+            if _mes(ano, mes) in conta.get("pagas", {}):
+                continue
             if any(desde < aviso <= hoje for aviso in (vencimento - timedelta(days=1), vencimento)):
                 itens.append({
                     "nome": conta["nome"],
+                    "mes": _mes(ano, mes),
                     "vencimento": vencimento,
                     "situacao": _situacao(vencimento, hoje),
                 })
