@@ -24,6 +24,10 @@ window.pywebview = { api: new Proxy({}, { get: (_, nome) =>
 """
 
 VARIANTES = [
+    ("inicio", "inicio", {"tema": "claro", "visual": "bonito"}, {}),
+    ("inicio-escuro", "inicio", {"tema": "escuro", "visual": "bonito"}, {}),
+    ("resumo", "resumo", {"tema": "claro", "visual": "bonito"}, {}),
+    ("agendamentos-historico", "agendamentos", {"tema": "claro", "visual": "bonito"}, {"agenda": "historico"}),
     # arquivo, view, configurações, extras ("pasta": "vazia" | "mes": n)
     ("notas-claro", "notas", {"tema": "claro", "visual": "bonito"}, {}),
     ("notas-escuro", "notas", {"tema": "escuro", "visual": "bonito"}, {}),
@@ -101,6 +105,13 @@ def _preparar_agendamentos(api) -> None:
         ):
             p = adicionar_paciente(d["pacientes"], {"nome": nome, "telefone": telefone, "valor": valor})
             p["agendado_em"] = date.today().isoformat() if agendado else ""
+        # Histórico de exemplo: cadastrados há seis meses, cada um com o seu jeito de vir.
+        from omac.agendamentos.pacientes import meses_ate
+        meses = meses_ate(date.today().year, date.today().month, 6)
+        for i, p in enumerate(d["pacientes"]):
+            p["criado_em"] = f"{meses[0][0]}-{meses[0][1]:02d}-01"
+            p["atendidos"] = {f"{a}-{m:02d}": f"{a}-{m:02d}-10" for j, (a, m) in enumerate(meses)
+                              if (j + i) % 4 != 1 and j < 5 and not p["alta_inicio"]}
 
 
 def _preparar_pagamentos(api) -> None:
@@ -152,7 +163,7 @@ def main() -> None:
                                  "escala_fonte": 1.0,
                                  "alto_contraste": False, "lembrete_fechamento_dia": 0,
                                  "assistente_nome": "Exemplo", "lembrete_nome": "Dra. Exemplo",
-                                 "lembrete_telefone": "61900000000", **cfg})
+                                 "lembrete_telefone": "61900000000", "abrir_em": "notas", **cfg})
                 api._cfg["chave_pix"] = "chave@exemplo.com"
                 _preparar_whatsapp(api, extras.get("whats"))
                 _preparar_agendamentos(api)
@@ -181,8 +192,13 @@ def main() -> None:
                     if extras["whats"] == "janela":
                         pagina.click('#whats-corpo [data-acao="whats-enviar"]')
                         pagina.wait_for_selector("#envio[open]")
+                if view in ("inicio", "resumo"):
+                    pagina.wait_for_selector(".ini-cartao" if view == "inicio" else "#rs-corpo tr")
                 if "agenda" in extras:
                     pagina.wait_for_selector("#ag-ativos-corpo tr")
+                    if extras["agenda"] == "historico":
+                        pagina.click('[data-acao="ag-aba"][data-aba="historico"]')
+                        pagina.wait_for_selector("#ag-hist-corpo tr")
                     if extras["agenda"] == "mensagem":
                         pagina.click('#ag-ativos-corpo [data-acao="ag-mensagem"]')
                         pagina.click('[data-acao="ag-tipo"][data-tipo="cobrar"]')
