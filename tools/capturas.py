@@ -45,6 +45,8 @@ VARIANTES = [
     ("whatsapp-lembretes-contraste", "notas", {"tema": "claro", "alto_contraste": True}, {"whats": "lembretes"}),
     ("agendamentos", "agendamentos", {"tema": "claro", "visual": "bonito"}, {"agenda": "lista"}),
     ("agendamentos-mensagem", "agendamentos", {"tema": "escuro", "visual": "bonito"}, {"agenda": "mensagem"}),
+    ("pagamentos", "pagamentos", {"tema": "claro", "visual": "bonito"}, {"pag": "lista"}),
+    ("pagamentos-atendimento", "pagamentos", {"tema": "escuro", "visual": "bonito"}, {"pag": "janela"}),
     ("notas-avisos-minimizados", "notas", {"tema": "claro", "visual": "bonito", "avisos_recolhidos": ["notas"]}, {}),
     ("config-whatsapp", "config", {"tema": "claro", "visual": "bonito"}, {"rolar": "#g-whats"}),
     ("config-claro", "config", {"tema": "claro", "visual": "bonito"}, {}),
@@ -58,7 +60,13 @@ def _preparar_whatsapp(api, caso: str | None) -> None:
     hoje = date.today()
     with api._dados() as d:
         d["inicio"] = "2026-01-01"
-        d["contas"] = [{"nome": "Aluguel", "dia": 10}, {"nome": "Internet", "dia": 22}]
+        mes = hoje.isoformat()[:7]
+        anterior = (hoje.replace(day=1) - timedelta(days=1)).isoformat()[:7]
+        d["contas"] = [
+            {"nome": "Aluguel", "dia": 10, "criada_em": "2026-01-01", "pagas": {mes: hoje.isoformat(), anterior: anterior + "-09"}},
+            {"nome": "Internet", "dia": 22, "criada_em": "2026-01-01", "pagas": {}},
+            {"nome": "Laboratório", "dia": 28, "criada_em": "2026-01-01", "pagas": {anterior: anterior + "-27"}},
+        ]
         if caso == "lembretes":
             d["contas"] = [{"nome": "Aluguel", "dia": hoje.day},
                            {"nome": "Condomínio", "dia": (hoje + timedelta(days=1)).day}]
@@ -95,6 +103,30 @@ def _preparar_agendamentos(api) -> None:
             p["agendado_em"] = date.today().isoformat() if agendado else ""
 
 
+def _preparar_pagamentos(api) -> None:
+    from datetime import date, timedelta
+
+    from omac.pagamentos.ficha import adicionar
+
+    hoje = date.today()
+    mes = hoje.replace(day=1)
+    anterior = mes - timedelta(days=3)
+    with api._ficha() as d:
+        if d["atendimentos"]:
+            return
+        for nome, tratamento, dia, valor, forma, parcelas, pago in (
+            ("Ana Beatriz Moreira", "Limpeza", mes, "180,00", "pix_pf", 1, True),
+            ("Pedro Alves Souza", "Manutenção", mes + timedelta(days=1), "220,00", "credito", 3, True),
+            ("Rafael Martins", "Botox", mes + timedelta(days=3), "900,00", "credito", 6, False),
+            ("Camila Ferreira", "Limpeza", mes + timedelta(days=4), "180,00", "dinheiro", 1, True),
+            ("Juliana Alves", "Clareamento", mes + timedelta(days=6), "650,00", "pix_pj", 1, False),
+            ("Bruno Carvalho", "Restauração", anterior, "250,00", "debito", 1, False),
+        ):
+            adicionar(d["atendimentos"], {"nome": nome, "tratamento": tratamento, "data": dia.isoformat(),
+                                          "valor": valor, "forma": forma, "parcelas": parcelas, "pago": pago,
+                                          "nota_manual": nome.startswith(("Ana", "Camila"))}, hoje)
+
+
 def main() -> None:
     from playwright.sync_api import sync_playwright
 
@@ -124,6 +156,7 @@ def main() -> None:
                 api._cfg["chave_pix"] = "chave@exemplo.com"
                 _preparar_whatsapp(api, extras.get("whats"))
                 _preparar_agendamentos(api)
+                _preparar_pagamentos(api)
 
                 def chamar(metodo, args, api=api):
                     return json.dumps(getattr(api, metodo)(*json.loads(args)))
@@ -153,6 +186,11 @@ def main() -> None:
                     if extras["agenda"] == "mensagem":
                         pagina.click('#ag-ativos-corpo [data-acao="ag-mensagem"]')
                         pagina.click('[data-acao="ag-tipo"][data-tipo="cobrar"]')
+                if "pag" in extras:
+                    pagina.wait_for_selector("#pg-corpo tr")
+                    if extras["pag"] == "janela":
+                        pagina.click('#pg-corpo tr:nth-child(3) [data-acao="pg-editar"]')
+                        pagina.wait_for_selector("#pg-atendimento[open]")
                 if extras.get("whats") == "lembretes":
                     pagina.wait_for_selector("#lembretes[open]")
                 if "rolar" in extras:
