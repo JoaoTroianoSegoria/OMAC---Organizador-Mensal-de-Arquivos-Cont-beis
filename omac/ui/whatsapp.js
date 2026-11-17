@@ -1,11 +1,12 @@
-/* OMAC — módulo de WhatsApp: envio de notas, contas com lembrete e contatos. */
+/* OMAC — módulo de WhatsApp: envio de notas e contas com lembrete.
+ * Os contatos ficam em Contatos (contatos.js); quem recebe os lembretes é um contato. */
 "use strict";
 
 const whats = {
   aba: "enviar",
   notas: [],
   contas: [],
-  contatos: [],
+  destinatario: null, // contato que recebe os lembretes
   atual: null, // nota aberta na janela de envio
   contaEditando: null,
   mesContas: "", // "AAAA-MM" da coluna "este mês" das contas
@@ -15,15 +16,22 @@ const whats = {
 modulos.whatsapp = {
   aoMostrar: carregarWhats,
   carregar: carregarWhats,
+  antesDeMostrar(aba) { whats.aba = aba; },
+  irParaAba: mostrarAbaWhats,
   ligar() {
     $("#form-conta").addEventListener("submit", salvarConta);
+    $("#form-destinatario").addEventListener("submit", (e) => { e.preventDefault(); definirDestinatario(); });
+    $("#cfg-destinatario").addEventListener("change", definirDestinatario);
     $("#form-envio").addEventListener("submit", (e) => e.preventDefault());
     $("#conta-dia").replaceChildren(...diasDoMes().map((d) => new Option(`Dia ${d}`, String(d))));
     $("#cfg-fechamento").replaceChildren(new Option("Desligado", "0"),
       ...diasDoMes(28).map((d) => new Option(`Todo dia ${d}`, String(d))));
     aplicarConfig();
   },
-  aoIniciar: verLembretesDoDia,
+  aoIniciar() {
+    verLembretesDoDia();
+    carregarDestinatario();
+  },
 };
 
 function diasDoMes(fim = 31) {
@@ -43,7 +51,6 @@ Object.assign(acoes, {
   "whats-conta-paga": marcarContaPaga,
   "whats-lembrete-paga": marcarPagaNoLembrete,
   "whats-conta-cancelar": limparFormularioConta,
-  "whats-contato-apagar": (alvo) => apagarContato(whats.contatos[Number(alvo.dataset.indice)]),
   "whats-ver-lembretes": () => verLembretesDoDia(true),
   "whats-fechar-lembretes": () => $("#lembretes").close(),
   "whats-ir-extrato": () => { $("#lembretes").close(); mostrarView("extrato"); },
@@ -57,12 +64,11 @@ function mostrarAbaWhats(aba) {
   $$("#whats-abas .escolha").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.aba === aba)));
   $("#whats-enviar").hidden = aba !== "enviar";
   $("#whats-contas").hidden = aba !== "contas";
-  $("#whats-contatos").hidden = aba !== "contatos";
 }
 
 async function carregarWhats() {
   mostrarAbaWhats(whats.aba);
-  await Promise.all([carregarAEnviar(), carregarContas(), carregarContatos()]);
+  await Promise.all([carregarAEnviar(), carregarContas(), carregarDestinatario()]);
 }
 
 /* ---------- Notas a enviar ---------- */
@@ -155,7 +161,6 @@ async function abrirConversa() {
   $("#envio-passo").hidden = false;
   $("#envio-acoes-1").hidden = true;
   $("#envio-acoes-2").hidden = false;
-  carregarContatos();
   const proximas = whats.notas.filter((n) => n.numero !== whats.atual.numero).length;
   $("#envio-proxima").hidden = proximas === 0;
 }
@@ -210,9 +215,7 @@ function desenharContas(r) {
   $("#contas-tabela").hidden = contas.length === 0;
   $("#contas-th-mes").textContent = r.nome_mes;
   $("#contas-th-passado").textContent = r.nome_mes_passado;
-  $("#whats-contato-dica").textContent = estado.cfg.lembrete_telefone
-    ? ""
-    : "Falta dizer quem recebe os lembretes: preencha o nome e o telefone em Configurações.";
+  desenharDicaDoDestinatario();
   $("#contas-corpo").replaceChildren(...contas.map((c, i) => {
     const tr = document.createElement("tr");
     const tdNome = Object.assign(document.createElement("td"), { textContent: c.nome });
@@ -299,40 +302,41 @@ async function apagarConta(conta) {
   });
 }
 
-/* ---------- Contatos ---------- */
+/* ---------- Quem recebe os lembretes (Configurações) ---------- */
 
-async function carregarContatos() {
-  const r = await api().whatsapp_contatos();
+async function carregarDestinatario() {
+  const r = await api().whatsapp_destinatario();
   if (r.erro) return mostrarToast(r.erro, { erro: true });
-  desenharContatos(r.contatos);
+  aplicarDestinatario(r);
 }
 
-function desenharContatos(contatos) {
-  whats.contatos = contatos;
-  $("#contatos-tabela").hidden = contatos.length === 0;
-  $("#contatos-vazio").hidden = contatos.length > 0;
-  $("#contatos-corpo").replaceChildren(...contatos.map((c, i) => {
-    const tr = document.createElement("tr");
-    const tdNome = Object.assign(document.createElement("td"), { textContent: c.nome });
-    const tdTel = Object.assign(document.createElement("td"), { className: "c-telefone", textContent: telefoneBR(c.telefone) });
-    const tdAcao = document.createElement("td");
-    tdAcao.className = "c-acao";
-    tdAcao.append(botaoIcone("whats-contato-apagar", "i-lixeira", `Apagar ${c.nome}`, { indice: i }));
-    tr.append(tdNome, tdTel, tdAcao);
-    return tr;
-  }));
+function aplicarDestinatario(r) {
+  whats.destinatario = r.contato;
+  $("#cfg-destinatario-nomes").replaceChildren(...r.nomes.map((n) => Object.assign(document.createElement("option"), { value: n })));
+  if (document.activeElement !== $("#cfg-destinatario")) $("#cfg-destinatario").value = r.contato ? r.contato.nome : "";
+  const c = r.contato;
+  $("#cfg-destinatario-dica").textContent = !c
+    ? "Escolha da lista de contatos. Um nome novo vira contato."
+    : c.telefone ? `Os lembretes vão para ${telefoneBR(c.telefone)}. Para trocar o telefone, altere o contato em Contatos.`
+      : `${c.nome} está sem telefone: preencha em Contatos.`;
+  desenharDicaDoDestinatario();
 }
 
-async function apagarContato(contato) {
-  const r = await api().whatsapp_apagar_contato(contato.nome);
+function desenharDicaDoDestinatario() {
+  const c = whats.destinatario;
+  $("#whats-contato-dica").textContent = c && c.telefone ? ""
+    : "Falta dizer quem recebe os lembretes: escolha um contato em Configurações.";
+}
+
+async function definirDestinatario() {
+  const campo = $("#cfg-destinatario");
+  const nome = campo.value.trim();
+  if (normalizarNome(nome) === normalizarNome(whats.destinatario ? whats.destinatario.nome : "")) return;
+  const r = await api().whatsapp_definir_destinatario(nome);
   if (r.erro) return mostrarToast(r.erro, { erro: true });
-  desenharContatos(r.contatos);
-  mostrarToast(`Contato apagado: ${contato.nome}`, {
-    acoes: [["Desfazer", async () => {
-      const volta = await api().whatsapp_salvar_contato(contato.nome, contato.telefone);
-      if (!volta.erro) desenharContatos(volta.contatos);
-    }]],
-  });
+  campo.blur();
+  aplicarDestinatario(r);
+  mostrarToast(r.contato ? `Os lembretes vão para ${r.contato.nome}.` : "Ninguém recebe os lembretes agora.");
 }
 
 /* ---------- Lembretes ---------- */
@@ -395,10 +399,68 @@ async function enviarLembrete() {
   const r = await api().whatsapp_enviar_lembrete(whats.lembrete.mensagem);
   $("#lembretes").close();
   if (r.sem_contato) {
-    mostrarToast("Falta o telefone de quem recebe os lembretes.", {
-      acoes: [["Abrir Configurações", () => mostrarView("config")]],
+    mostrarToast(r.nome ? `${r.nome} está sem telefone. Preencha em Contatos.` : "Falta escolher quem recebe os lembretes.", {
+      acoes: r.nome ? [["Abrir Contatos", () => mostrarView("contatos")]]
+        : [["Abrir Configurações", () => irPara("config", "whats")]],
     });
     return;
   }
   if (r.erro) mostrarToast(r.erro, { erro: true });
 }
+
+/* ---------- Widget do Início ---------- */
+
+async function marcarContaPagaNoInicio(botao) {
+  const r = await api().whatsapp_marcar_paga(botao.dataset.nome, botao.dataset.mes, true);
+  if (r.erro) return mostrarToast(r.erro, { erro: true });
+  mostrarToast(`${botao.dataset.nome} marcada como paga.`, {
+    acoes: [["Desfazer", async () => {
+      await api().whatsapp_marcar_paga(botao.dataset.nome, botao.dataset.mes, false);
+      carregarInicio();
+    }]],
+  });
+  carregarInicio();
+}
+
+acoes["ini-conta-paga"] = marcarContaPagaNoInicio;
+
+function contasDoWidget(c, hoje) {
+  const perto = c.abertas.filter((x) => x.perto);
+  if (!c.total) return [texto("p", "Nenhuma conta com lembrete.", "dica")];
+  if (!perto.length) {
+    return [texto("p", c.abertas.length
+      ? `Nada vence até amanhã. ${plural(c.abertas.length, "conta ainda em aberto", "contas ainda em aberto")} no mês.`
+      : "Todas as contas do mês estão pagas.", "ini-tudo-certo")];
+  }
+  const ul = Object.assign(document.createElement("ul"), { className: "ini-lista" });
+  for (const conta of perto) {
+    const li = Object.assign(document.createElement("li"), { className: "ini-conta" });
+    const [, mes, dia] = conta.vencimento.split("-");
+    const quando = conta.venceu ? `venceu ${dia}/${mes}` : conta.vencimento === hoje ? "vence hoje" : "vence amanhã";
+    li.append(Object.assign(document.createElement("span"), { textContent: conta.nome }),
+      texto("span", quando, conta.venceu ? "etiqueta etiqueta-erro" : "etiqueta etiqueta-aviso"));
+    const b = Object.assign(document.createElement("button"), { type: "button", className: "btn btn-peq" });
+    b.dataset.acao = "ini-conta-paga";
+    b.dataset.nome = conta.nome;
+    b.dataset.mes = conta.mes;
+    b.setAttribute("aria-label", `${conta.nome} já foi paga`);
+    b.innerHTML = '<svg class="ic"><use href="#i-ok"/></svg><span>Paga</span>';
+    li.append(b);
+    ul.append(li);
+  }
+  return [ul];
+}
+
+registrarWidget("lembretes", {
+  icone: "i-whats",
+  desenhar(corpo, c) {
+    corpo.append(texto("p", "Contas", "ini-subtitulo"), ...contasDoWidget(c, inicio.painel.data));
+    const n = c.notas_enviar;
+    let notas;
+    if (n.sem_pasta) notas = "Escolha a pasta das notas para ver o que falta enviar.";
+    else if (n.erro) notas = n.erro;
+    else notas = n.qtd ? `${plural(n.qtd, "nota esperando", "notas esperando")} para ser enviada${n.qtd === 1 ? "" : "s"}.` : "Todas as notas foram enviadas.";
+    corpo.append(texto("p", "Notas a enviar", "ini-subtitulo"), texto("p", notas, n.qtd ? "ini-alerta" : "ini-tudo-certo"));
+    corpo.append(rodape(botaoIr("Ver contas", "whatsapp", "contas"), botaoIr("Enviar notas", "whatsapp", "enviar")));
+  },
+});

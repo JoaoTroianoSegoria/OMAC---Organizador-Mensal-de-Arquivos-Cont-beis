@@ -295,3 +295,18 @@ async function exportarRegras() {
   if (r.erro) return mostrarToast(r.erro, { erro: true });
   toastDeArquivo(`Regras salvas: ${r.caminho.split(/[\\/]/).pop()}`, r.caminho);
 }
+
+/* ---------- Widget do Início: o fechamento do mês anterior ---------- */
+
+registrarWidget("relatorio", {
+  icone: "i-banco",
+  desenhar(corpo, f) {
+    const linhas = [
+      ["Notas fiscais", f.notas == null ? "sem pasta" : plural(f.notas, "nota", "notas"), f.notas ? "" : "ini-alerta"],
+      ["Extrato", f.lancamentos == null ? "sem pasta" : f.lancamentos ? plural(f.lancamentos, "lançamento", "lançamentos") : "falta o extrato",
+        f.lancamentos ? "" : "ini-alerta"],
+    ];
+    corpo.append(texto("p", `${f.nome_mes} de ${f.ano}`, "ini-subtitulo"), numeros(linhas),
+      rodape(botaoIr("Abrir notas", "notas"), botaoIr("Abrir extrato", "extrato")));
+  },
+});

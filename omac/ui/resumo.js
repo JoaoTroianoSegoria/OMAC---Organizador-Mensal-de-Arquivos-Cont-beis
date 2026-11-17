@@ -142,3 +142,23 @@ function desenharBarras(caixa, meses, { ano, destaque = null, compacto = false }
   area.addEventListener("focusout", () => { dica.hidden = true; });
   caixa.replaceChildren(area);
 }
+
+/* ---------- Widget do Início ---------- */
+
+registrarWidget("resumo", {
+  icone: "i-grafico",
+  desenhar(corpo, r) {
+    if (!r.notas_lidas) {
+      corpo.append(texto("p", "Escolha a pasta das notas para ver o faturamento.", "dica"), rodape(botaoIr("Ver resumo do ano", "resumo")));
+      return;
+    }
+    corpo.append(numeros([
+      [`Faturamento em ${r.ano}`, r.faturamento_centavos == null ? "—" : real.format(r.faturamento_centavos / 100)],
+      ["Média por mês", r.media_centavos == null ? "—" : real.format(r.media_centavos / 100)],
+      ["Melhor mês", r.melhor ? MESES[r.melhor - 1] : "—"],
+    ]));
+    const grafico = Object.assign(document.createElement("div"), { className: "rs-grafico" });
+    desenharBarras(grafico, r.meses, { ano: r.ano, compacto: true });
+    corpo.append(grafico, rodape(botaoIr("Ver resumo do ano", "resumo")));
+  },
+});
