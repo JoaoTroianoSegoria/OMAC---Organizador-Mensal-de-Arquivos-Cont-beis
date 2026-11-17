@@ -57,7 +57,7 @@ async function carregarNotas() {
       return;
     }
     notasEstado.dados = r;
-    const env = await api().whatsapp_enviadas();
+    const env = await api().notas_enviadas();
     notasEstado.enviadas = new Set(env.numeros ?? []);
     preencherSeletores($("#sel-mes"), $("#sel-ano"), r.competencias);
     desenharNotas();

@@ -186,9 +186,11 @@ function pendenciasDeHoje(w) {
   }
   if (ok(w.lembretes)) {
     const contas = w.lembretes.abertas.filter((c) => c.perto);
-    if (contas.length) itens.push([`${plural(contas.length, "conta vence", "contas vencem")} até amanhã ou já venceu`, "whatsapp", "contas"]);
+    if (contas.length) itens.push([`${plural(contas.length, "conta vence", "contas vencem")} até amanhã ou já venceu`, "lembretes", "contas"]);
     const notas = w.lembretes.notas_enviar;
-    if (notas && notas.qtd) itens.push([`${plural(notas.qtd, "nota", "notas")} para enviar no WhatsApp`, "whatsapp", "enviar"]);
+    if (notas && notas.qtd) itens.push([`${plural(notas.qtd, "nota", "notas")} para enviar no WhatsApp`, "lembretes", "enviar"]);
+    const livres = w.lembretes.livres || [];
+    if (livres.length) itens.push([`${plural(livres.length, "lembrete em aberto", "lembretes em aberto")}`, "lembretes", "livres"]);
   }
   if (ok(w.tratamentos)) {
     const faltam = w.tratamentos.ativos - w.tratamentos.agendados;
@@ -211,7 +213,7 @@ function pendenciasAnteriores(w) {
   const itens = [];
   const ok = (x) => x && !x.erro;
   if (ok(w.lembretes) && w.lembretes.nao_pagas_mes_passado.length) {
-    itens.push([`Contas do mês passado sem marcar como pagas: ${w.lembretes.nao_pagas_mes_passado.join(", ")}`, "whatsapp", "contas"]);
+    itens.push([`Contas do mês passado sem marcar como pagas: ${w.lembretes.nao_pagas_mes_passado.join(", ")}`, "lembretes", "contas"]);
   }
   if (ok(w.atendimentos) && w.atendimentos.nao_pagos_mes_passado) {
     itens.push([`${plural(w.atendimentos.nao_pagos_mes_passado, "atendimento do mês passado ficou", "atendimentos do mês passado ficaram")} sem pagar`, "atendimentos"]);
