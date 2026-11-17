@@ -1,4 +1,7 @@
-/* OMAC — ficha de pagamentos: o papel dos atendimentos pagos, mês a mês.
+/* OMAC — Atendimentos: a ficha do mês (pagamento e nota de cada atendimento).
+ *
+ * O paciente é um contato: o campo completa com a lista de contatos, e um nome que
+ * não existe vira contato novo ao salvar.
  *
  * O mês daqui é o do dia a dia (o atual), e não o do relatório dos outros módulos,
  * que no começo do mês costuma ser o anterior. Por isso ele tem os próprios seletores.
@@ -14,11 +17,14 @@ const ficha = {
   orto: {}, // nome → valor da manutenção em centavos (ou null)
   editando: null,
   forma: "",
+  nota: "", // "" (falta), "ok", "nao_precisa"
+  notaSugerida: false, // "não precisa" veio sozinho da forma de pagamento (troca junto com ela)
+  semNotaPorPadrao: [],
 };
 
 const PARCELAS_MAX = 12;
 
-modulos.pagamentos = {
+modulos.atendimentos = {
   aoMostrar: carregarFicha,
   carregar: carregarFicha,
   ligar() {
@@ -28,6 +34,7 @@ modulos.pagamentos = {
     $("#form-atendimento").addEventListener("submit", salvarAtendimento);
     $("#form-tratamento").addEventListener("submit", adicionarTratamento);
     $("#pg-nome").addEventListener("change", sugerirDaOrtodontia);
+    $("#pg-nome").addEventListener("input", avisarContatoNovo);
     $("#pg-sel-mes").addEventListener("change", (e) => irParaMesDaFicha(ficha.ano, Number(e.target.value)));
     $("#pg-sel-ano").addEventListener("change", (e) => irParaMesDaFicha(Number(e.target.value), ficha.mes));
     $("#pg-parcelas").replaceChildren(...Array.from({ length: PARCELAS_MAX }, (_, i) =>
@@ -42,7 +49,8 @@ Object.assign(acoes, {
   "pg-novo": () => abrirAtendimento(null),
   "pg-editar": (alvo) => abrirAtendimento(atendimentoDa(alvo)),
   "pg-fechar": () => $("#pg-atendimento").close(),
-  "pg-forma": (alvo) => escolherForma(ficha.forma === alvo.dataset.forma ? "" : alvo.dataset.forma),
+  "pg-forma": (alvo) => escolherForma(ficha.forma === alvo.dataset.forma ? "" : alvo.dataset.forma, true),
+  "pg-nota": (alvo) => { ficha.notaSugerida = false; escolherNota(alvo.dataset.nota); },
   "pg-pago": marcarPagoNaLista,
   "pg-filtro": (alvo) => { ficha.filtro = alvo.dataset.filtro; desenharFicha(); },
   "pg-excluir": excluirAtendimento,
@@ -53,7 +61,7 @@ Object.assign(acoes, {
 /* ---------- Lista ---------- */
 
 async function carregarFicha() {
-  aplicarFicha(await api().pagamentos_listar(ficha.ano, ficha.mes));
+  aplicarFicha(await api().atendimentos_listar(ficha.ano, ficha.mes));
 }
 
 function irParaMesDaFicha(ano, mes) {
@@ -64,7 +72,8 @@ function irParaMesDaFicha(ano, mes) {
 
 function aplicarFicha(r) {
   if (r.erro) return mostrarToast(r.erro, { erro: true });
-  Object.assign(ficha, { ano: r.ano, mes: r.mes, atendimentos: r.atendimentos, nomes: r.nomes, orto: r.orto });
+  Object.assign(ficha, { ano: r.ano, mes: r.mes, atendimentos: r.atendimentos, nomes: r.nomes, orto: r.orto,
+    semNotaPorPadrao: r.sem_nota_por_padrao });
   ficha.totais = r.totais;
   ficha.meses = r.meses;
   ficha.notasLidas = r.notas_lidas;
@@ -86,7 +95,7 @@ function seletoresDaFicha() {
 function passaNoFiltro(a) {
   if (ficha.filtro === "aguardando") return a.situacao === "aguardando";
   if (ficha.filtro === "nao_pago") return a.situacao === "nao_pago";
-  if (ficha.filtro === "sem_nota") return !a.nota;
+  if (ficha.filtro === "sem_nota") return a.nota_situacao === "falta";
   return true;
 }
 
@@ -135,12 +144,16 @@ function linhaDoAtendimento(a) {
 
   const tdNota = document.createElement("td");
   tdNota.className = "pg-c-nota";
-  if (a.nota) {
+  if (a.nota_situacao === "ok") {
     tdNota.innerHTML = '<svg class="ic pg-ok"><use href="#i-ok"/></svg>';
     tdNota.append(" ok");
     tdNota.title = a.nota_numero ? `Nota nº ${a.nota_numero}, achada na pasta` : "Marcada à mão";
+  } else if (a.nota_situacao === "nao_precisa") {
+    tdNota.textContent = "não precisa";
+    tdNota.classList.add("pg-nao-precisa");
   } else {
     tdNota.textContent = "—";
+    tdNota.title = "Falta emitir";
     tdNota.classList.add("ag-sem-dado");
   }
 
@@ -162,7 +175,7 @@ function linhaDoAtendimento(a) {
 }
 
 async function marcarPagoNaLista(caixa) {
-  const r = await api().pagamentos_marcar_pago(caixa.dataset.id, caixa.checked, ficha.ano, ficha.mes);
+  const r = await api().atendimentos_marcar_pago(caixa.dataset.id, caixa.checked, ficha.ano, ficha.mes);
   if (r.erro) {
     caixa.checked = !caixa.checked;
     return mostrarToast(r.erro, { erro: true });
@@ -171,7 +184,7 @@ async function marcarPagoNaLista(caixa) {
 }
 
 async function exportarFicha() {
-  const r = await api().pagamentos_exportar(ficha.ano, ficha.mes);
+  const r = await api().atendimentos_exportar(ficha.ano, ficha.mes);
   if (!r || r.cancelado) return;
   if (r.erro) return mostrarToast(r.erro, { erro: true });
   estado.cfg.pasta_saida = r.caminho.replace(/[\\/][^\\/]*$/, "");
@@ -180,10 +193,30 @@ async function exportarFicha() {
 
 /* ---------- Novo atendimento / alterar atendimento ---------- */
 
-function escolherForma(forma) {
+function escolherForma(forma, clicada = false) {
   ficha.forma = forma;
   $$(".pg-formas .escolha").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.forma === forma)));
   $("#pg-parcelas-campo").hidden = forma !== "credito";
+  if (!clicada) return;
+  // Dinheiro e Pix PF já sugerem "não precisa" de nota; trocar a forma desfaz a sugestão.
+  const semNota = ficha.semNotaPorPadrao.includes(forma);
+  if (semNota && ficha.nota === "") {
+    ficha.notaSugerida = true;
+    escolherNota("nao_precisa");
+  } else if (!semNota && ficha.notaSugerida) {
+    ficha.notaSugerida = false;
+    escolherNota("");
+  }
+}
+
+function escolherNota(nota) {
+  ficha.nota = nota;
+  $$(".pg-notas .escolha").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.nota === nota)));
+}
+
+function avisarContatoNovo() {
+  const nome = normalizarNome($("#pg-nome").value);
+  $("#pg-contato-novo").hidden = !nome || ficha.nomes.some((n) => normalizarNome(n) === nome);
 }
 
 function opcoes(lista) {
@@ -197,10 +230,6 @@ function dataPadrao() {
     return `${ficha.ano}-${String(ficha.mes).padStart(2, "0")}-${String(hoje.getDate()).padStart(2, "0")}`;
   }
   return `${ficha.ano}-${String(ficha.mes).padStart(2, "0")}-01`;
-}
-
-function valorParaCampo(centavos) {
-  return centavos == null ? "" : (centavos / 100).toFixed(2).replace(".", ",");
 }
 
 function abrirAtendimento(a) {
@@ -222,7 +251,9 @@ function abrirAtendimento(a) {
   $("#pg-nota-achada-texto").textContent = achada ? `Nota nº ${a.nota_numero} achada na pasta.` : "";
   $("#pg-nota-campo").hidden = !!achada;
   $("#pg-nota-dica").hidden = !!achada;
-  $("#pg-nota-manual").checked = !!(a && a.nota_manual);
+  ficha.notaSugerida = false;
+  escolherNota(a ? a.nota : "");
+  $("#pg-contato-novo").hidden = true;
 
   $("#pg-excluir").hidden = !a;
   $("#pg-atendimento-erro").hidden = true;
@@ -242,7 +273,7 @@ function sugerirDaOrtodontia() {
 async function salvarAtendimento(e) {
   e.preventDefault();
   const anterior = ficha.editando;
-  const r = await api().pagamentos_salvar({
+  const r = await api().atendimentos_salvar({
     nome: $("#pg-nome").value,
     tratamento: $("#pg-tratamento").value,
     data: $("#pg-data").value,
@@ -250,7 +281,7 @@ async function salvarAtendimento(e) {
     forma: ficha.forma,
     parcelas: Number($("#pg-parcelas").value),
     pago: $("#pg-pago").checked,
-    nota_manual: $("#pg-nota-manual").checked,
+    nota: ficha.nota,
   }, anterior ? anterior.id : null);
   if (r.erro) {
     $("#pg-atendimento-erro").textContent = r.erro;
@@ -264,12 +295,12 @@ async function salvarAtendimento(e) {
 }
 
 async function excluirAtendimento() {
-  const r = await api().pagamentos_apagar(ficha.editando.id, ficha.ano, ficha.mes);
+  const r = await api().atendimentos_apagar(ficha.editando.id, ficha.ano, ficha.mes);
   $("#pg-atendimento").close();
   if (r.erro) return mostrarToast(r.erro, { erro: true });
   aplicarFicha(r);
-  mostrarToast(`Atendimento excluído: ${r.apagado.nome}`, {
-    acoes: [["Desfazer", async () => aplicarFicha(await api().pagamentos_restaurar(r.apagado, ficha.ano, ficha.mes))]],
+  mostrarToast(`Atendimento excluído: ${r.apagado_nome}`, {
+    acoes: [["Desfazer", async () => aplicarFicha(await api().atendimentos_restaurar(r.apagado, ficha.ano, ficha.mes))]],
   });
 }
 
@@ -306,3 +337,21 @@ function adicionarTratamento(e) {
   desenharTratamentos();
   campo.focus();
 }
+
+/* ---------- Widget do Início ---------- */
+
+registrarWidget("atendimentos", {
+  icone: "i-dinheiro",
+  desenhar(corpo, f) {
+    if (!f.qtd) {
+      corpo.append(texto("p", "Nenhum atendimento na ficha deste mês.", "dica"), rodape(botaoIr("Abrir atendimentos", "atendimentos")));
+      return;
+    }
+    corpo.append(numeros([
+      ["Recebido", real.format(f.recebido_centavos / 100)],
+      ["A receber", real.format(f.a_receber_centavos / 100)],
+      ["Sem nota", String(f.sem_nota), f.sem_nota ? "ini-alerta" : ""],
+    ]));
+    corpo.append(rodape(botaoIr("Abrir atendimentos", "atendimentos")));
+  },
+});

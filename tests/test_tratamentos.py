@@ -5,9 +5,10 @@ from urllib.parse import unquote
 import pytest
 
 from omac import config, sistema
-from omac.agendamentos import mensagens as msg
-from omac.agendamentos import pacientes as pc
 from omac.app import Api
+from omac.dados import esquema
+from omac.tratamentos import mensagens as msg
+from omac.tratamentos import orto as pc
 
 TEL = "5561900000000"
 NOV = date(2026, 11, 6)
@@ -25,9 +26,21 @@ def api(tmp_path, monkeypatch):
     return a
 
 
+def _contato_do(api, tratamento_id):
+    return next(t["contato_id"] for t in api._armazem.ler(esquema.TRATAMENTOS)["tratamentos"]
+                if t["id"] == tratamento_id)
+
+
+def _salvar(api, dados, tratamento_id=None):
+    """A janela de contato com a chave "Em tratamento de orto" ligada."""
+    contato_id = _contato_do(api, tratamento_id) if tratamento_id else None
+    r = api.contatos_salvar({"orto": True, **dados}, contato_id)
+    return r if "erro" in r else api.tratamentos_listar()
+
+
 def _novo(api, **campos):
     dados = {"nome": "Maria Exemplo", "telefone": "(61) 90000-0000", "valor": "250,00", **campos}
-    r = api.agendamentos_salvar(dados)
+    r = _salvar(api, dados)
     assert "erro" not in r, r
     return r
 
@@ -58,7 +71,7 @@ def test_adiciona_paciente(api):
 
 
 def test_telefone_e_valor_podem_ficar_para_depois(api):
-    p = api.agendamentos_salvar({"nome": "Maria"})["ativos"][0]
+    p = _salvar(api, {"nome": "Maria"})["ativos"][0]
     assert p["telefone"] == "" and p["valor_centavos"] is None
 
 
@@ -68,44 +81,57 @@ def test_telefone_e_valor_podem_ficar_para_depois(api):
     ({"nome": "Maria", "valor": "abc"}, "valor"),
 ])
 def test_recusa_dados_ruins_sem_salvar(api, dados, trecho):
-    assert trecho in api.agendamentos_salvar(dados)["erro"]
-    assert api.agendamentos_listar()["ativos"] == []
+    assert trecho in _salvar(api, dados)["erro"]
+    assert api.tratamentos_listar()["ativos"] == []
 
 
 def test_recusa_nome_repetido_ignorando_acento_e_caixa(api):
     _novo(api, nome="Joana Exemplo")
-    r = api.agendamentos_salvar({"nome": "JOANÁ  exemplo"})
+    r = _salvar(api, {"nome": "JOANÁ  exemplo"})
     assert "Já existe" in r["erro"]
-    assert len(api.agendamentos_listar()["ativos"]) == 1
+    assert len(api.tratamentos_listar()["ativos"]) == 1
 
 
 def test_altera_paciente_mantendo_o_confere(api):
     p = _novo(api)["ativos"][0]
-    api.agendamentos_marcar(p["id"], True)
-    r = api.agendamentos_salvar({"nome": "Maria Nova", "telefone": "61911111111", "valor": "300"}, p["id"])
+    api.tratamentos_marcar(p["id"], True)
+    r = _salvar(api, {"nome": "Maria Nova", "telefone": "61911111111", "valor": "300"}, p["id"])
     novo = r["ativos"][0]
     assert (novo["id"], novo["nome"], novo["valor_centavos"], novo["agendado"]) == (p["id"], "Maria Nova", 30000, True)
 
 
 def test_alterar_pode_manter_o_proprio_nome(api):
     p = _novo(api)["ativos"][0]
-    assert "erro" not in api.agendamentos_salvar({"nome": p["nome"], "valor": "1"}, p["id"])
+    assert "erro" not in _salvar(api, {"nome": p["nome"], "valor": "1"}, p["id"])
+
+
+def _excluir(api, p):
+    """Desligar a ortodontia na janela de contato tira o paciente de Tratamentos."""
+    return api.contatos_salvar({"nome": p["nome"], "telefone": p["telefone"], "orto": False}, p["contato_id"])
 
 
 def test_excluir_e_desfazer(api):
     p = _novo(api)["ativos"][0]
-    api.agendamentos_marcar(p["id"], True)
-    r = api.agendamentos_apagar(p["id"])
-    assert r["ativos"] == []
-    volta = api.agendamentos_restaurar(r["apagado"])
+    api.tratamentos_marcar(p["id"], True)
+    r = _excluir(api, p)
+    assert api.tratamentos_listar()["ativos"] == []
+    api.contatos_restaurar_tratamento(r["tratamento_apagado"])
+    volta = api.tratamentos_listar()
     assert volta["ativos"][0]["id"] == p["id"] and volta["ativos"][0]["agendado"]
+
+
+def test_excluir_tira_so_da_ortodontia_e_o_contato_fica(api):
+    p = _novo(api)["ativos"][0]
+    r = _excluir(api, p)
+    assert [c["nome"] for c in r["contatos"]] == ["Maria Exemplo"]
 
 
 def test_desfazer_duas_vezes_nao_duplica(api):
     p = _novo(api)["ativos"][0]
-    apagado = api.agendamentos_apagar(p["id"])["apagado"]
-    api.agendamentos_restaurar(apagado)
-    assert len(api.agendamentos_restaurar(apagado)["ativos"]) == 1
+    apagado = _excluir(api, p)["tratamento_apagado"]
+    api.contatos_restaurar_tratamento(apagado)
+    api.contatos_restaurar_tratamento(apagado)
+    assert len(api.tratamentos_listar()["ativos"]) == 1
 
 
 # --- Finalizados -------------------------------------------------------------------
@@ -113,15 +139,15 @@ def test_desfazer_duas_vezes_nao_duplica(api):
 
 def test_finalizar_muda_de_aba_e_volta(api):
     p = _novo(api)["ativos"][0]
-    r = api.agendamentos_salvar({"nome": p["nome"], "situacao": "finalizado"}, p["id"])
+    r = _salvar(api, {"nome": p["nome"], "situacao": "finalizado"}, p["id"])
     assert r["ativos"] == [] and r["finalizados"][0]["finalizado_em"] == date.today().isoformat()
-    r = api.agendamentos_salvar({"nome": p["nome"], "situacao": "ativo"}, p["id"])
+    r = _salvar(api, {"nome": p["nome"], "situacao": "ativo"}, p["id"])
     assert r["finalizados"] == [] and r["ativos"][0]["id"] == p["id"]
 
 
 def test_alterar_finalizado_mantem_a_data_original():
-    p = pc.completar({"id": "a", "nome": "Maria", "finalizado_em": "2026-01-15"})
-    pc.alterar([p], "a", {"nome": "Maria Nova", "situacao": "finalizado"}, NOV)
+    p = pc.completar({"id": "a", "contato_id": "c", "finalizado_em": "2026-01-15"})
+    pc.salvar([p], "c", {"situacao": "finalizado"}, NOV)
     assert p["finalizado_em"] == "2026-01-15"
 
 
@@ -138,15 +164,15 @@ def test_confere_vale_so_no_mes_marcado():
 
 def test_confere_de_outro_mes_aparece_desmarcado(api):
     _novo(api)
-    with api._agenda() as d:
-        d["pacientes"][0]["agendado_em"] = "2020-01-31"
-    assert api.agendamentos_listar()["ativos"][0]["agendado"] is False
+    with api._armazem.editar(esquema.TRATAMENTOS) as d:
+        d["tratamentos"][0]["agendado_em"] = "2020-01-31"
+    assert api.tratamentos_listar()["ativos"][0]["agendado"] is False
 
 
 def test_desmarcar_confere(api):
     p = _novo(api)["ativos"][0]
-    assert api.agendamentos_marcar(p["id"], True)["ativos"][0]["agendado"] is True
-    assert api.agendamentos_marcar(p["id"], False)["ativos"][0]["agendado"] is False
+    assert api.tratamentos_marcar(p["id"], True)["ativos"][0]["agendado"] is True
+    assert api.tratamentos_marcar(p["id"], False)["ativos"][0]["agendado"] is False
 
 
 # --- Mensagens ---------------------------------------------------------------------
@@ -179,16 +205,21 @@ def test_retorno():
     assert "retorno" in msg.retorno("", "Maria")
 
 
+def _mensagens(api, tratamento_id, papel=""):
+    r = api.tratamentos_preparar_mensagens(tratamento_id)
+    return next(d for d in r["destinos"] if d["papel"] == papel)["mensagens"]
+
+
 def test_prepara_as_tres_mensagens(api):
     p = _novo(api)["ativos"][0]
-    m = api.agendamentos_preparar_mensagens(p["id"])["mensagens"]
+    m = _mensagens(api, p["id"])
     assert set(m) == {"agendar", "cobrar", "retorno"}
     assert "chave@exemplo.com" in m["cobrar"] and "R$ 250,00" in m["cobrar"]
 
 
 def test_enviar_abre_a_conversa_e_guarda_o_telefone(api):
-    p = api.agendamentos_salvar({"nome": "Maria"})["ativos"][0]
-    r = api.agendamentos_enviar(p["id"], "(61) 90000-0000", "Olá & tudo bem?")
+    p = _salvar(api, {"nome": "Maria"})["ativos"][0]
+    r = api.tratamentos_enviar(p["id"], p["contato_id"], "(61) 90000-0000", "Olá & tudo bem?")
     assert r["ativos"][0]["telefone"] == TEL
     assert len(api.abertos) == 1 and TEL in api.abertos[0]
     assert unquote(api.abertos[0].split("text=")[1]) == "Olá & tudo bem?"
@@ -196,14 +227,14 @@ def test_enviar_abre_a_conversa_e_guarda_o_telefone(api):
 
 def test_enviar_com_telefone_ruim_nao_abre_nada(api):
     p = _novo(api)["ativos"][0]
-    assert "telefone" in api.agendamentos_enviar(p["id"], "123", "oi")["erro"]
+    assert "telefone" in api.tratamentos_enviar(p["id"], p["contato_id"], "123", "oi")["erro"]
     assert api.abertos == []
 
 
 def test_paciente_finalizado_tambem_recebe_mensagem(api):
     p = _novo(api)["ativos"][0]
-    api.agendamentos_salvar({"nome": p["nome"], "telefone": TEL, "situacao": "finalizado"}, p["id"])
-    assert "erro" not in api.agendamentos_enviar(p["id"], TEL, "retorno")
+    _salvar(api, {"nome": p["nome"], "telefone": TEL, "situacao": "finalizado"}, p["id"])
+    assert "erro" not in api.tratamentos_enviar(p["id"], p["contato_id"], TEL, "retorno")
 
 
 # --- Dados que sobrevivem a uma versão nova -----------------------------------------
@@ -211,16 +242,16 @@ def test_paciente_finalizado_tambem_recebe_mensagem(api):
 
 def test_dados_sobrevivem_a_outra_abertura_do_app(api):
     p = _novo(api)["ativos"][0]
-    api.agendamentos_marcar(p["id"], True)
+    api.tratamentos_marcar(p["id"], True)
     outra = Api()
-    assert outra.agendamentos_listar()["ativos"][0]["agendado"] is True
+    assert outra.tratamentos_listar()["ativos"][0]["agendado"] is True
 
 
 def test_arquivo_estragado_nao_e_sobrescrito(api):
-    arquivo = config.caminho_agendamentos()
+    arquivo = config.pasta_dados() / esquema.TRATAMENTOS
     arquivo.parent.mkdir(parents=True, exist_ok=True)
     arquivo.write_text("{ quebrado", encoding="utf-8")
-    assert "Os pacientes" in api.agendamentos_salvar({"nome": "Maria"})["erro"]
+    assert "pacientes de ortodontia" in _salvar(api, {"nome": "Maria"})["erro"]
     assert arquivo.read_text(encoding="utf-8") == "{ quebrado"
 
 
@@ -255,13 +286,13 @@ ALTA = {"situacao": "alta", "alta_inicio": "2026-10-01", "alta_fim": "2026-12-31
 
 def test_alta_muda_de_aba_e_sai_do_confere(api):
     p = _novo(api)["ativos"][0]
-    r = api.agendamentos_salvar({"nome": p["nome"], **ALTA}, p["id"])
+    r = _salvar(api, {"nome": p["nome"], **ALTA}, p["id"])
     assert r["ativos"] == [] and r["finalizados"] == []
     assert (r["altas"][0]["alta_inicio"], r["altas"][0]["alta_fim"]) == ("2026-10-01", "2026-12-31")
 
 
 def test_novo_paciente_ja_pode_entrar_de_alta(api):
-    assert api.agendamentos_salvar({"nome": "Maria", **ALTA})["altas"][0]["nome"] == "Maria"
+    assert _salvar(api, {"nome": "Maria", **ALTA})["altas"][0]["nome"] == "Maria"
 
 
 @pytest.mark.parametrize("campos, trecho", [
@@ -271,151 +302,144 @@ def test_novo_paciente_ja_pode_entrar_de_alta(api):
     ({"alta_inicio": "2026-02-31", "alta_fim": "2026-12-31"}, "não existe"),
 ])
 def test_alta_precisa_de_duas_datas_validas(api, campos, trecho):
-    assert trecho in api.agendamentos_salvar({"nome": "Maria", "situacao": "alta", **campos})["erro"]
-    assert api.agendamentos_listar()["altas"] == []
+    assert trecho in _salvar(api, {"nome": "Maria", "situacao": "alta", **campos})["erro"]
+    assert api.tratamentos_listar()["altas"] == []
 
 
 def test_erro_na_alta_nao_troca_o_nome(api):
     p = _novo(api)["ativos"][0]
-    api.agendamentos_salvar({"nome": "Outro Nome", "situacao": "alta", "alta_inicio": ""}, p["id"])
-    assert api.agendamentos_listar()["ativos"][0]["nome"] == p["nome"]
+    assert "erro" in _salvar(api, {"nome": "Outro Nome", "situacao": "alta", "alta_inicio": ""}, p["id"])
+    assert api.tratamentos_listar()["ativos"][0]["nome"] == p["nome"]
 
 
 def test_alta_que_termina_hoje_ainda_vale():
-    p = pc.completar({"alta_inicio": "2026-10-01", "alta_fim": "2026-11-06"})
+    p = pc.completar({"contato_id": "c", "alta_inicio": "2026-10-01", "alta_fim": "2026-11-06"})
     assert not pc.alta_terminou(p, NOV)
     assert pc.alta_terminou(p, date(2026, 11, 7))
 
 
 def test_altas_em_ordem_de_quem_acaba_primeiro(api):
-    api.agendamentos_salvar({"nome": "Ana", "situacao": "alta", "alta_inicio": "2020-01-01", "alta_fim": "2099-01-01"})
-    api.agendamentos_salvar({"nome": "Bia", "situacao": "alta", "alta_inicio": "2020-01-01", "alta_fim": "2020-02-01"})
-    altas = api.agendamentos_listar()["altas"]
+    _salvar(api, {"nome": "Ana", "situacao": "alta", "alta_inicio": "2020-01-01", "alta_fim": "2099-01-01"})
+    _salvar(api, {"nome": "Bia", "situacao": "alta", "alta_inicio": "2020-01-01", "alta_fim": "2020-02-01"})
+    altas = api.tratamentos_listar()["altas"]
     assert [(a["nome"], a["terminou"]) for a in altas] == [("Bia", True), ("Ana", False)]
 
 
 def test_voltar_ao_tratamento_limpa_as_datas(api):
-    p = api.agendamentos_salvar({"nome": "Maria", **ALTA})["altas"][0]
-    r = api.agendamentos_voltar_ao_tratamento(p["id"])
+    p = _salvar(api, {"nome": "Maria", **ALTA})["altas"][0]
+    r = api.tratamentos_voltar_ao_tratamento(p["id"])
     assert r["altas"] == [] and r["ativos"][0]["alta_inicio"] == ""
 
 
 def test_finalizar_quem_estava_de_alta_limpa_as_datas(api):
-    p = api.agendamentos_salvar({"nome": "Maria", **ALTA})["altas"][0]
-    r = api.agendamentos_salvar({"nome": "Maria", "situacao": "finalizado"}, p["id"])
+    p = _salvar(api, {"nome": "Maria", **ALTA})["altas"][0]
+    r = _salvar(api, {"nome": "Maria", "situacao": "finalizado"}, p["id"])
     assert r["altas"] == [] and r["finalizados"][0]["alta_fim"] == ""
 
 
 def test_situacao_desconhecida(api):
-    assert "situação" in api.agendamentos_salvar({"nome": "Maria", "situacao": "x"})["erro"]
+    assert "situação" in _salvar(api, {"nome": "Maria", "situacao": "x"})["erro"]
 
 
 # --- Responsáveis --------------------------------------------------------------------
 
-MAE = {"nome": "Helena Exemplo", "telefone": "(61) 91111-1111"}
-PAI = {"nome": "Carlos Exemplo", "telefone": "(61) 92222-2222"}
+MAE = {"nome": "Helena Exemplo", "telefone": "(61) 91111-1111", "papel": "mae"}
+PAI = {"nome": "Carlos Exemplo", "telefone": "(61) 92222-2222", "papel": "pai"}
 TEL_MAE, TEL_PAI = "5561911111111", "5561922222222"
 
 
-def _crianca(api, envia_para="mae", **campos):
-    dados = {"nome": "Pedro Exemplo", "responsaveis": {"pai": PAI, "mae": MAE, "envia_para": envia_para}, **campos}
-    r = api.agendamentos_salvar(dados)
+def _crianca(api, **campos):
+    dados = {"nome": "Pedro Exemplo", "responsaveis": [MAE, PAI], **campos}
+    r = _salvar(api, dados)
     assert "erro" not in r, r
     return r["ativos"][0]
 
 
-@pytest.mark.parametrize("envia_para, nome, tel, papel", [
-    ("mae", "Helena Exemplo", TEL_MAE, "mãe"), ("pai", "Carlos Exemplo", TEL_PAI, "pai"),
-])
-def test_destino_e_o_responsavel_escolhido(api, envia_para, nome, tel, papel):
-    assert _crianca(api, envia_para)["destino"] == {"nome": nome, "telefone": tel, "papel": papel}
+def _destino(p):
+    return {k: p["destino"][k] for k in ("nome", "telefone", "papel")}
 
 
-def test_sem_responsaveis_o_destino_e_o_paciente(api):
-    assert _novo(api)["ativos"][0]["destino"] == {"nome": "Maria Exemplo", "telefone": TEL, "papel": ""}
+def test_sem_escolha_o_destino_e_o_proprio_paciente(api):
+    assert _destino(_novo(api)["ativos"][0]) == {"nome": "Maria Exemplo", "telefone": TEL, "papel": ""}
+    assert _destino(_crianca(api, nome="Ana Exemplo"))["nome"] == "Ana Exemplo"
 
 
-def test_basta_um_responsavel_se_for_quem_recebe(api):
-    r = api.agendamentos_salvar({"nome": "Pedro", "responsaveis": {"mae": MAE, "pai": {}, "envia_para": "mae"}})
-    assert r["ativos"][0]["destino"]["nome"] == "Helena Exemplo"
+@pytest.mark.parametrize("papel, nome, tel", [("mãe", "Helena Exemplo", TEL_MAE), ("pai", "Carlos Exemplo", TEL_PAI)])
+def test_envio_lembra_para_quem_foi(api, papel, nome, tel):
+    p = _crianca(api)
+    destino = next(d for d in api.tratamentos_preparar_mensagens(p["id"])["destinos"] if d["papel"] == papel)
+    r = api.tratamentos_enviar(p["id"], destino["contato_id"], tel, "oi")
+    assert _destino(r["ativos"][0]) == {"nome": nome, "telefone": tel, "papel": papel}
+    assert api.tratamentos_preparar_mensagens(p["id"])["escolhido"] == destino["contato_id"]
 
 
-def test_quem_recebe_precisa_ter_nome(api):
-    r = api.agendamentos_salvar({"nome": "Pedro", "responsaveis": {"mae": MAE, "pai": {}, "envia_para": "pai"}})
-    assert "pai" in r["erro"]
-    assert api.agendamentos_listar()["ativos"] == []
+def test_responsavel_vira_contato(api):
+    _crianca(api)
+    contatos = {c["nome"]: c for c in api.contatos_listar()["contatos"]}
+    assert set(contatos) == {"Pedro Exemplo", "Helena Exemplo", "Carlos Exemplo"}
+    assert contatos["Helena Exemplo"]["telefone"] == TEL_MAE
+    assert contatos["Helena Exemplo"]["dependentes"] == ["Pedro Exemplo"]
+    assert [r["papel"] for r in contatos["Pedro Exemplo"]["responsaveis"]] == ["mae", "pai"]
 
 
 def test_telefone_ruim_diz_de_quem_e(api):
-    r = api.agendamentos_salvar({"nome": "Pedro", "responsaveis": {"mae": {"nome": "Ana", "telefone": "123"}, "envia_para": "mae"}})
-    assert "mãe" in r["erro"]
+    r = _salvar(api, {"nome": "Pedro", "responsaveis": [{"nome": "Ana", "telefone": "123", "papel": "mae"}]})
+    assert "Ana" in r["erro"]
+    assert api.contatos_listar()["contatos"] == []
 
 
 def test_mensagem_fala_com_o_responsavel_sobre_o_paciente(api):
     p = _crianca(api, valor="250,00")
-    r = api.agendamentos_preparar_mensagens(p["id"])
-    assert r["destino"]["papel"] == "mãe"
+    m = _mensagens(api, p["id"], "mãe")
     for tipo in ("agendar", "cobrar", "retorno"):
-        assert "Olá, Helena." in r["mensagens"][tipo] and "Pedro" in r["mensagens"][tipo]
-    assert "R$ 250,00" in r["mensagens"]["cobrar"] and "chave@exemplo.com" in r["mensagens"]["cobrar"]
+        assert "Olá, Helena." in m[tipo] and "Pedro" in m[tipo]
+    assert "R$ 250,00" in m["cobrar"] and "chave@exemplo.com" in m["cobrar"]
 
 
 def test_mensagem_sem_responsavel_nao_cita_ninguem_mais(api):
-    m = api.agendamentos_preparar_mensagens(_novo(api)["ativos"][0]["id"])["mensagens"]["agendar"]
+    m = _mensagens(api, _novo(api)["ativos"][0]["id"])["agendar"]
     assert "Olá, Maria." in m and "a sua manutenção" in m
 
 
 def test_enviar_abre_o_telefone_do_responsavel_e_guarda_nele(api):
-    p = api.agendamentos_salvar({"nome": "Pedro", "responsaveis": {"mae": {"nome": "Helena"}, "envia_para": "mae"}})["ativos"][0]
-    r = api.agendamentos_enviar(p["id"], "(61) 91111-1111", "oi")
+    p = _salvar(api, {"nome": "Pedro", "responsaveis": [{"nome": "Helena", "papel": "mae"}]})["ativos"][0]
+    mae = api.tratamentos_preparar_mensagens(p["id"])["destinos"][1]
+    r = api.tratamentos_enviar(p["id"], mae["contato_id"], "(61) 91111-1111", "oi")
     assert TEL_MAE in api.abertos[0]
-    assert r["ativos"][0]["responsaveis"]["mae"]["telefone"] == TEL_MAE
+    assert r["ativos"][0]["destino"]["telefone"] == TEL_MAE
     assert r["ativos"][0]["telefone"] == ""
 
 
-def test_trocar_quem_recebe(api):
+def test_nao_envia_para_quem_nao_e_responsavel(api):
     p = _crianca(api)
-    r = api.agendamentos_salvar({"nome": p["nome"], "responsaveis": {"pai": PAI, "mae": MAE, "envia_para": "pai"}}, p["id"])
-    assert r["ativos"][0]["destino"]["telefone"] == TEL_PAI
+    outro = api.contatos_salvar({"nome": "Fulano"})["salvo"]
+    assert "erro" in api.tratamentos_enviar(p["id"], outro["id"], TEL, "oi")
+    assert api.abertos == []
 
 
 def test_tirar_os_responsaveis_volta_para_o_paciente(api):
     p = _crianca(api, telefone="(61) 90000-0000")
-    r = api.agendamentos_salvar({"nome": p["nome"], "telefone": "(61) 90000-0000", "responsaveis": None}, p["id"])
-    assert r["ativos"][0]["destino"]["telefone"] == TEL and r["ativos"][0]["responsaveis"] is None
+    mae = api.tratamentos_preparar_mensagens(p["id"])["destinos"][1]
+    api.tratamentos_enviar(p["id"], mae["contato_id"], TEL_MAE, "oi")
+    r = _salvar(api, {"nome": p["nome"], "telefone": "(61) 90000-0000", "responsaveis": []}, p["id"])
+    assert r["ativos"][0]["destino"]["telefone"] == TEL
+    # Os responsáveis continuam como contatos.
+    assert len(api.contatos_listar()["contatos"]) == 3
 
 
 # --- Quem já estava cadastrado antes destes campos ------------------------------------
 
 
-def test_paciente_cadastrado_antes_continua_funcionando(api):
-    arquivo = config.caminho_agendamentos()
-    arquivo.parent.mkdir(parents=True, exist_ok=True)
-    arquivo.write_text(json.dumps({"pacientes": [{
-        "id": "antigo", "nome": "Maria", "telefone": TEL, "valor_centavos": 25000,
-        "agendado_em": "", "finalizado_em": "",
-    }]}), encoding="utf-8")
-    p = api.agendamentos_listar()["ativos"][0]
-    assert (p["id"], p["situacao"], p["destino"]["telefone"]) == ("antigo", "ativo", TEL)
-    assert api.agendamentos_salvar({"nome": "Maria", **ALTA}, "antigo")["altas"][0]["id"] == "antigo"
-
-
 def test_so_abrir_a_lista_nao_regrava_o_arquivo(api):
-    arquivo = config.caminho_agendamentos()
-    arquivo.parent.mkdir(parents=True, exist_ok=True)
-    original = json.dumps({"pacientes": [{"id": "a", "nome": "Maria", "agendado_em": "", "finalizado_em": ""}]})
-    arquivo.write_text(original, encoding="utf-8")
-    # A primeira abertura grava uma vez o começo do histórico de quem veio da versão anterior...
-    api.agendamentos_listar()
+    _novo(api)
+    arquivo = config.pasta_dados() / esquema.TRATAMENTOS
     gravado = arquivo.read_text(encoding="utf-8")
-    assert json.loads(gravado)["pacientes"][0]["criado_em"] == date.today().isoformat()
-    # ...e depois só abrir não regrava mais.
-    api.agendamentos_listar()
-    api.agendamentos_historico(2026, 11)
+    api.tratamentos_listar()
+    api.tratamentos_historico(2026, 11)
     assert arquivo.read_text(encoding="utf-8") == gravado
 
 
 def test_desfazer_exclusao_de_quem_esta_de_alta(api):
-    p = api.agendamentos_salvar({"nome": "Maria", **ALTA})["altas"][0]
-    apagado = api.agendamentos_apagar(p["id"])["apagado"]
-    assert api.agendamentos_restaurar(apagado)["altas"][0]["alta_fim"] == "2026-12-31"
+    p = _salvar(api, {"nome": "Maria", **ALTA})["altas"][0]
+    api.contatos_restaurar_tratamento(_excluir(api, p)["tratamento_apagado"])
+    assert api.tratamentos_listar()["altas"][0]["alta_fim"] == "2026-12-31"

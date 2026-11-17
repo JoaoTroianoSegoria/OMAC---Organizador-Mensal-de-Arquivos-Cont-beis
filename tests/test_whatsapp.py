@@ -10,7 +10,7 @@ from omac.notas.leitor import Nota
 from omac.whatsapp import lembretes as lb
 from omac.whatsapp import mensagens as msg
 from omac.whatsapp.api import responsavel
-from omac.whatsapp.dados import DadosIlegiveis, carregar
+from omac.dados import esquema
 from tests.fabrica import criar_pasta_exemplo
 
 TEL = "5561900000000"
@@ -176,7 +176,7 @@ def api(tmp_path, monkeypatch):
 
 
 def _comecar_em(api, dia="2026-01-01"):
-    with api._dados() as d:
+    with api._enviadas() as d:
         d["inicio"] = dia
 
 
@@ -207,15 +207,23 @@ def test_enviar_nota_guarda_o_contato_pelo_responsavel(api):
     assert r == {"pdf_copiado": True}
     assert api.abertos[0].startswith(f"whatsapp://send?phone={TEL}")
     assert api.whatsapp_preparar_nota(803)["telefone"] == TEL
+    # Quem recebe a nota vira contato.
+    [contato] = api.contatos_listar()["contatos"]
+    assert (contato["nome"], contato["telefone"]) == ("FERNANDA COSTA", TEL)
     # Abrir a conversa não marca como enviada: quem envia é a pessoa.
     assert api.whatsapp_enviadas()["numeros"] == []
+
+
+def test_contato_ja_cadastrado_da_o_telefone_da_nota(api):
+    api.contatos_salvar({"nome": "Fernanda Costa", "telefone": "(61) 90000-0000"})
+    assert api.whatsapp_preparar_nota(803)["telefone"] == TEL
 
 
 def test_telefone_invalido_nao_abre_nem_guarda(api):
     r = api.whatsapp_enviar_nota(801, "123", "oi")
     assert "telefone" in r["erro"]
     assert api.abertos == []
-    assert api.whatsapp_contatos()["contatos"] == []
+    assert api.contatos_listar()["contatos"] == []
 
 
 def test_web_abre_o_site(api):
@@ -249,7 +257,7 @@ def test_lembrete_so_na_primeira_abertura_do_dia(api):
     hoje = date.today()
     api.whatsapp_salvar_conta({"nome": "Aluguel", "dia": min(hoje.day, 28)})
     api._cfg["lembrete_fechamento_dia"] = 0
-    with api._dados() as d:
+    with api._contas() as d:
         d["contas"] = [{"nome": "Aluguel", "dia": hoje.day}]
 
     primeira = api.whatsapp_lembretes()
@@ -261,20 +269,30 @@ def test_lembrete_so_na_primeira_abertura_do_dia(api):
 
 
 def test_lembrete_sem_telefone_pede_contato(api):
-    assert api.whatsapp_enviar_lembrete("oi") == {"sem_contato": True}
-    api._cfg["lembrete_telefone"] = "(61) 90000-0000"
+    assert api.whatsapp_enviar_lembrete("oi") == {"sem_contato": True, "nome": ""}
+    api.whatsapp_definir_destinatario("Dra. Exemplo")
+    assert api.whatsapp_enviar_lembrete("oi") == {"sem_contato": True, "nome": "Dra. Exemplo"}
+    contato = api.whatsapp_destinatario()["contato"]
+    api.contatos_salvar({"nome": contato["nome"], "telefone": "(61) 90000-0000"}, contato["id"])
     assert api.whatsapp_enviar_lembrete("oi") == {}
     assert TEL in api.abertos[0]
 
 
+def test_escolher_quem_recebe_os_lembretes(api):
+    api.contatos_salvar({"nome": "Dra. Exemplo", "telefone": "(61) 90000-0000"})
+    r = api.whatsapp_definir_destinatario("dra.  EXEMPLO")
+    assert r["contato"]["nome"] == "Dra. Exemplo" and r["nomes"] == ["Dra. Exemplo"]
+    assert len(api.contatos_listar()["contatos"]) == 1  # usou o contato que já existia
+    assert api.whatsapp_definir_destinatario("")["contato"] is None
+
+
 def test_arquivo_ruim_nao_e_apagado(api):
-    arquivo = config.caminho_whatsapp()
+    arquivo = config.pasta_dados() / esquema.LEMBRETES
     arquivo.parent.mkdir(parents=True, exist_ok=True)
     arquivo.write_text("{ quebrado", encoding="utf-8")
-    assert "erro" in api.whatsapp_contatos()
+    assert "erro" in api.whatsapp_contas()
+    assert "erro" in api.whatsapp_salvar_conta({"nome": "Luz", "dia": 3})
     assert arquivo.read_text(encoding="utf-8") == "{ quebrado"
-    with pytest.raises(DadosIlegiveis):
-        carregar(arquivo)
 
 
 def test_configuracoes_novas_sao_validadas(tmp_path, monkeypatch):

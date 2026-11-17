@@ -11,7 +11,7 @@ import json
 import re
 from pathlib import Path
 
-from ..armazem import salvar_json
+from ..dados.arquivo import salvar_json
 from ..texto import normalizar
 from .leitor import Lancamento
 

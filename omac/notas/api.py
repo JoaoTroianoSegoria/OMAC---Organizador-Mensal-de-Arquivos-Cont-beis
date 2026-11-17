@@ -7,21 +7,9 @@ from pathlib import Path
 from .. import config, sistema
 from ..nucleo import ApiBase, seguro
 from . import exportar as exp
-from .pasta import Cache, Varredura, varrer
 
 
 class NotasApi(ApiBase):
-    def __init__(self):
-        super().__init__()
-        self._varredura: Varredura | None = None
-        self._pasta_lida = ""
-
-    def _ler_notas(self, pasta: str) -> Varredura:
-        with self._trava:
-            self._varredura = varrer(Path(pasta), Cache(config.caminho_cache()), self._progresso)
-            self._pasta_lida = pasta
-        return self._varredura
-
     @seguro
     def notas_do_mes(self, ano: int, mes: int):
         pasta = self._cfg["pasta_notas"]
@@ -30,7 +18,7 @@ class NotasApi(ApiBase):
         if not Path(pasta).is_dir():
             return {"erro": f"Não encontrei a pasta “{pasta}”. Ela foi movida ou renomeada?"}
 
-        v = self._ler_notas(pasta)
+        v = self._servico_notas.ler()
         notas = v.do_mes(int(ano), int(mes))
         return {
             "notas": [_nota_para_js(n) for n in notas],
@@ -43,11 +31,12 @@ class NotasApi(ApiBase):
 
     @seguro
     def exportar(self, ano: int, mes: int, formato: str):
-        if self._varredura is None or self._pasta_lida != self._cfg["pasta_notas"]:
+        lida = self._servico_notas.ja_lida()
+        if lida is None:
             return {"erro": "Atualize a lista de notas antes de exportar."}
         ano, mes = int(ano), int(mes)
         formato = "csv" if formato == "csv" else "xlsx"
-        notas = self._varredura.do_mes(ano, mes)
+        notas = lida.do_mes(ano, mes)
 
         destino = self._dialogo_salvar(
             exp.nome_sugerido(ano, mes, formato),

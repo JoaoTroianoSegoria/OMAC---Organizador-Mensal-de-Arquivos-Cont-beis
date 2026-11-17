@@ -7,8 +7,9 @@
   <link rel="stylesheet" href="estilo.css">
   <link rel="stylesheet" href="extrato.css">
   <link rel="stylesheet" href="whatsapp.css">
-  <link rel="stylesheet" href="agendamentos.css">
-  <link rel="stylesheet" href="pagamentos.css">
+  <link rel="stylesheet" href="tratamentos.css">
+  <link rel="stylesheet" href="atendimentos.css">
+  <link rel="stylesheet" href="contatos.css">
   <link rel="stylesheet" href="inicio.css">
   <script>
     /* Antes de tudo: se um script não carregar ou quebrar, a tela diz qual, em vez de ficar muda. */
@@ -71,6 +72,10 @@
       <symbol id="i-cima" viewBox="0 0 24 24"><path d="m6 14.5 6-6 6 6"/></symbol>
       <symbol id="i-largura" viewBox="0 0 24 24"><path d="M3.5 12h17M7 8.5 3.5 12 7 15.5M17 8.5l3.5 3.5-3.5 3.5"/></symbol>
       <symbol id="i-x" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="m9 9 6 6M15 9l-6 6"/></symbol>
+      <symbol id="i-pessoas" viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0M16 4.8a3.5 3.5 0 0 1 0 6.4M18.5 14.5A6.5 6.5 0 0 1 21.5 20"/></symbol>
+      <symbol id="i-busca" viewBox="0 0 24 24"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m15.5 15.5 5 5"/></symbol>
+      <symbol id="i-cofre" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="15" rx="2"/><circle cx="12" cy="11.5" r="3.2"/><path d="M12 8.3v1M12 13.7v1M6 19v2M18 19v2"/></symbol>
+      <symbol id="i-juntar" viewBox="0 0 24 24"><path d="M5 4v4a4 4 0 0 0 4 4h6a4 4 0 0 1 4 4v4M19 4v4a4 4 0 0 1-4 4"/><path d="m16 17 3 3 3-3"/></symbol>
       <symbol id="i-cadeado" viewBox="0 0 24 24"><rect x="4.5" y="10.5" width="15" height="10" rx="2"/><path d="M8 10.5V7.5a4 4 0 0 1 8 0v3"/></symbol>
     </defs>
   </svg>
@@ -101,17 +106,20 @@
         <button class="menu-item" data-view="extrato">
           <svg class="ic"><use href="#i-banco"/></svg><span class="rotulo">Extrato bancário</span>
         </button>
-        <button class="menu-item" data-view="whatsapp">
-          <svg class="ic"><use href="#i-whats"/></svg><span class="rotulo">WhatsApp</span>
-        </button>
-        <button class="menu-item" data-view="agendamentos">
-          <svg class="ic"><use href="#i-agenda"/></svg><span class="rotulo">Agendamentos</span>
-        </button>
-        <button class="menu-item" data-view="pagamentos">
-          <svg class="ic"><use href="#i-dinheiro"/></svg><span class="rotulo">Pagamentos</span>
-        </button>
         <button class="menu-item" data-view="resumo">
           <svg class="ic"><use href="#i-grafico"/></svg><span class="rotulo">Resumo do ano</span>
+        </button>
+        <button class="menu-item" data-view="atendimentos">
+          <svg class="ic"><use href="#i-dinheiro"/></svg><span class="rotulo">Atendimentos</span>
+        </button>
+        <button class="menu-item" data-view="tratamentos">
+          <svg class="ic"><use href="#i-agenda"/></svg><span class="rotulo">Tratamentos</span>
+        </button>
+        <button class="menu-item" data-view="contatos">
+          <svg class="ic"><use href="#i-pessoas"/></svg><span class="rotulo">Contatos</span>
+        </button>
+        <button class="menu-item" data-view="whatsapp">
+          <svg class="ic"><use href="#i-whats"/></svg><span class="rotulo">WhatsApp</span>
         </button>
       </nav>
 
@@ -455,7 +463,6 @@
         <div class="escolhas abas" id="whats-abas">
           <button class="escolha" data-acao="whats-aba" data-aba="enviar" aria-pressed="true">Notas a enviar <span id="whats-qtd"></span></button>
           <button class="escolha" data-acao="whats-aba" data-aba="contas" aria-pressed="false">Lembretes de contas</button>
-          <button class="escolha" data-acao="whats-aba" data-aba="contatos" aria-pressed="false">Contatos</button>
         </div>
 
         <!-- Notas a enviar -->
@@ -523,34 +530,13 @@
           <p class="dica" id="whats-contato-dica"></p>
         </div>
 
-        <!-- Contatos -->
-        <div class="painel-coluna" id="whats-contatos" hidden>
-          <div class="tabela-caixa vidro" id="contatos-tabela">
-            <table class="tabela">
-              <caption class="so-leitor">Contatos salvos</caption>
-              <thead>
-                <tr>
-                  <th scope="col">Nome</th>
-                  <th scope="col" class="c-telefone">Telefone</th>
-                  <th scope="col" class="c-acao"><span class="so-leitor">Apagar</span></th>
-                </tr>
-              </thead>
-              <tbody id="contatos-corpo"></tbody>
-            </table>
-          </div>
-          <div class="vazio vidro" id="contatos-vazio" hidden>
-            <span class="vazio-icone"><svg class="ic"><use href="#i-whats"/></svg></span>
-            <h2>Nenhum contato ainda</h2>
-            <p>Os contatos entram aqui conforme você envia as notas. Eles ficam só neste computador.</p>
-          </div>
-        </div>
       </section>
 
-      <!-- ============ AGENDAMENTOS ============ -->
-      <section class="view" id="view-agendamentos" aria-labelledby="t-agenda" hidden>
+      <!-- ============ TRATAMENTOS (ortodontia) ============ -->
+      <section class="view" id="view-tratamentos" aria-labelledby="t-agenda" hidden>
         <header class="topo">
           <div>
-            <h1 id="t-agenda">Agendamentos</h1>
+            <h1 id="t-agenda">Tratamentos</h1>
             <p class="sub">Manutenção dos pacientes de ortodontia em <strong id="ag-mes"></strong></p>
           </div>
           <div class="topo-acoes">
@@ -616,7 +602,7 @@
           <div class="vazio vidro" id="ag-ativos-vazio" hidden>
             <span class="vazio-icone"><svg class="ic"><use href="#i-agenda"/></svg></span>
             <h2>Nenhum paciente em tratamento</h2>
-            <p>Adicione os pacientes de ortodontia. Eles ficam só neste computador.</p>
+            <p>Adicione os pacientes de ortodontia, ou ligue <strong>Em tratamento de orto</strong> num contato. Eles ficam só neste computador.</p>
             <button class="btn btn-primario" data-acao="ag-novo"><svg class="ic"><use href="#i-mais"/></svg><span>Novo paciente</span></button>
           </div>
         </div>
@@ -698,12 +684,12 @@
         </div>
       </section>
 
-      <!-- ============ FICHA DE PAGAMENTOS ============ -->
-      <section class="view" id="view-pagamentos" aria-labelledby="t-pag" hidden>
+      <!-- ============ ATENDIMENTOS (a ficha do mês) ============ -->
+      <section class="view" id="view-atendimentos" aria-labelledby="t-pag" hidden>
         <header class="topo">
           <div>
-            <h1 id="t-pag">Ficha de pagamentos</h1>
-            <p class="sub">Atendimentos que precisam ser pagos em <strong id="pg-mes-nome"></strong></p>
+            <h1 id="t-pag">Atendimentos</h1>
+            <p class="sub">A ficha de <strong id="pg-mes-nome"></strong>: pagamentos e notas</p>
           </div>
           <div class="topo-acoes">
             <button class="btn" data-acao="pg-exportar" id="pg-exportar"><svg class="ic"><use href="#i-baixar"/></svg><span>Exportar Excel</span></button>
@@ -779,8 +765,62 @@
         <div class="vazio vidro" id="pg-vazio" hidden>
           <span class="vazio-icone"><svg class="ic"><use href="#i-dinheiro"/></svg></span>
           <h2 id="pg-vazio-titulo">Nenhum atendimento neste mês</h2>
-          <p>Lance aqui os atendimentos que precisam ser pagos, como na ficha de papel. Eles ficam só neste computador.</p>
+          <p>Lance aqui os atendimentos do mês, como na ficha de papel. Eles ficam só neste computador.</p>
           <button class="btn btn-primario" data-acao="pg-novo"><svg class="ic"><use href="#i-mais"/></svg><span>Novo atendimento</span></button>
+        </div>
+      </section>
+
+      <!-- ============ CONTATOS ============ -->
+      <section class="view" id="view-contatos" aria-labelledby="t-contatos" hidden>
+        <header class="topo">
+          <div>
+            <h1 id="t-contatos">Contatos</h1>
+            <p class="sub">Pacientes, responsáveis e quem recebe os lembretes, num lugar só</p>
+          </div>
+          <div class="topo-acoes">
+            <button class="btn btn-primario" data-acao="ct-novo"><svg class="ic"><use href="#i-mais"/></svg><span>Novo contato</span></button>
+          </div>
+        </header>
+
+        <section class="grupo vidro ct-conferir" id="ct-conferir" aria-labelledby="ct-conferir-titulo" hidden>
+          <h2 id="ct-conferir-titulo"><svg class="ic"><use href="#i-juntar"/></svg>Conferir contatos</h2>
+          <p class="dica">Na passagem para a versão 1.6.0, estes nomes ficaram parecidos ou com dois telefones. Decida um por um: nada muda sem você clicar.</p>
+          <ul class="ct-conferir-lista" id="ct-conferir-lista"></ul>
+        </section>
+
+        <div class="barra vidro ct-barra">
+          <div class="campo campo-texto ct-busca">
+            <label class="rotulo-campo" for="ct-busca">Pesquisar</label>
+            <span class="ct-busca-caixa"><svg class="ic"><use href="#i-busca"/></svg><input id="ct-busca" type="search" autocomplete="off" placeholder="Nome ou telefone"></span>
+          </div>
+          <div class="escolhas ct-filtros" id="ct-filtros">
+            <button class="escolha" data-acao="ct-filtro" data-filtro="todos">Todos</button>
+            <button class="escolha" data-acao="ct-filtro" data-filtro="orto">Em ortodontia</button>
+            <button class="escolha" data-acao="ct-filtro" data-filtro="sem_telefone">Sem telefone</button>
+          </div>
+        </div>
+
+        <div class="tabela-caixa vidro" id="ct-caixa">
+          <table class="tabela">
+            <caption class="so-leitor">Contatos</caption>
+            <thead>
+              <tr>
+                <th scope="col">Nome</th>
+                <th scope="col" class="c-telefone">Telefone</th>
+                <th scope="col">Ligações</th>
+                <th scope="col" class="c-acao"><span class="so-leitor">Alterar</span></th>
+              </tr>
+            </thead>
+            <tbody id="ct-corpo"></tbody>
+          </table>
+        </div>
+        <p class="dica" id="ct-qtd"></p>
+
+        <div class="vazio vidro" id="ct-vazio" hidden>
+          <span class="vazio-icone"><svg class="ic"><use href="#i-pessoas"/></svg></span>
+          <h2>Nenhum contato ainda</h2>
+          <p>Os contatos entram aqui quando você cadastra alguém, lança um atendimento ou envia uma nota. Eles ficam só neste computador.</p>
+          <button class="btn btn-primario" data-acao="ct-novo"><svg class="ic"><use href="#i-mais"/></svg><span>Novo contato</span></button>
         </div>
       </section>
 
@@ -789,7 +829,7 @@
         <header class="topo">
           <div>
             <h1 id="t-resumo">Resumo do ano</h1>
-            <p class="sub">Notas fiscais, extrato e ficha de pagamentos, mês a mês</p>
+            <p class="sub">Notas fiscais, extrato e ficha de atendimentos, mês a mês</p>
           </div>
           <div class="topo-acoes">
             <div class="campo rs-campo-ano">
@@ -954,7 +994,7 @@
             <div class="campo campo-texto">
               <label class="rotulo-campo" for="cfg-pix">Chave Pix</label>
               <input id="cfg-pix" type="text" autocomplete="off" data-config-campo="chave_pix" placeholder="CPF, CNPJ, e-mail, telefone ou chave aleatória">
-              <p class="dica">Vai na mensagem de cobrança da manutenção, em Agendamentos.</p>
+              <p class="dica">Vai na mensagem de cobrança da manutenção, em Tratamentos.</p>
             </div>
             <fieldset class="opcao">
               <legend>Abrir as conversas no</legend>
@@ -963,16 +1003,12 @@
                 <button class="escolha" data-valor="web">WhatsApp Web</button>
               </div>
             </fieldset>
-            <div class="form-conta-campos">
-              <div class="campo campo-texto">
-                <label class="rotulo-campo" for="cfg-lembrete-nome">Quem recebe os lembretes</label>
-                <input id="cfg-lembrete-nome" type="text" autocomplete="off" data-config-campo="lembrete_nome" placeholder="Nome">
-              </div>
-              <div class="campo campo-texto">
-                <label class="rotulo-campo" for="cfg-lembrete-tel">Telefone com DDD</label>
-                <input id="cfg-lembrete-tel" type="tel" autocomplete="off" data-config-campo="lembrete_telefone" placeholder="(61) 90000-0000">
-              </div>
-            </div>
+            <form class="campo campo-texto" id="form-destinatario">
+              <label class="rotulo-campo" for="cfg-destinatario">Quem recebe os lembretes de contas</label>
+              <input id="cfg-destinatario" type="text" autocomplete="off" list="cfg-destinatario-nomes" placeholder="Escolha um contato">
+              <datalist id="cfg-destinatario-nomes"></datalist>
+              <p class="dica" id="cfg-destinatario-dica">Escolha da lista de contatos. Um nome novo vira contato.</p>
+            </form>
             <div class="campo">
               <label class="rotulo-campo" for="cfg-fechamento">Lembrar de gerar o fechamento</label>
               <span class="select"><select id="cfg-fechamento" data-config-campo="lembrete_fechamento_dia" data-tipo="numero"></select></span>
@@ -992,7 +1028,7 @@
           </section>
 
           <section class="grupo vidro" aria-labelledby="g-pagamentos">
-            <h2 id="g-pagamentos">Ficha de pagamentos</h2>
+            <h2 id="g-pagamentos">Atendimentos</h2>
             <div class="campo">
               <span class="rotulo-campo" id="cfg-tratamentos-rotulo">Tratamentos sugeridos</span>
               <ul class="pg-chips" id="cfg-tratamentos" aria-labelledby="cfg-tratamentos-rotulo"></ul>
@@ -1005,6 +1041,57 @@
               </div>
               <button class="btn" type="submit"><svg class="ic"><use href="#i-mais"/></svg><span>Adicionar</span></button>
             </form>
+          </section>
+
+          <section class="grupo vidro" aria-labelledby="g-backup" id="cfg-backup">
+            <h2 id="g-backup">Backup</h2>
+            <div class="opcao">
+              <span class="rotulo-campo">Pasta do backup</span>
+              <div class="pasta-linha">
+                <svg class="ic ic-suave"><use href="#i-cofre"/></svg>
+                <span class="pasta-texto" data-pasta="backup_pasta">Nenhuma pasta escolhida</span>
+                <button class="btn btn-peq" data-acao="bk-pasta">Alterar</button>
+              </div>
+              <p class="dica">Um pendrive, um HD externo ou a pasta do Google Drive no computador.</p>
+            </div>
+            <p class="bk-situacao" id="bk-situacao" aria-live="polite"></p>
+            <div class="bk-botoes">
+              <button class="btn btn-primario btn-peq" data-acao="bk-agora" id="bk-agora"><svg class="ic"><use href="#i-cofre"/></svg><span>Fazer backup agora</span></button>
+              <button class="btn btn-peq" data-acao="bk-restaurar"><svg class="ic"><use href="#i-atualizar"/></svg><span>Restaurar um backup</span></button>
+            </div>
+            <div class="opcao opcao-chave">
+              <svg class="ic ic-suave"><use href="#i-relogio"/></svg>
+              <span class="opcao-texto"><strong id="l-backup-auto">Backup automático</strong><small>Feito ao abrir o OMAC (e de hora em hora com ele aberto) quando passa a data. Se o computador estiver desligado no dia, faz na próxima vez.</small></span>
+              <button class="chave" role="switch" aria-checked="false" aria-labelledby="l-backup-auto" data-config-bool="backup_automatico"><span></span></button>
+            </div>
+            <div class="bk-quando" id="bk-quando">
+              <fieldset class="opcao">
+                <legend>Frequência</legend>
+                <div class="escolhas" data-config="backup_frequencia">
+                  <button class="escolha" data-valor="dia">Todo dia</button>
+                  <button class="escolha" data-valor="semana">Toda semana</button>
+                  <button class="escolha" data-valor="mes">Todo mês</button>
+                </div>
+              </fieldset>
+              <div class="campo" id="bk-campo-semana">
+                <label class="rotulo-campo" for="bk-dia-semana">No dia</label>
+                <span class="select"><select id="bk-dia-semana" data-config-campo="backup_dia_semana" data-tipo="numero">
+                  <option value="0">Segunda-feira</option><option value="1">Terça-feira</option>
+                  <option value="2">Quarta-feira</option><option value="3">Quinta-feira</option>
+                  <option value="4">Sexta-feira</option><option value="5">Sábado</option><option value="6">Domingo</option>
+                </select></span>
+              </div>
+              <div class="campo" id="bk-campo-mes">
+                <label class="rotulo-campo" for="bk-dia-mes">No dia do mês</label>
+                <span class="select"><select id="bk-dia-mes" data-config-campo="backup_dia_mes" data-tipo="numero"></select></span>
+              </div>
+            </div>
+            <div class="opcao opcao-chave">
+              <svg class="ic ic-suave"><use href="#i-notas"/></svg>
+              <span class="opcao-texto"><strong id="l-backup-arquivos">Guardar também as notas e os extratos</strong><small>Copia os PDFs para as pastas Notas e Extratos dentro do backup. Só copia o que é novo ou mudou, e nunca apaga nada de lá.</small></span>
+              <button class="chave" role="switch" aria-checked="false" aria-labelledby="l-backup-arquivos" data-config-bool="backup_arquivos"><span></span></button>
+            </div>
+            <p class="dica">Cada backup é um arquivo <strong>OMAC-backup-AAAA-MM-DD.zip</strong> com contatos, tratamentos, atendimentos, contas, regras e configurações. Ficam os 12 mais novos.</p>
           </section>
 
           <section class="grupo vidro" aria-labelledby="g-sistema">
@@ -1040,7 +1127,7 @@
             </div>
             <p class="privacidade"><svg class="ic ic-suave"><use href="#i-cadeado"/></svg>
               <span>Tudo fica neste computador. O OMAC não envia nenhum dado seu: ele só abre a conversa no WhatsApp, e quem envia é você.</span></p>
-            <p class="dica">Configurações, regras, contatos e pacientes ficam em uma pasta separada do programa e continuam lá quando você baixa uma versão nova. Para ter um backup, copie essa pasta.</p>
+            <p class="dica">Configurações, regras, contatos e pacientes ficam em uma pasta separada do programa e continuam lá quando você baixa uma versão nova. Para guardar uma cópia, use o <strong>Backup</strong>.</p>
             <div><button class="btn btn-peq" data-acao="abrir-pasta-dados"><svg class="ic"><use href="#i-pasta"/></svg><span>Abrir a pasta dos meus dados</span></button></div>
           </section>
         </div>
@@ -1107,80 +1194,69 @@
     </div>
   </dialog>
 
-  <!-- Novo paciente / alterar paciente -->
-  <dialog class="modal vidro" id="ag-paciente" aria-labelledby="ag-paciente-titulo">
-    <form id="form-paciente" class="modal-corpo">
-      <h2 id="ag-paciente-titulo"></h2>
-      <div class="campo campo-texto">
-        <label class="rotulo-campo" for="ag-nome">Nome</label>
-        <input id="ag-nome" type="text" autocomplete="off" required>
-      </div>
+  <!-- Contato (novo, alterar, e a ortodontia dele) -->
+  <dialog class="modal vidro modal-largo" id="ct-contato" aria-labelledby="ct-contato-titulo">
+    <form id="form-contato" class="modal-corpo">
+      <h2 id="ct-contato-titulo"></h2>
+      <p class="faixa faixa-info ct-carregado" id="ct-carregado" hidden><svg class="ic"><use href="#i-pessoas"/></svg><span id="ct-carregado-texto"></span></p>
       <div class="form-conta-campos">
-        <div class="campo campo-texto" id="ag-telefone-campo">
-          <label class="rotulo-campo" for="ag-telefone">Telefone com DDD</label>
-          <input id="ag-telefone" type="tel" autocomplete="off" placeholder="(61) 90000-0000">
+        <div class="campo campo-texto">
+          <label class="rotulo-campo" for="ct-nome">Nome</label>
+          <input id="ct-nome" type="text" autocomplete="off" list="ct-nomes" required>
         </div>
         <div class="campo campo-texto">
+          <label class="rotulo-campo" for="ct-telefone">Telefone com DDD</label>
+          <input id="ct-telefone" type="tel" autocomplete="off" placeholder="(61) 90000-0000">
+        </div>
+      </div>
+      <datalist id="ct-nomes"></datalist>
+
+      <label class="ag-caixa">
+        <input type="checkbox" class="confere" id="ct-tem-responsaveis">
+        <span>Tem responsáveis</span>
+      </label>
+      <div class="ag-bloco" id="ct-responsaveis" hidden>
+        <p class="dica">Escolha da lista de contatos ou escreva um nome novo (ele vira contato). Para quem vai cada mensagem você escolhe na hora de enviar.</p>
+        <ul class="ct-resp-lista" id="ct-resp-lista"></ul>
+        <div><button class="btn btn-peq" type="button" data-acao="ct-mais-responsavel"><svg class="ic"><use href="#i-mais"/></svg><span>Adicionar responsável</span></button></div>
+      </div>
+
+      <div class="opcao opcao-chave ct-orto-chave">
+        <svg class="ic ic-suave"><use href="#i-agenda"/></svg>
+        <span class="opcao-texto"><strong id="l-ct-orto">Em tratamento de orto</strong><small>Aparece em Tratamentos, com a manutenção do mês e o histórico</small></span>
+        <button class="chave" type="button" role="switch" aria-checked="false" aria-labelledby="l-ct-orto" id="ct-orto" data-acao="ct-orto"><span></span></button>
+      </div>
+      <div class="ag-bloco" id="ct-orto-campos" hidden>
+        <div class="campo campo-texto pg-campo-curto">
           <label class="rotulo-campo" for="ag-valor">Valor da manutenção</label>
           <input id="ag-valor" type="text" inputmode="decimal" autocomplete="off" placeholder="0,00">
         </div>
-      </div>
-      <label class="ag-caixa">
-        <input type="checkbox" class="confere" id="ag-tem-responsaveis">
-        <span>Tem responsáveis (paciente criança)</span>
-      </label>
-      <div class="ag-bloco" id="ag-responsaveis" hidden>
-        <div class="form-conta-campos">
-          <div class="campo campo-texto">
-            <label class="rotulo-campo" for="ag-pai-nome">Nome do pai</label>
-            <input id="ag-pai-nome" type="text" autocomplete="off">
-          </div>
-          <div class="campo campo-texto">
-            <label class="rotulo-campo" for="ag-pai-telefone">Telefone do pai</label>
-            <input id="ag-pai-telefone" type="tel" autocomplete="off" placeholder="(61) 90000-0000">
-          </div>
-        </div>
-        <div class="form-conta-campos">
-          <div class="campo campo-texto">
-            <label class="rotulo-campo" for="ag-mae-nome">Nome da mãe</label>
-            <input id="ag-mae-nome" type="text" autocomplete="off">
-          </div>
-          <div class="campo campo-texto">
-            <label class="rotulo-campo" for="ag-mae-telefone">Telefone da mãe</label>
-            <input id="ag-mae-telefone" type="tel" autocomplete="off" placeholder="(61) 90000-0000">
-          </div>
-        </div>
         <fieldset class="opcao">
-          <legend>As mensagens vão sempre para</legend>
-          <div class="escolhas ag-envia-para">
-            <button class="escolha" type="button" data-acao="ag-envia-para" data-papel="mae">Mãe</button>
-            <button class="escolha" type="button" data-acao="ag-envia-para" data-papel="pai">Pai</button>
+          <legend>Situação</legend>
+          <div class="escolhas ag-situacoes">
+            <button class="escolha" type="button" data-acao="ag-situacao" data-situacao="ativo">Em tratamento</button>
+            <button class="escolha" type="button" data-acao="ag-situacao" data-situacao="alta">Alta temporária</button>
+            <button class="escolha" type="button" data-acao="ag-situacao" data-situacao="finalizado">Finalizado</button>
           </div>
         </fieldset>
-      </div>
-      <fieldset class="opcao">
-        <legend>Situação</legend>
-        <div class="escolhas ag-situacoes">
-          <button class="escolha" type="button" data-acao="ag-situacao" data-situacao="ativo">Em tratamento</button>
-          <button class="escolha" type="button" data-acao="ag-situacao" data-situacao="alta">Alta temporária</button>
-          <button class="escolha" type="button" data-acao="ag-situacao" data-situacao="finalizado">Finalizado</button>
-        </div>
-      </fieldset>
-      <div class="form-conta-campos ag-bloco" id="ag-alta-campos" hidden>
-        <div class="campo campo-texto">
-          <label class="rotulo-campo" for="ag-alta-inicio">Alta dada em</label>
-          <input id="ag-alta-inicio" type="date">
-        </div>
-        <div class="campo campo-texto">
-          <label class="rotulo-campo" for="ag-alta-fim">Acaba em</label>
-          <input id="ag-alta-fim" type="date">
+        <div class="form-conta-campos" id="ag-alta-campos" hidden>
+          <div class="campo campo-texto">
+            <label class="rotulo-campo" for="ag-alta-inicio">Alta dada em</label>
+            <input id="ag-alta-inicio" type="date">
+          </div>
+          <div class="campo campo-texto">
+            <label class="rotulo-campo" for="ag-alta-fim">Acaba em</label>
+            <input id="ag-alta-fim" type="date">
+          </div>
         </div>
       </div>
-      <p class="modal-erro" id="ag-paciente-erro" role="alert" hidden></p>
+      <p class="faixa faixa-aviso ct-orto-desligar" id="ct-orto-desligar" hidden><svg class="ic"><use href="#i-alerta"/></svg><span>Ao salvar, o paciente sai de Tratamentos (o contato continua, e dá para desfazer logo depois). Para só pausar, use <strong>Alta temporária</strong> ou <strong>Finalizado</strong>.</span></p>
+
+      <p class="modal-erro" id="ct-contato-erro" role="alert" hidden></p>
       <div class="modal-acoes">
-        <button class="btn btn-perigo" type="button" id="ag-excluir" data-acao="ag-excluir"><svg class="ic"><use href="#i-lixeira"/></svg><span>Excluir paciente</span></button>
+        <button class="btn btn-perigo" type="button" id="ct-apagar" data-acao="ct-apagar"><svg class="ic"><use href="#i-lixeira"/></svg><span>Apagar contato</span></button>
         <button class="btn" type="button" id="ag-ver-historico" data-acao="ag-ver-historico"><svg class="ic"><use href="#i-relogio"/></svg><span>Histórico</span></button>
-        <button class="btn" type="button" data-acao="ag-fechar-paciente">Cancelar</button>
+        <button class="btn" type="button" data-acao="ct-fechar">Cancelar</button>
         <button class="btn btn-primario" type="submit">Salvar</button>
       </div>
     </form>
@@ -1202,6 +1278,10 @@
   <dialog class="modal vidro" id="ag-mensagem" aria-labelledby="ag-mensagem-titulo">
     <form id="form-ag-mensagem" class="modal-corpo">
       <h2 id="ag-mensagem-titulo"></h2>
+      <fieldset class="opcao" id="ag-destinos-campo">
+        <legend>Enviar para</legend>
+        <div class="escolhas ag-destinos" id="ag-destinos"></div>
+      </fieldset>
       <div class="escolhas ag-tipos" role="group" aria-label="Qual mensagem">
         <button class="escolha" type="button" data-acao="ag-tipo" data-tipo="agendar">Agendar manutenção</button>
         <button class="escolha" type="button" data-acao="ag-tipo" data-tipo="cobrar">Cobrar manutenção</button>
@@ -1238,6 +1318,7 @@
         <label class="rotulo-campo" for="pg-nome">Paciente</label>
         <input id="pg-nome" type="text" autocomplete="off" list="pg-nomes" required>
         <datalist id="pg-nomes"></datalist>
+        <p class="dica pg-contato-novo" id="pg-contato-novo" hidden><svg class="ic"><use href="#i-mais"/></svg><span>Contato novo: entra em Contatos quando você salvar.</span></p>
       </div>
       <div class="form-conta-campos">
         <div class="campo campo-texto">
@@ -1274,11 +1355,15 @@
           <span>Já foi pago</span>
         </label>
         <p class="pg-nota-achada" id="pg-nota-achada" hidden><svg class="ic"><use href="#i-ok"/></svg><span id="pg-nota-achada-texto"></span></p>
-        <label class="ag-caixa" id="pg-nota-campo">
-          <input type="checkbox" class="confere" id="pg-nota-manual">
-          <span>Nota emitida</span>
-        </label>
-        <p class="dica" id="pg-nota-dica">O OMAC marca sozinho quando acha a nota do paciente na pasta. Marque aqui se ela saiu em outro nome.</p>
+        <fieldset class="opcao" id="pg-nota-campo">
+          <legend>Nota fiscal</legend>
+          <div class="escolhas pg-notas">
+            <button class="escolha" type="button" data-acao="pg-nota" data-nota="">Falta emitir</button>
+            <button class="escolha" type="button" data-acao="pg-nota" data-nota="ok">Emitida</button>
+            <button class="escolha" type="button" data-acao="pg-nota" data-nota="nao_precisa">Não precisa</button>
+          </div>
+        </fieldset>
+        <p class="dica" id="pg-nota-dica">O OMAC marca sozinho quando acha a nota do paciente na pasta. Marque <strong>Emitida</strong> se ela saiu em outro nome. Dinheiro e Pix PF já sugerem <strong>Não precisa</strong>.</p>
       </div>
       <p class="modal-erro" id="pg-atendimento-erro" role="alert" hidden></p>
       <div class="modal-acoes">
@@ -1289,14 +1374,34 @@
     </form>
   </dialog>
 
+  <!-- Restaurar um backup -->
+  <dialog class="modal vidro" id="bk-restaurar" aria-labelledby="bk-restaurar-titulo">
+    <div class="modal-corpo">
+      <h2 id="bk-restaurar-titulo">Restaurar este backup?</h2>
+      <p id="bk-restaurar-texto"></p>
+      <ul class="lista-simples" id="bk-restaurar-arquivos"></ul>
+      <div class="faixa faixa-aviso">
+        <svg class="ic"><use href="#i-alerta"/></svg>
+        <div>Os dados de agora são trocados pelos do backup. Antes disso, o OMAC guarda uma cópia deles na pasta <strong>antes-de-restaurar</strong>, dentro da pasta dos seus dados.</div>
+      </div>
+      <p class="modal-erro" id="bk-restaurar-erro" role="alert" hidden></p>
+      <div class="modal-acoes">
+        <button class="btn" type="button" data-acao="bk-cancelar" autofocus>Cancelar</button>
+        <button class="btn btn-primario" type="button" data-acao="bk-confirmar"><svg class="ic"><use href="#i-atualizar"/></svg><span>Restaurar</span></button>
+      </div>
+    </div>
+  </dialog>
+
   <div class="avisos-flutuantes" id="toasts" aria-live="polite"></div>
 
   <script src="nucleo.js"></script>
   <script src="notas.js"></script>
   <script src="extrato.js"></script>
   <script src="whatsapp.js"></script>
-  <script src="agendamentos.js"></script>
-  <script src="pagamentos.js"></script>
+  <script src="contatos.js"></script>
+  <script src="tratamentos.js"></script>
+  <script src="atendimentos.js"></script>
+  <script src="backup.js"></script>
   <script src="resumo.js"></script>
   <script src="inicio.js"></script>
   <script src="atualizacao.js"></script>

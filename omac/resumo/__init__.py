@@ -1,1 +1,1 @@
-"""Resumo do ano: faturamento, extrato e ficha de pagamentos mês a mês."""
+"""Resumo do ano: faturamento, extrato e ficha de atendimentos mês a mês."""

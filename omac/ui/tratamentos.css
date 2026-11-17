@@ -1,4 +1,4 @@
-/* OMAC — módulo de agendamentos. Tokens e componentes vêm de estilo.css. */
+/* OMAC — Tratamentos (ortodontia). Tokens e componentes vêm de estilo.css. */
 
 .ag-qtd:empty { display: none; }
 .ag-qtd { color: var(--acento); font-variant-numeric: tabular-nums; }
@@ -80,3 +80,6 @@
 
 [data-contraste="alto"] .btn-perigo,
 [data-contraste="alto"] .ag-qtd { color: inherit; }
+
+.ag-destinos { flex-wrap: wrap; }
+.ag-destinos .escolha { flex: 1 1 auto; }

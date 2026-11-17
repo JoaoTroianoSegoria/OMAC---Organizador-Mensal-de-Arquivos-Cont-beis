@@ -27,7 +27,12 @@ VARIANTES = [
     ("inicio", "inicio", {"tema": "claro", "visual": "bonito"}, {}),
     ("inicio-escuro", "inicio", {"tema": "escuro", "visual": "bonito"}, {}),
     ("resumo", "resumo", {"tema": "claro", "visual": "bonito"}, {}),
-    ("agendamentos-historico", "agendamentos", {"tema": "claro", "visual": "bonito"}, {"agenda": "historico"}),
+    ("tratamentos-historico", "tratamentos", {"tema": "claro", "visual": "bonito"}, {"agenda": "historico"}),
+    ("contatos", "contatos", {"tema": "claro", "visual": "bonito"}, {"ct": "lista"}),
+    ("contatos-escuro", "contatos", {"tema": "escuro", "visual": "bonito"}, {"ct": "lista"}),
+    ("contatos-janela", "contatos", {"tema": "claro", "visual": "bonito"}, {"ct": "janela"}),
+    ("tratamentos-paciente", "tratamentos", {"tema": "escuro", "visual": "bonito"}, {"agenda": "paciente"}),
+    ("config-backup", "config", {"tema": "claro", "visual": "bonito", "backup_automatico": True}, {"rolar": "#g-backup"}),
     # arquivo, view, configurações, extras ("pasta": "vazia" | "mes": n)
     ("notas-claro", "notas", {"tema": "claro", "visual": "bonito"}, {}),
     ("notas-escuro", "notas", {"tema": "escuro", "visual": "bonito"}, {}),
@@ -47,10 +52,10 @@ VARIANTES = [
     ("whatsapp-lembretes", "notas", {"tema": "escuro", "visual": "bonito"}, {"whats": "lembretes"}),
     ("whatsapp-envio-otimizado", "whatsapp", {"tema": "escuro", "visual": "otimizado"}, {"whats": "janela"}),
     ("whatsapp-lembretes-contraste", "notas", {"tema": "claro", "alto_contraste": True}, {"whats": "lembretes"}),
-    ("agendamentos", "agendamentos", {"tema": "claro", "visual": "bonito"}, {"agenda": "lista"}),
-    ("agendamentos-mensagem", "agendamentos", {"tema": "escuro", "visual": "bonito"}, {"agenda": "mensagem"}),
-    ("pagamentos", "pagamentos", {"tema": "claro", "visual": "bonito"}, {"pag": "lista"}),
-    ("pagamentos-atendimento", "pagamentos", {"tema": "escuro", "visual": "bonito"}, {"pag": "janela"}),
+    ("tratamentos", "tratamentos", {"tema": "claro", "visual": "bonito"}, {"agenda": "lista"}),
+    ("tratamentos-mensagem", "tratamentos", {"tema": "escuro", "visual": "bonito"}, {"agenda": "mensagem"}),
+    ("atendimentos", "atendimentos", {"tema": "claro", "visual": "bonito"}, {"pag": "lista"}),
+    ("atendimentos-atendimento", "atendimentos", {"tema": "escuro", "visual": "bonito"}, {"pag": "janela"}),
     ("notas-avisos-minimizados", "notas", {"tema": "claro", "visual": "bonito", "avisos_recolhidos": ["notas"]}, {}),
     ("config-whatsapp", "config", {"tema": "claro", "visual": "bonito"}, {"rolar": "#g-whats"}),
     ("config-claro", "config", {"tema": "claro", "visual": "bonito"}, {}),
@@ -58,84 +63,92 @@ VARIANTES = [
 ]
 
 
+def _gravar(pasta: Path, nome: str, dados: dict) -> None:
+    pasta.mkdir(parents=True, exist_ok=True)
+    (pasta / nome).write_text(json.dumps(dados, ensure_ascii=False, indent=2), encoding="utf-8")
+
+
+def _dados_da_1_5(pasta: Path) -> None:
+    """Exemplos no formato da 1.5.0: a 1.6.0 passa tudo para o formato novo ao abrir."""
+    from datetime import date, timedelta
+
+    from omac.tratamentos.orto import meses_ate
+
+    hoje = date.today()
+    meses = meses_ate(hoje.year, hoje.month, 6)
+    inicio = f"{meses[0][0]}-{meses[0][1]:02d}-01"
+    pacientes = []
+    for i, (nome, telefone, valor, agendado) in enumerate((
+        ("ANA BEATRIZ MOREIRA", "5561900000001", 25000, True),
+        ("CARLOS EDUARDO LIMA", "5561900000002", 25000, False),
+        ("LUCAS COSTA RIBEIRO", "", 18000, False),
+        ("MARIANA ALVES SOUZA", "5561900000004", 30000, True),
+        ("PEDRO ALVES SOUZA", "", 22000, False),
+        ("JOANA RIBEIRO LIMA", "5561900000006", 25000, False),
+    )):
+        de_alta = nome.startswith("JOANA")
+        pacientes.append({
+            "id": f"p{i}", "nome": nome, "telefone": telefone, "valor_centavos": valor,
+            "agendado_em": hoje.isoformat() if agendado else "", "finalizado_em": "",
+            "alta_inicio": "2026-10-01" if de_alta else "", "alta_fim": "2027-01-15" if de_alta else "",
+            "responsaveis": {"pai": {"nome": "Carlos Souza", "telefone": ""},
+                             "mae": {"nome": "Helena Alves", "telefone": "5561900000005"},
+                             "envia_para": "mae"} if nome.startswith("PEDRO") else None,
+            "atendidos": {} if de_alta else {f"{a}-{m:02d}": f"{a}-{m:02d}-10" for j, (a, m) in enumerate(meses)
+                                             if (j + i) % 4 != 1 and j < 5},
+            "altas": [], "criado_em": inicio,
+        })
+    _gravar(pasta, "agendamentos.json", {"pacientes": pacientes})
+
+    mes = hoje.replace(day=1)
+    anterior = mes - timedelta(days=3)
+    atendimentos = []
+    for i, (nome, tratamento, dia, valor, forma, parcelas, pago) in enumerate((
+        ("Ana Beatriz Moreira", "Limpeza", mes, 18000, "pix_pf", 1, True),
+        ("Pedro Alves Souza", "Manutenção", mes + timedelta(days=1), 22000, "credito", 3, True),
+        ("Rafael Martins", "Botox", mes + timedelta(days=3), 90000, "credito", 6, False),
+        ("Camila Ferreira", "Limpeza", mes + timedelta(days=4), 18000, "dinheiro", 1, True),
+        ("Juliana Alves", "Clareamento", mes + timedelta(days=6), 65000, "pix_pj", 1, False),
+        ("Bruno Carvalho", "Restauração", anterior, 25000, "debito", 1, False),
+    )):
+        atendimentos.append({"id": f"a{i}", "nome": nome, "tratamento": tratamento, "data": dia.isoformat(),
+                             "valor_centavos": valor, "forma": forma, "parcelas": parcelas,
+                             "pago_em": dia.isoformat() if pago else "", "nota_manual": nome.startswith("Ana")})
+    _gravar(pasta, "pagamentos.json", {"atendimentos": atendimentos})
+
+    anterior_mes = (hoje.replace(day=1) - timedelta(days=1)).isoformat()[:7]
+    _gravar(pasta, "whatsapp.json", {
+        "inicio": "2026-01-01", "ultima_abertura": hoje.isoformat(),
+        "contatos": {
+            "FERNANDA COSTA": {"nome": "FERNANDA COSTA", "telefone": "5561900000010"},
+            "CAMILA FERREIRA": {"nome": "CAMILA FERREIRA", "telefone": "5561900000011"},
+            # Parecido com "Rafael Martins" da ficha, e telefone diferente do cadastro da orto:
+            # vão para "Conferir contatos".
+            "RAFAEL MARTINS COSTA": {"nome": "RAFAEL MARTINS COSTA", "telefone": "5561900000012"},
+            "CARLOS EDUARDO LIMA": {"nome": "CARLOS EDUARDO LIMA", "telefone": "5561900000099"},
+        },
+        "enviadas": {},
+        "contas": [
+            {"nome": "Aluguel", "dia": 10, "criada_em": "2026-01-01", "pagas": {hoje.isoformat()[:7]: hoje.isoformat(),
+                                                                               anterior_mes: anterior_mes + "-09"}},
+            {"nome": "Internet", "dia": 22, "criada_em": "2026-01-01", "pagas": {}},
+            {"nome": "Laboratório", "dia": 28, "criada_em": "2026-01-01", "pagas": {anterior_mes: anterior_mes + "-27"}},
+        ],
+    })
+    _gravar(pasta, "config.json", {"lembrete_nome": "Dra. Exemplo", "lembrete_telefone": "5561900000000"})
+
+
 def _preparar_whatsapp(api, caso: str | None) -> None:
     from datetime import date, timedelta
 
     hoje = date.today()
-    with api._dados() as d:
-        d["inicio"] = "2026-01-01"
-        mes = hoje.isoformat()[:7]
-        anterior = (hoje.replace(day=1) - timedelta(days=1)).isoformat()[:7]
-        d["contas"] = [
-            {"nome": "Aluguel", "dia": 10, "criada_em": "2026-01-01", "pagas": {mes: hoje.isoformat(), anterior: anterior + "-09"}},
-            {"nome": "Internet", "dia": 22, "criada_em": "2026-01-01", "pagas": {}},
-            {"nome": "Laboratório", "dia": 28, "criada_em": "2026-01-01", "pagas": {anterior: anterior + "-27"}},
-        ]
+    with api._contas() as d:
         if caso == "lembretes":
             d["contas"] = [{"nome": "Aluguel", "dia": hoje.day},
                            {"nome": "Condomínio", "dia": (hoje + timedelta(days=1)).day}]
             d["ultima_abertura"] = ""
         else:
             d["ultima_abertura"] = hoje.isoformat()  # sem a janela de lembretes por cima
-
-
-def _preparar_agendamentos(api) -> None:
-    from datetime import date
-
-    from omac.agendamentos.pacientes import adicionar as adicionar_paciente
-
-    with api._agenda() as d:
-        if d["pacientes"]:
-            return
-        adicionar_paciente(d["pacientes"], {
-            "nome": "JOANA RIBEIRO LIMA", "valor": "250,00", "situacao": "alta",
-            "alta_inicio": "2026-10-01", "alta_fim": "2027-01-15",
-        })
-        filho = adicionar_paciente(d["pacientes"], {
-            "nome": "PEDRO ALVES SOUZA", "valor": "220,00",
-            "responsaveis": {"pai": {"nome": "Carlos Souza", "telefone": ""},
-                             "mae": {"nome": "Helena Alves", "telefone": "61900000005"}, "envia_para": "mae"},
-        })
-        filho["agendado_em"] = ""
-        for nome, telefone, valor, agendado in (
-            ("ANA BEATRIZ MOREIRA", "61900000001", "250,00", True),
-            ("CARLOS EDUARDO LIMA", "61900000002", "250,00", False),
-            ("LUCAS COSTA RIBEIRO", "", "180,00", False),
-            ("MARIANA ALVES SOUZA", "61900000004", "300,00", True),
-        ):
-            p = adicionar_paciente(d["pacientes"], {"nome": nome, "telefone": telefone, "valor": valor})
-            p["agendado_em"] = date.today().isoformat() if agendado else ""
-        # Histórico de exemplo: cadastrados há seis meses, cada um com o seu jeito de vir.
-        from omac.agendamentos.pacientes import meses_ate
-        meses = meses_ate(date.today().year, date.today().month, 6)
-        for i, p in enumerate(d["pacientes"]):
-            p["criado_em"] = f"{meses[0][0]}-{meses[0][1]:02d}-01"
-            p["atendidos"] = {f"{a}-{m:02d}": f"{a}-{m:02d}-10" for j, (a, m) in enumerate(meses)
-                              if (j + i) % 4 != 1 and j < 5 and not p["alta_inicio"]}
-
-
-def _preparar_pagamentos(api) -> None:
-    from datetime import date, timedelta
-
-    from omac.pagamentos.ficha import adicionar
-
-    hoje = date.today()
-    mes = hoje.replace(day=1)
-    anterior = mes - timedelta(days=3)
-    with api._ficha() as d:
-        if d["atendimentos"]:
-            return
-        for nome, tratamento, dia, valor, forma, parcelas, pago in (
-            ("Ana Beatriz Moreira", "Limpeza", mes, "180,00", "pix_pf", 1, True),
-            ("Pedro Alves Souza", "Manutenção", mes + timedelta(days=1), "220,00", "credito", 3, True),
-            ("Rafael Martins", "Botox", mes + timedelta(days=3), "900,00", "credito", 6, False),
-            ("Camila Ferreira", "Limpeza", mes + timedelta(days=4), "180,00", "dinheiro", 1, True),
-            ("Juliana Alves", "Clareamento", mes + timedelta(days=6), "650,00", "pix_pj", 1, False),
-            ("Bruno Carvalho", "Restauração", anterior, "250,00", "debito", 1, False),
-        ):
-            adicionar(d["atendimentos"], {"nome": nome, "tratamento": tratamento, "data": dia.isoformat(),
-                                          "valor": valor, "forma": forma, "parcelas": parcelas, "pago": pago,
-                                          "nota_manual": nome.startswith(("Ana", "Camila"))}, hoje)
 
 
 def main() -> None:
@@ -149,7 +162,10 @@ def main() -> None:
         from omac.app import Api
         from tests.fabrica import criar_pasta_exemplo
 
+        _dados_da_1_5(Path(tmp) / "omac")
         pasta = criar_pasta_exemplo(Path(tmp) / "NFS-e 2026")
+        pendrive = Path(tmp) / "Pendrive"
+        pendrive.mkdir()
         pasta_vazia = Path(tmp) / "NFS-e 2027"
         pasta_vazia.mkdir()
 
@@ -162,12 +178,12 @@ def main() -> None:
                 api._cfg.update({"pasta_notas": str(alvo), "pasta_extratos": str(pasta / "Extratos"),
                                  "escala_fonte": 1.0,
                                  "alto_contraste": False, "lembrete_fechamento_dia": 0,
-                                 "assistente_nome": "Exemplo", "lembrete_nome": "Dra. Exemplo",
-                                 "lembrete_telefone": "61900000000", "abrir_em": "notas", **cfg})
+                                 "assistente_nome": "Exemplo", "abrir_em": "notas",
+                                 "backup_pasta": str(pendrive), **cfg})
                 api._cfg["chave_pix"] = "chave@exemplo.com"
                 _preparar_whatsapp(api, extras.get("whats"))
-                _preparar_agendamentos(api)
-                _preparar_pagamentos(api)
+                if not api._cfg["backup_ultimo"]:
+                    api.backup_agora()
 
                 def chamar(metodo, args, api=api):
                     return json.dumps(getattr(api, metodo)(*json.loads(args)))
@@ -178,6 +194,9 @@ def main() -> None:
                 pagina.add_init_script(PONTE)
                 pagina.goto((RAIZ / "omac" / "ui" / "index.html").as_uri())
                 pagina.wait_for_selector("#painel-notas:not([hidden])")
+                # As notas e extratos de exemplo são de outubro/2026, seja qual for o dia de hoje.
+                pagina.evaluate("mudarMes(2026, 10)")
+                pagina.wait_for_timeout(300)
                 if "mes" in extras:
                     pagina.select_option("#sel-mes", str(extras["mes"]))
                     pagina.wait_for_selector("#notas-vazio:not([hidden])")
@@ -194,13 +213,21 @@ def main() -> None:
                         pagina.wait_for_selector("#envio[open]")
                 if view in ("inicio", "resumo"):
                     pagina.wait_for_selector(".ini-cartao" if view == "inicio" else "#rs-corpo tr")
+                if "ct" in extras:
+                    pagina.wait_for_selector("#ct-corpo tr")
+                    if extras["ct"] == "janela":
+                        pagina.click('#ct-corpo tr:has(td:first-child:text-is("PEDRO ALVES SOUZA")) [data-acao="ct-editar"]')
+                        pagina.wait_for_selector("#ct-contato[open]")
                 if "agenda" in extras:
                     pagina.wait_for_selector("#ag-ativos-corpo tr")
+                    if extras["agenda"] == "paciente":
+                        pagina.click('#ag-ativos-corpo tr:has-text("PEDRO") [data-acao="ag-editar"]')
+                        pagina.wait_for_selector("#ct-contato[open]")
                     if extras["agenda"] == "historico":
                         pagina.click('[data-acao="ag-aba"][data-aba="historico"]')
                         pagina.wait_for_selector("#ag-hist-corpo tr")
                     if extras["agenda"] == "mensagem":
-                        pagina.click('#ag-ativos-corpo [data-acao="ag-mensagem"]')
+                        pagina.click('#ag-ativos-corpo tr:has-text("PEDRO") [data-acao="ag-mensagem"]')
                         pagina.click('[data-acao="ag-tipo"][data-tipo="cobrar"]')
                 if "pag" in extras:
                     pagina.wait_for_selector("#pg-corpo tr")

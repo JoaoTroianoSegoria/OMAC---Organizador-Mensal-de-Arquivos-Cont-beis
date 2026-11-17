@@ -23,18 +23,18 @@ extrato do banco precisavam ser passadas à mão para uma planilha que vai para 
 ### Início
 
 <p align="center">
-  <img src="docs/capturas/inicio.png" alt="Tela inicial com os cartões do dia" width="49%">
+  <img src="docs/capturas/inicio.png" alt="Tela inicial com os widgets do dia" width="49%">
   <img src="docs/capturas/resumo.png" alt="Resumo do ano" width="49%">
 </p>
 
-- **O dia numa tela só:** contas que vencem (com o botão **Paga** ali mesmo), pacientes de ortodontia para agendar e atender, a ficha do mês, notas a enviar, o fechamento do mês anterior e o resumo do ano.
-- **Pendências dos meses anteriores:** contas e atendimentos que ficaram sem pagar e pacientes que não vieram. Cada linha leva direto para a tela certa.
-- **Personalizável:** no botão **Personalizar** dá para arrastar os cartões (ou usar as setas, pelo teclado), esconder os que não interessam e deixar um cartão largo. Nas Configurações escolhe-se abrir o app no Início ou direto nas notas.
+- **O dia numa tela só, em widgets:** Hoje, Lembretes (contas que vencem, com o botão **Paga** ali mesmo, e notas a enviar), Tratamentos, Atendimentos do mês, Relatório mensal (o fechamento do mês anterior), Contatos e Resumo do ano.
+- **Hoje:** junta o que está para hoje em todos os módulos, as pendências dos meses anteriores e o aviso de backup atrasado ou com falha. Cada linha leva direto para a tela certa.
+- **Personalizável:** no botão **Personalizar** dá para arrastar os widgets (ou usar as setas, pelo teclado), esconder os que não interessam e deixar um widget largo. Nas Configurações escolhe-se abrir o app no Início ou direto nas notas.
 
 ### Resumo do ano
 
 - **Faturamento das notas mês a mês** em gráfico, com o total, a média por mês, o melhor e o pior mês e a comparação com o mês anterior.
-- **Tabela completa:** notas, faturamento, entradas e saídas do banco e o recebido e pendente da ficha de pagamentos.
+- **Tabela completa:** notas, faturamento, entradas e saídas do banco e o recebido e pendente da ficha de atendimentos.
 - **Mês sem dado fica em branco**, com um aviso de quais meses não têm nota lida. O mês atual não entra na média, porque ainda não acabou.
 
 ### Notas fiscais
@@ -67,42 +67,66 @@ extrato do banco precisavam ser passadas à mão para uma planilha que vai para 
 
 - **Enviar a nota ao paciente:** a mensagem sai pronta e assinada, o PDF é copiado e a conversa abre no aplicativo ou no WhatsApp Web. A pessoa cola o PDF e aperta enviar.
 - **Lista "Notas a enviar":** as notas novas ficam ali, em qualquer mês, até serem enviadas. Dá para seguir direto para a próxima.
-- **Lembretes de contas:** na primeira abertura do dia, uma janela mostra o que vence amanhã ou hoje, e um clique deixa a mensagem pronta para quem cuida dos pagamentos.
+- **Lembretes de contas:** na primeira abertura do dia, uma janela mostra o que vence amanhã ou hoje, e um clique deixa a mensagem pronta para quem cuida dos pagamentos (um contato escolhido nas Configurações).
 - **Conta paga:** um botão **Paga** no próprio lembrete faz a conta parar de avisar naquele mês. Na lista de contas aparece o mês atual e o anterior; o que não foi marcado até o fim do mês fica como **não paga**.
 - **Sem automação no WhatsApp:** o OMAC usa o link oficial e nunca envia nada sozinho, para não colocar o número em risco.
 
-### Agendamentos
+### Contatos
 
 <p align="center">
-  <img src="docs/capturas/agendamentos.png" alt="Lista de pacientes de ortodontia com o confere do mês" width="49%">
-  <img src="docs/capturas/agendamentos-mensagem.png" alt="Janela de mensagem com as três opções" width="49%">
+  <img src="docs/capturas/contatos.png" alt="Lista de contatos com a conferência da passagem para a 1.6.0" width="49%">
+  <img src="docs/capturas/contatos-janela.png" alt="Janela de contato com responsáveis e ortodontia" width="49%">
+</p>
+
+- **Nome e telefone num lugar só:** pacientes, responsáveis e quem recebe os lembretes. Tratamentos, Atendimentos e WhatsApp usam o mesmo cadastro, então trocar um telefone vale para todo o app.
+- **Pesquisa** por nome ou telefone, com filtros (em ortodontia, sem telefone), e **apagar com desfazer**. Quem tem atendimento na ficha não pode ser apagado, para não perder o histórico de pagamentos.
+- **Responsáveis:** qualquer contato pode ter responsáveis (mãe, pai, cônjuge ou outro), que também são contatos: escolhe da lista ou cria na hora.
+- **Em tratamento de orto:** uma chave na janela de contato põe a pessoa em Tratamentos, com o valor da manutenção e a situação.
+- **Conferir contatos:** na passagem para a 1.6.0, nomes iguais se juntam sozinhos; nomes só parecidos (um sobrenome a mais) ou com dois telefones aparecem aqui para decidir com um clique.
+
+### Tratamentos (ortodontia)
+
+<p align="center">
+  <img src="docs/capturas/tratamentos.png" alt="Lista de pacientes de ortodontia com o confere do mês" width="49%">
+  <img src="docs/capturas/tratamentos-mensagem.png" alt="Janela de mensagem com a escolha de quem recebe" width="49%">
 </p>
 
 <p align="center">
-  <img src="docs/capturas/agendamentos-historico.png" alt="Histórico de atendimentos mês a mês" width="70%">
+  <img src="docs/capturas/tratamentos-historico.png" alt="Histórico de atendimentos mês a mês" width="70%">
 </p>
 
-- **Lista dos pacientes de ortodontia:** nome, telefone e valor da manutenção. Dá para alterar ou excluir, com a opção de desfazer.
+- **Os pacientes de ortodontia**, com telefone e valor da manutenção. **Novo paciente** abre a janela de contato com a ortodontia já ligada; escrever o nome de quem já é contato abre o cadastro dele.
 - **Três mensagens prontas:** agendar a manutenção do mês, cobrar com a chave Pix das Configurações e agendar o retorno. O texto pode ser ajustado antes de abrir a conversa.
+- **Para quem enviar** se escolhe na hora: o próprio paciente ou um dos responsáveis. O OMAC lembra a última escolha, e o texto já sai falando com o responsável sobre o paciente.
 - **Confere do mês:** marca quem já está agendado e recomeça sozinho todo dia 1, mesmo que o app esteja fechado nesse dia.
 - **Atendido no mês e histórico:** marque quem já foi atendido. A aba **Histórico** mostra, mês a mês, quem veio, quem não veio e quem estava de alta, e o nome de cada paciente abre o histórico completo dele ("veio em 8 de 10 meses"). Dá para corrigir um mês que passou com um clique.
-- **Responsáveis:** paciente criança pode ter pai e mãe no cadastro, com a escolha de quem sempre recebe as mensagens. O texto já sai falando com o responsável.
 - **Alta temporária:** com o dia em que foi dada e o dia em que acaba. Enquanto durar, o paciente fica fora do confere, e o OMAC avisa quando a alta termina.
 - **Finalizados:** quem termina o tratamento vai para outra aba e pode voltar para a lista se precisar.
 
-### Ficha de pagamentos
+### Atendimentos (a ficha do mês)
 
 <p align="center">
-  <img src="docs/capturas/pagamentos.png" alt="Ficha de pagamentos do mês" width="49%">
-  <img src="docs/capturas/pagamentos-atendimento.png" alt="Janela de atendimento" width="49%">
+  <img src="docs/capturas/atendimentos.png" alt="Ficha de atendimentos do mês" width="49%">
+  <img src="docs/capturas/atendimentos-atendimento.png" alt="Janela de atendimento" width="49%">
 </p>
 
 - **A ficha de papel, dentro do app:** paciente, tratamento, data, valor, forma de pagamento (Pix PJ, Pix PF, dinheiro, débito ou crédito), em quantas vezes no crédito, pago e nota.
 - **Pago sem esforço:** fica em branco enquanto espera; se o mês acabar sem marcar, aparece como **não pago**. Pagou depois, é só marcar.
-- **Nota marcada sozinha:** o OMAC procura na pasta das notas uma nota do paciente com competência no mês e marca "ok". Se a nota saiu em outro nome, dá para marcar à mão.
-- **Menos digitação:** o campo de paciente sugere os nomes já usados na ficha e os pacientes de ortodontia, que já vêm com a manutenção e o valor. Os tratamentos sugeridos (limpeza, manutenção, botox…) são editáveis nas Configurações.
-- **Resumo do mês:** recebido, a receber, não pago e quantos estão sem nota, com filtros.
-- **Exportar Excel:** a ficha do mês em uma folha deitada, pronta para imprimir.
+- **Nota em três situações:** **ok** (achada sozinha na pasta, ou marcada como emitida), **falta emitir** e **não precisa**. Dinheiro e Pix PF já sugerem "não precisa", e dá para trocar.
+- **O paciente é um contato:** o campo completa com a lista de contatos; um nome novo vira contato ao salvar. Paciente de ortodontia já vem com a manutenção e o valor.
+- **Resumo do mês:** recebido, a receber, não pago e quantos estão sem nota, com filtros. **Exportar Excel:** a ficha do mês em uma folha deitada, pronta para imprimir.
+
+### Backup
+
+<p align="center">
+  <img src="docs/capturas/config-backup.png" alt="Backup nas Configurações" width="70%">
+</p>
+
+- **Um arquivo por backup**, `OMAC-backup-AAAA-MM-DD.zip`, com contatos, tratamentos, atendimentos, contas, regras e configurações, mais um manifesto com a versão e a data. Ficam os 12 mais novos.
+- **Automático:** todo dia, toda semana (no dia escolhido) ou todo mês (no dia escolhido). É feito ao abrir o OMAC e de hora em hora com ele aberto; se o computador estava desligado no dia, faz na próxima vez.
+- **Notas e extratos também (opcional):** cópia para as pastas `Notas` e `Extratos` do backup, só do que é novo ou mudou, sem nunca apagar nada de lá.
+- **Restaurar:** escolhe o zip, vê a data e a versão, e o OMAC guarda os dados atuais em `antes-de-restaurar` antes de trocar. Backup de uma versão mais nova que o app é recusado.
+- **Falha não trava nada:** pendrive fora ou pasta sumida viram um aviso no Início.
 
 ### Interface
 
@@ -143,7 +167,7 @@ Dados de saúde são dados sensíveis. O OMAC:
 - não envia nenhum dado seu para a internet: a única saída é a conversa do WhatsApp que a própria pessoa abre e envia;
 - guarda configurações e cache só no computador (`%APPDATA%\OMAC`), em uma pasta separada do programa, que as atualizações não alteram;
 - para procurar versão nova, só consulta o GitHub, sem enviar nenhum dado seu, e dá para desligar nas Configurações;
-- guarda os telefones dos pacientes, os dados de agendamento e a ficha de pagamentos só no computador;
+- guarda os contatos, os tratamentos e a ficha de atendimentos só no computador, e o backup só na pasta que a própria pessoa escolhe;
 - deixa o nome de quem mandou Pix fora da planilha do fechamento;
 - guarda as regras do extrato (com nomes de fornecedores) só no computador, nunca no código;
 - tem um `.gitignore` que bloqueia PDF, planilhas e extratos, para nenhum dado real ir parar no GitHub.
@@ -169,7 +193,7 @@ python -m omac                # abre o app
 python -m tests.fabrica pasta-de-teste   # cria notas e extratos de exemplo para testar
 ```
 
-- `tools/capturas.py` regenera as imagens deste README (precisa do `playwright`).
+- `tools/capturas.py` regenera as imagens deste README (precisa do `playwright`). Os dados de exemplo são gravados no formato da 1.5.0, então as capturas também passam pela migração.
 - `tools/icone.py` regenera o ícone.
 
 ### Gerar uma versão
@@ -190,33 +214,44 @@ Mude `__version__` em `omac/__init__.py` e leve para a `main`. O GitHub Actions 
 ```
 omac/
 ├── app.py            janela; a classe Api junta a API de cada módulo
-├── nucleo.py         base da API: configurações, diálogos, tratamento de erro
+├── nucleo.py         base da API: configurações, diálogos, tratamento de erro, armazém e notas
 ├── config.py         configurações do usuário
-├── armazem.py        leitura e gravação segura dos JSON com os dados do usuário
 ├── sistema.py        coisas do Windows (WebView2, abrir arquivo, PC fraco?)
 ├── pdf.py            extração de texto de PDF
 ├── planilha.py       estilo comum das planilhas
 ├── fechamento.py     planilha do mês, com as abas de cada módulo
-├── notas/            leitor.py · pasta.py · exportar.py · api.py
+├── dados/            arquivo.py · armazem.py · esquema.py · migracoes.py (a única camada que lê e grava)
+├── contatos/         contatos.py · api.py
+├── tratamentos/      orto.py · mensagens.py · api.py
+├── atendimentos/     ficha.py · exportar.py · api.py
+├── notas/            leitor.py · pasta.py · servico.py · exportar.py · api.py
 ├── extrato/          leitor.py · pasta.py · regras.py · exportar.py · api.py
-├── whatsapp/         mensagens.py · lembretes.py · dados.py · api.py
-├── agendamentos/     pacientes.py · mensagens.py · api.py
-├── pagamentos/       ficha.py · exportar.py · api.py
+├── whatsapp/         mensagens.py · lembretes.py · api.py
+├── backup/           backup.py · api.py
 ├── resumo/           ano.py · api.py
-├── inicio/           api.py (junta o que os outros módulos já leem)
+├── inicio/           registro.py (widgets) · api.py
 ├── atualizacao/      github.py · api.py
 └── ui/               index.html, estilo.css, nucleo.js + um .js/.css por módulo
 tests/                testes + gerador de notas e extratos de exemplo
 ```
 
-Para criar um módulo: uma pasta em `omac/` com a classe da API (herdando de `ApiBase`), que entra na lista de `Api` em `app.py`, e um `.js` em `ui/` que se registra em `modulos` e `acoes`. Os métodos de cada módulo levam o nome dele (`pagamentos_listar`, `_lista_ficha`…): como todos viram uma classe só, dois métodos com o mesmo nome se apagariam sem erro, e um teste confere isso.
+**Dados** (`%APPDATA%\OMAC`): `config.json`, `contatos.json`, `tratamentos.json`, `atendimentos.json`, `lembretes.json`, `notas-enviadas.json`, `regras-extrato.json` e `cache-notas.json`. Regras:
+
+- só `omac/dados` lê e grava arquivos; os módulos pedem ao armazém, que guarda cada arquivo em memória e só lê de novo se ele mudar no disco;
+- todo arquivo tem `"versao"`; mudar o formato = subir a versão em `esquema.py` e escrever um passo em `migracoes.py` (com teste). Campo novo com valor padrão não precisa de migração;
+- ligação entre arquivos é sempre por id; o nome de uma pessoa só existe em `contatos.json`;
+- a situação sai das datas: nada é regravado na virada do mês.
+
+Para criar um módulo: uma pasta em `omac/` com a classe da API (herdando de `ApiBase`), que entra na lista de `Api` em `app.py`, e um `.js` em `ui/` que se registra em `modulos` e `acoes`. Os métodos de cada módulo levam o nome dele (`atendimentos_listar`, `_lista_ficha`…): como todos viram uma classe só, dois métodos com o mesmo nome se apagariam sem erro, e um teste confere isso. Para ter um widget no Início: `@widget("id", "Título", ordem=…)` no método que monta os dados e `registrarWidget("id", {…})` no `.js`.
 
 ## Próximos passos
 
 - [x] **Extrato bancário:** leitura do PDF do Inter, regras editáveis e fechamento do mês.
 - [ ] **Conciliação:** cruzar Pix recebidos com notas emitidas.
 - [x] **WhatsApp:** envio de notas e lembretes de contas pelo link oficial.
-- [x] **Agendamentos:** pacientes de ortodontia, mensagens e confere do mês.
-- [x] **Ficha de pagamentos** e contas pagas nos lembretes.
-- [x] **Tela inicial personalizável**, **resumo do ano** e **histórico de atendimentos** da ortodontia.
-- [ ] **Backup** das notas, extratos e dados.
+- [x] **Tratamentos (ortodontia):** pacientes, mensagens, confere do mês e histórico.
+- [x] **Ficha de atendimentos** e contas pagas nos lembretes.
+- [x] **Tela inicial personalizável** e **resumo do ano**.
+- [x] **Contatos únicos**, **base de dados nova** e **backup** (1.6.0).
+- [ ] **Lembretes e Comandos** (1.7.0).
+- [ ] **Relatório mensal**, pesquisa de notas e envio de várias notas de uma vez (1.8.0).

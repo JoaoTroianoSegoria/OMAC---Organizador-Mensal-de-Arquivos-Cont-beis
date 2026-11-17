@@ -1,0 +1,52 @@
+/* OMAC — Contatos (e a janela de contato) e o grupo Backup. Tokens e componentes vêm de estilo.css. */
+
+/* ---------- Lista ---------- */
+.ct-barra { align-items: flex-end; flex-wrap: wrap; }
+.ct-busca { flex: 1 1 16rem; }
+.ct-busca-caixa { position: relative; display: block; }
+.ct-busca-caixa .ic { position: absolute; left: .75rem; top: 50%; transform: translateY(-50%); width: 1.1rem; height: 1.1rem; color: var(--texto-3); pointer-events: none; }
+.ct-busca-caixa input { width: 100%; padding-left: 2.4rem !important; }
+.ct-filtros { flex-wrap: wrap; align-self: flex-end; }
+.ct-filtros .escolha { flex: 0 1 auto; min-height: 2.2rem; padding: .3rem .9rem; }
+
+.ct-ligacoes { display: flex; flex-wrap: wrap; gap: .35rem; }
+.etiqueta-acento { color: var(--acento-forte); background: var(--acento-suave); }
+[data-tema="escuro"] .etiqueta-acento { color: var(--acento); }
+
+/* ---------- Conferir contatos ---------- */
+.ct-conferir { gap: .6rem; border-left: .3rem solid var(--aviso-borda); }
+.ct-conferir h2 { display: flex; align-items: center; gap: .55rem; font-size: 1.05rem; }
+.ct-conferir h2 .ic { color: var(--acento); }
+.ct-conferir-lista { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: .75rem; }
+.ct-conferir-item { display: flex; flex-direction: column; gap: .5rem; padding: .75rem .9rem; border: 1px solid var(--solido-borda); border-radius: var(--raio-p); }
+.ct-conferir-item p { margin: 0; }
+.ct-tel { color: var(--texto-2); font-variant-numeric: tabular-nums; }
+.ct-conferir-botoes { display: flex; flex-wrap: wrap; gap: .5rem; }
+
+/* ---------- Janela de contato ---------- */
+.modal-largo { width: min(44rem, calc(100vw - 2rem)); }
+.ct-carregado { display: flex; align-items: center; gap: .6rem; margin: 0; }
+.ct-resp-lista { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: .75rem; }
+.ct-resp {
+  display: grid; gap: .6rem; align-items: end;
+  grid-template-columns: minmax(10rem, 2fr) minmax(7rem, 1fr) minmax(9rem, 1.4fr) auto;
+}
+.ct-resp .campo { min-width: 0; }
+.ct-resp .btn-linha { margin-bottom: .35rem; }
+.ct-orto-chave { padding: .25rem 0; }
+.ct-orto-desligar { display: flex; align-items: center; gap: .6rem; margin: 0; }
+@media (max-width: 40rem) {
+  .ct-resp { grid-template-columns: 1fr 1fr; }
+  .ct-resp .campo:first-child { grid-column: 1 / -1; }
+}
+
+/* ---------- Backup (Configurações) ---------- */
+.bk-situacao { margin: 0; font-weight: 600; }
+.bk-erro { color: var(--erro); }
+.bk-botoes { display: flex; flex-wrap: wrap; gap: .5rem; }
+.bk-quando { display: flex; flex-direction: column; gap: .85rem; padding-left: 2.2rem; }
+.bk-quando .campo { align-self: flex-start; min-width: 12rem; }
+
+[data-contraste="alto"] .etiqueta-acento { color: var(--texto); background: none; }
+[data-contraste="alto"] .ct-conferir { border-left-color: var(--texto); }
+[data-contraste="alto"] .ct-conferir h2 .ic { color: inherit; }

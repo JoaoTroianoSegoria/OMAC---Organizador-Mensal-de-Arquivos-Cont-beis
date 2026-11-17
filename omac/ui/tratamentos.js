@@ -1,5 +1,7 @@
-/* OMAC — módulo de agendamentos: pacientes de ortodontia, responsáveis, altas, confere,
- * atendido do mês e histórico (quem veio em cada mês). */
+/* OMAC — Tratamentos (ortodontia): confere do mês, atendido, altas, histórico e mensagens.
+ *
+ * Nome, telefone e responsáveis são do contato: criar e alterar o paciente é pela janela
+ * de contato (contatos.js), com a chave "Em tratamento de orto" ligada. */
 "use strict";
 
 const agenda = {
@@ -10,10 +12,8 @@ const agenda = {
   ativos: [],
   altas: [],
   finalizados: [],
-  editando: null, // paciente aberto na janela de alteração
-  situacao: "ativo", // escolhida na janela de paciente
-  enviaPara: "mae", // escolhida na janela de paciente
   mensagem: null, // dados da janela de mensagem
+  destino: "", // contato que vai receber a mensagem aberta
   histFim: null, // [ano, mês] da última coluna do histórico (null = mês atual)
   historico: null,
 };
@@ -24,15 +24,12 @@ const SITUACAO_NO_MES = {
 };
 const MESES_CURTOS = ["jan", "fev", "mar", "abr", "mai", "jun", "jul", "ago", "set", "out", "nov", "dez"];
 
-const NOMES_DAS_ABAS = { ativo: "Em tratamento", alta: "Alta temporária", finalizado: "Finalizados" };
-
-modulos.agendamentos = {
+modulos.tratamentos = {
   aoMostrar: carregarAgenda,
   carregar: carregarAgenda,
+  antesDeMostrar(aba) { agenda.aba = aba; }, // a aba vale já no carregamento, que vem ao mostrar a tela
   ligar() {
-    $("#form-paciente").addEventListener("submit", salvarPaciente);
     $("#form-ag-mensagem").addEventListener("submit", enviarMensagem);
-    $("#ag-tem-responsaveis").addEventListener("change", mostrarResponsaveis);
   },
 };
 
@@ -45,19 +42,16 @@ Object.assign(acoes, {
   "ag-hist-mover": (alvo) => moverHistorico(Number(alvo.dataset.passo)),
   "ag-hist-marcar": marcarNoHistorico,
   "ag-hist-paciente": (alvo) => abrirHistoricoDoPaciente(alvo.dataset.id),
-  "ag-ver-historico": () => { $("#ag-paciente").close(); abrirHistoricoDoPaciente(agenda.editando.id); },
+  "ag-ver-historico": () => { $("#ct-contato").close(); abrirHistoricoDoPaciente(contatos.editando.tratamento.id); },
   "ag-fechar-hist": () => $("#ag-hist-paciente").close(),
   "ag-filtro": (alvo) => { agenda.filtro = alvo.dataset.filtro; desenharAgenda(); },
-  "ag-novo": () => abrirPaciente(null),
-  "ag-editar": (alvo) => abrirPaciente(pacienteAgenda(alvo)),
-  "ag-fechar-paciente": () => $("#ag-paciente").close(),
-  "ag-situacao": (alvo) => escolherSituacao(alvo.dataset.situacao),
-  "ag-envia-para": (alvo) => escolherQuemRecebe(alvo.dataset.papel),
+  "ag-novo": () => abrirContato(null, { orto: true }),
+  "ag-editar": (alvo) => abrirContatoPorId(pacienteAgenda(alvo).contato_id),
   "ag-voltar": voltarAoTratamento,
-  "ag-excluir": excluirPaciente,
   "ag-marcar": marcarAgendado,
   "ag-mensagem": (alvo) => abrirMensagem(alvo.dataset.id),
   "ag-tipo": (alvo) => escolherMensagem(alvo.dataset.tipo),
+  "ag-destino": (alvo) => escolherDestino(alvo.dataset.id),
   "ag-fechar-mensagem": () => $("#ag-mensagem").close(),
   "ag-abrir-config": () => {
     $("#ag-mensagem").close();
@@ -69,7 +63,7 @@ Object.assign(acoes, {
 /* ---------- Lista ---------- */
 
 async function carregarAgenda() {
-  aplicarAgenda(await api().agendamentos_listar());
+  aplicarAgenda(await api().tratamentos_listar());
 }
 
 function aplicarAgenda(r) {
@@ -210,7 +204,7 @@ function desenharFinalizados() {
 }
 
 async function marcarAgendado(caixa) {
-  const r = await api().agendamentos_marcar(caixa.dataset.id, caixa.checked);
+  const r = await api().tratamentos_marcar(caixa.dataset.id, caixa.checked);
   if (r.erro) {
     caixa.checked = !caixa.checked;
     return mostrarToast(r.erro, { erro: true });
@@ -221,7 +215,7 @@ async function marcarAgendado(caixa) {
 const mesAtualDaAgenda = () => `${agenda.ano}-${String(agenda.mes).padStart(2, "0")}`;
 
 async function marcarAtendido(caixa) {
-  const r = await api().agendamentos_marcar_atendido(caixa.dataset.id, mesAtualDaAgenda(), caixa.checked);
+  const r = await api().tratamentos_marcar_atendido(caixa.dataset.id, mesAtualDaAgenda(), caixa.checked);
   if (r.erro) {
     caixa.checked = !caixa.checked;
     return mostrarToast(r.erro, { erro: true });
@@ -237,7 +231,7 @@ function fimDoHistorico() {
 
 async function carregarHistorico() {
   const [ano, mes] = fimDoHistorico();
-  const r = await api().agendamentos_historico(ano, mes, HIST_MESES);
+  const r = await api().tratamentos_historico(ano, mes, HIST_MESES);
   if (r.erro) return mostrarToast(r.erro, { erro: true });
   agenda.historico = r;
   desenharHistorico();
@@ -323,7 +317,7 @@ function desenharHistorico() {
 
 async function marcarNoHistorico(botao) {
   const veio = botao.getAttribute("aria-pressed") !== "true";
-  const r = await api().agendamentos_marcar_atendido(botao.dataset.id, botao.dataset.mes, veio);
+  const r = await api().tratamentos_marcar_atendido(botao.dataset.id, botao.dataset.mes, veio);
   if (r.erro) return mostrarToast(r.erro, { erro: true });
   aplicarAgenda(r); // já recarrega o histórico, que está aberto
   // O foco volta para a mesma célula, para seguir marcando pelo teclado.
@@ -332,7 +326,7 @@ async function marcarNoHistorico(botao) {
 }
 
 async function abrirHistoricoDoPaciente(id) {
-  const r = await api().agendamentos_historico_paciente(id);
+  const r = await api().tratamentos_historico_paciente(id);
   if (r.erro) return mostrarToast(r.erro, { erro: true });
   $("#ag-hist-titulo").textContent = `Histórico de ${r.nome}`;
   $("#ag-hist-conta").textContent = r.esperados
@@ -350,132 +344,64 @@ async function abrirHistoricoDoPaciente(id) {
 
 async function voltarAoTratamento(alvo) {
   const p = pacienteAgenda(alvo);
-  const r = await api().agendamentos_voltar_ao_tratamento(p.id);
+  const r = await api().tratamentos_voltar_ao_tratamento(p.id);
   if (r.erro) return mostrarToast(r.erro, { erro: true });
   aplicarAgenda(r);
   mostrarToast(`${p.nome} voltou para Em tratamento.`);
 }
 
-/* ---------- Novo paciente / alterar paciente ---------- */
-
-function escolherSituacao(situacao) {
-  agenda.situacao = situacao;
-  $$(".ag-situacoes .escolha").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.situacao === situacao)));
-  $("#ag-alta-campos").hidden = situacao !== "alta";
-}
-
-function escolherQuemRecebe(papel) {
-  agenda.enviaPara = papel;
-  $$(".ag-envia-para .escolha").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.papel === papel)));
-}
-
-function mostrarResponsaveis() {
-  const tem = $("#ag-tem-responsaveis").checked;
-  $("#ag-responsaveis").hidden = !tem;
-  // Com responsáveis, a mensagem usa o telefone deles.
-  $("#ag-telefone-campo").hidden = tem;
-}
-
-function preencherResponsavel(papel, pessoa) {
-  $(`#ag-${papel}-nome`).value = pessoa ? pessoa.nome : "";
-  $(`#ag-${papel}-telefone`).value = pessoa && pessoa.telefone ? telefoneBR(pessoa.telefone) : "";
-}
-
-function abrirPaciente(p) {
-  agenda.editando = p;
-  const responsaveis = p && p.responsaveis;
-  $("#ag-paciente-titulo").textContent = p ? "Alterar paciente" : "Novo paciente";
-  $("#ag-nome").value = p ? p.nome : "";
-  $("#ag-telefone").value = p && p.telefone ? telefoneBR(p.telefone) : "";
-  $("#ag-valor").value = p && p.valor_centavos != null ? (p.valor_centavos / 100).toFixed(2).replace(".", ",") : "";
-  $("#ag-tem-responsaveis").checked = !!responsaveis;
-  preencherResponsavel("pai", responsaveis && responsaveis.pai);
-  preencherResponsavel("mae", responsaveis && responsaveis.mae);
-  escolherQuemRecebe(responsaveis ? responsaveis.envia_para : "mae");
-  mostrarResponsaveis();
-  $("#ag-alta-inicio").value = p ? p.alta_inicio : "";
-  $("#ag-alta-fim").value = p ? p.alta_fim : "";
-  escolherSituacao(p ? p.situacao : "ativo");
-  $("#ag-excluir").hidden = !p;
-  $("#ag-ver-historico").hidden = !p;
-  $("#ag-paciente-erro").hidden = true;
-  $("#ag-paciente").showModal();
-  $("#ag-nome").focus();
-}
-
-function dadosDoResponsavel(papel) {
-  return { nome: $(`#ag-${papel}-nome`).value, telefone: $(`#ag-${papel}-telefone`).value };
-}
-
-async function salvarPaciente(e) {
-  e.preventDefault();
-  const anterior = agenda.editando;
-  const situacao = agenda.situacao;
-  const nome = $("#ag-nome").value;
-  const r = await api().agendamentos_salvar({
-    nome,
-    telefone: $("#ag-telefone").value,
-    valor: $("#ag-valor").value,
-    situacao,
-    alta_inicio: $("#ag-alta-inicio").value,
-    alta_fim: $("#ag-alta-fim").value,
-    responsaveis: $("#ag-tem-responsaveis").checked
-      ? { pai: dadosDoResponsavel("pai"), mae: dadosDoResponsavel("mae"), envia_para: agenda.enviaPara }
-      : null,
-  }, anterior ? anterior.id : null);
-  if (r.erro) {
-    // Um aviso comum ficaria escondido atrás da janela.
-    $("#ag-paciente-erro").textContent = r.erro;
-    $("#ag-paciente-erro").hidden = false;
-    return;
-  }
-  $("#ag-paciente").close();
-  aplicarAgenda(r);
-  if (situacao !== (anterior ? anterior.situacao : "ativo")) {
-    mostrarToast(`${nome.trim()} foi para ${NOMES_DAS_ABAS[situacao]}.`);
-  }
-}
-
-async function excluirPaciente() {
-  const r = await api().agendamentos_apagar(agenda.editando.id);
-  $("#ag-paciente").close();
-  if (r.erro) return mostrarToast(r.erro, { erro: true });
-  aplicarAgenda(r);
-  mostrarToast(`Paciente excluído: ${r.apagado.nome}`, {
-    acoes: [["Desfazer", async () => aplicarAgenda(await api().agendamentos_restaurar(r.apagado))]],
-  });
-}
-
 /* ---------- Mensagem ---------- */
 
 async function abrirMensagem(id) {
-  const r = await api().agendamentos_preparar_mensagens(id);
+  const r = await api().tratamentos_preparar_mensagens(id);
   if (r.erro) return mostrarToast(r.erro, { erro: true });
   agenda.mensagem = r;
-  const { nome, telefone, papel } = r.destino;
-  $("#ag-mensagem-titulo").textContent = papel
-    ? `Mensagem para ${nome} (${papel} de ${r.nome})`
-    : `Mensagem para ${r.nome}`;
-  $("#ag-msg-telefone").value = telefone ? telefoneBR(telefone) : "";
+  agenda.tipo = "agendar";
+  // Para quem vai: o próprio paciente ou um responsável. Começa na última escolha.
+  $("#ag-destinos").replaceChildren(...r.destinos.map((d) => {
+    const b = Object.assign(document.createElement("button"), { type: "button", className: "escolha" });
+    b.dataset.acao = "ag-destino";
+    b.dataset.id = d.contato_id;
+    b.textContent = d.papel ? `${d.nome} (${d.papel})` : `${d.nome} (paciente)`;
+    return b;
+  }));
+  $("#ag-destinos-campo").hidden = r.destinos.length < 2;
   $("#ag-mensagem-erro").hidden = true;
-  escolherMensagem("agendar");
+  escolherDestino(r.escolhido);
   $("#ag-mensagem").showModal();
-  (telefone ? $("#ag-msg-texto") : $("#ag-msg-telefone")).focus();
+  ($("#ag-msg-telefone").value ? $("#ag-msg-texto") : $("#ag-msg-telefone")).focus();
+}
+
+function destinoAtual() {
+  return agenda.mensagem.destinos.find((d) => d.contato_id === agenda.destino) || agenda.mensagem.destinos[0];
+}
+
+function escolherDestino(id) {
+  agenda.destino = id;
+  const d = destinoAtual();
+  $$("#ag-destinos .escolha").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.id === d.contato_id)));
+  $("#ag-mensagem-titulo").textContent = d.papel
+    ? `Mensagem para ${d.nome} (${d.papel} de ${agenda.mensagem.nome})`
+    : `Mensagem para ${agenda.mensagem.nome}`;
+  $("#ag-msg-telefone").value = d.telefone ? telefoneBR(d.telefone) : "";
+  escolherMensagem(agenda.tipo);
 }
 
 function escolherMensagem(tipo) {
-  const texto = agenda.mensagem.mensagens[tipo];
+  agenda.tipo = tipo;
+  const textoDela = destinoAtual().mensagens[tipo];
   $$(".ag-tipos .escolha").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.tipo === tipo)));
-  $("#ag-msg-texto").value = texto;
+  $("#ag-msg-texto").value = textoDela;
   // Sem chave Pix não há cobrança para mandar.
-  $("#ag-sem-pix").hidden = texto !== "";
-  $("#ag-msg-texto-campo").hidden = texto === "";
-  $("#ag-enviar").disabled = texto === "";
+  $("#ag-sem-pix").hidden = textoDela !== "";
+  $("#ag-msg-texto-campo").hidden = textoDela === "";
+  $("#ag-enviar").disabled = textoDela === "";
 }
 
 async function enviarMensagem(e) {
   e.preventDefault();
-  const r = await api().agendamentos_enviar(agenda.mensagem.id, $("#ag-msg-telefone").value, $("#ag-msg-texto").value);
+  const r = await api().tratamentos_enviar(agenda.mensagem.id, destinoAtual().contato_id,
+    $("#ag-msg-telefone").value, $("#ag-msg-texto").value);
   if (r.erro) {
     $("#ag-mensagem-erro").textContent = r.erro;
     $("#ag-mensagem-erro").hidden = false;
@@ -485,3 +411,28 @@ async function enviarMensagem(e) {
   aplicarAgenda(r);
   mostrarToast("Conversa aberta no WhatsApp. É só conferir e enviar.");
 }
+
+/* ---------- Widget do Início ---------- */
+
+registrarWidget("tratamentos", {
+  icone: "i-agenda",
+  desenhar(corpo, o) {
+    if (!o.ativos) {
+      corpo.append(texto("p", "Nenhum paciente em tratamento.", "dica"), rodape(botaoIr("Abrir tratamentos", "tratamentos")));
+      return;
+    }
+    corpo.append(numeros([
+      ["Agendados no mês", `${o.agendados} de ${o.ativos}`],
+      ["Atendidos no mês", `${o.atendidos} de ${o.ativos}`],
+    ]));
+    const linhas = [];
+    if (o.altas_terminadas) linhas.push(plural(o.altas_terminadas, "alta temporária já terminou", "altas temporárias já terminaram"));
+    for (const a of o.altas_acabando) linhas.push(`Alta de ${a.nome} acaba em ${dataBR(a.alta_fim).slice(0, 5)}`);
+    if (linhas.length) {
+      const ul = Object.assign(document.createElement("ul"), { className: "ini-lista ini-lista-aviso" });
+      ul.append(...linhas.map((l) => texto("li", l)));
+      corpo.append(ul);
+    }
+    corpo.append(rodape(botaoIr("Abrir tratamentos", "tratamentos", "ativos"), botaoIr("Histórico", "tratamentos", "historico")));
+  },
+});

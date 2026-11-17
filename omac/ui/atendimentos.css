@@ -1,4 +1,4 @@
-/* OMAC — ficha de pagamentos. Tokens e componentes vêm de estilo.css. */
+/* OMAC — Atendimentos (a ficha do mês). Tokens e componentes vêm de estilo.css. */
 
 .pg-barra { align-items: flex-end; }
 .pg-barra-dica { flex: 1 1 14rem; margin: 0 0 .55rem; }
@@ -32,3 +32,11 @@
 [data-contraste="alto"] .pg-chip { background: none; border: 1px solid currentColor; }
 [data-contraste="alto"] .pg-ok,
 [data-contraste="alto"] .pg-nota-achada { color: inherit; }
+
+.pg-notas { flex-wrap: wrap; }
+.pg-notas .escolha { flex: 1 1 auto; }
+.pg-nao-precisa { color: var(--texto-2); font-size: .85rem; white-space: nowrap; }
+#view-atendimentos .pg-c-nota { width: 6rem; }
+.pg-contato-novo { display: flex; align-items: center; gap: .35rem; margin: 0; color: var(--acento); font-weight: 600; }
+.pg-contato-novo .ic { width: 1rem; height: 1rem; }
+[data-contraste="alto"] .pg-contato-novo { color: inherit; }

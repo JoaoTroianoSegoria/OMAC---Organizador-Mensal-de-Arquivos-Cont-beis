@@ -1,6 +1,7 @@
-"""Ficha de atendimentos pagos: a versão do papel impresso todo mês.
+"""Ficha de atendimentos: a versão do papel impresso todo mês.
 
 Colunas: paciente | tratamento | data | valor | forma de pagamento | dividido | pago | nota.
+O paciente é um contato (`contato_id`); o nome fica só em contatos.json.
 
 "Pago" nunca é apagado nem reescrito na virada do mês: a situação sai das datas.
 Marcado é "sim"; em branco é "aguardando" enquanto o mês do atendimento não acabou;
@@ -13,7 +14,7 @@ import uuid
 from datetime import date
 
 from .. import texto as tx
-from ..texto import normalizar
+from ..dados import esquema
 
 FORMAS = {
     "pix_pj": "Pix PJ",
@@ -25,27 +26,23 @@ FORMAS = {
 PARCELAS_MAX = 12
 TRATAMENTOS_PADRAO = ["Limpeza", "Manutenção", "Botox"]
 
+# Nota: "" = falta (ou achada sozinha na pasta), "ok" = emitida (marcada à mão), "nao_precisa".
+NOTA_OK = "ok"
+NOTA_NAO_PRECISA = "nao_precisa"
+NOTAS = {"", NOTA_OK, NOTA_NAO_PRECISA}
+# Formas em que a nota costuma não ser emitida: já sugerem "não precisa" (dá para trocar).
+SEM_NOTA_POR_PADRAO = {"dinheiro", "pix_pf"}
+
 PAGO = "pago"
 AGUARDANDO = "aguardando"
 NAO_PAGO = "nao_pago"
 
-# Quem foi salvo numa versão anterior ganha os campos novos ao abrir.
-_CAMPOS_PADRAO = {
-    "tratamento": "",
-    "valor_centavos": None,
-    "forma": "",
-    "parcelas": 1,
-    "pago_em": "",
-    "nota_manual": False,  # nota emitida com outro nome: marcada à mão
-}
-
-
 class AtendimentoInvalido(ValueError):
-    """Faltou o nome ou a data, ou um valor, forma ou parcela não dá para entender."""
+    """Faltou a data, ou um valor, forma ou parcela não dá para entender."""
 
 
 def completar(atendimento: dict) -> dict:
-    return {**_CAMPOS_PADRAO, **atendimento}
+    return esquema.completar_item(esquema.ATENDIMENTOS, atendimento)
 
 
 def _data(texto) -> str:
@@ -57,10 +54,7 @@ def _data(texto) -> str:
         raise AtendimentoInvalido("A data do atendimento não existe.") from e
 
 
-def _validar(dados: dict) -> dict:
-    nome = tx.nome_limpo(dados.get("nome"))
-    if not nome:
-        raise AtendimentoInvalido("Diga o nome do paciente.")
+def validar(dados: dict) -> dict:
     try:
         valor = tx.valor_em_centavos(dados.get("valor"))
     except tx.ValorInvalido as e:
@@ -76,14 +70,16 @@ def _validar(dados: dict) -> dict:
             parcelas = 0
         if not 1 <= parcelas <= PARCELAS_MAX:
             raise AtendimentoInvalido(f"No crédito, divida de 1 a {PARCELAS_MAX} vezes.")
+    nota = dados.get("nota") or ""
+    if nota not in NOTAS:
+        raise AtendimentoInvalido("Escolha a situação da nota.")
     return {
-        "nome": nome,
         "tratamento": tx.nome_limpo(dados.get("tratamento")),
         "data": _data(dados.get("data")),
         "valor_centavos": valor,
         "forma": forma,
         "parcelas": parcelas,
-        "nota_manual": bool(dados.get("nota_manual")),
+        "nota": nota,
     }
 
 
@@ -111,27 +107,26 @@ def forma_por_extenso(atendimento: dict) -> str:
 # --- Nota emitida ----------------------------------------------------------------------
 
 
-def mesmo_paciente(nome_ficha: str, nome_nota: str) -> bool:
-    """O nome da nota pode ter um sobrenome a mais ou a menos que o da ficha.
-
-    Com uma palavra só, precisa ser igual: "Pedro" não pode achar a nota de qualquer Pedro.
-    """
-    ficha, nota = normalizar(nome_ficha).split(), normalizar(nome_nota).split()
-    if not ficha or not nota:
-        return False
-    if ficha == nota:
-        return True
-    menor, maior = sorted((ficha, nota), key=len)
-    return len(menor) >= 2 and menor[0] == maior[0] and set(menor) <= set(maior)
+mesmo_paciente = tx.mesma_pessoa
 
 
-def nota_do_atendimento(atendimento: dict, notas: list) -> int | None:
+def nota_do_atendimento(atendimento: dict, nome: str, notas: list) -> int | None:
     """Número da nota do mesmo paciente com competência no mês do atendimento."""
     mes = atendimento["data"][:7]
     for nota in notas:
-        if nota.competencia.isoformat()[:7] == mes and mesmo_paciente(atendimento["nome"], nota.paciente):
+        if nota.competencia.isoformat()[:7] == mes and mesmo_paciente(nome, nota.paciente):
             return nota.numero
     return None
+
+
+FALTA = "falta"
+
+
+def situacao_da_nota(atendimento: dict, numero_achado: int | None) -> str:
+    """"ok", "nao_precisa" ou "falta". Achada na pasta vale mais que a marcação à mão."""
+    if numero_achado or atendimento["nota"] == NOTA_OK:
+        return NOTA_OK
+    return NOTA_NAO_PRECISA if atendimento["nota"] == NOTA_NAO_PRECISA else FALTA
 
 
 # --- Lista ---------------------------------------------------------------------------
@@ -144,16 +139,16 @@ def buscar(atendimentos: list[dict], atendimento_id: str) -> dict:
     raise AtendimentoInvalido("Não encontrei esse atendimento. Ele pode ter sido excluído.")
 
 
-def adicionar(atendimentos: list[dict], dados: dict, hoje: date) -> dict:
-    novo = completar({**_validar(dados), "id": uuid.uuid4().hex})
+def adicionar(atendimentos: list[dict], contato_id: str, dados: dict, hoje: date) -> dict:
+    novo = completar({**validar(dados), "id": uuid.uuid4().hex, "contato_id": contato_id})
     marcar_pago(novo, bool(dados.get("pago")), hoje)
     atendimentos.append(novo)
     return novo
 
 
-def alterar(atendimentos: list[dict], atendimento_id: str, dados: dict, hoje: date) -> dict:
+def alterar(atendimentos: list[dict], atendimento_id: str, contato_id: str, dados: dict, hoje: date) -> dict:
     atendimento = buscar(atendimentos, atendimento_id)
-    atendimento.update(_validar(dados))
+    atendimento.update(validar(dados), contato_id=contato_id)
     # Quem já estava pago mantém a data em que foi marcado.
     if bool(dados.get("pago")) != bool(atendimento["pago_em"]):
         marcar_pago(atendimento, bool(dados.get("pago")), hoje)
@@ -168,8 +163,7 @@ def restaurar(atendimentos: list[dict], atendimento: dict) -> None:
 
 def do_mes(atendimentos: list[dict], ano: int, mes: int) -> list[dict]:
     prefixo = f"{ano:04d}-{mes:02d}"
-    return sorted((a for a in atendimentos if a["data"][:7] == prefixo),
-                  key=lambda a: (a["data"], normalizar(a["nome"])))
+    return sorted((a for a in atendimentos if a["data"][:7] == prefixo), key=lambda a: a["data"])
 
 
 def meses(atendimentos: list[dict]) -> list[tuple[int, int, int]]:
@@ -181,21 +175,8 @@ def meses(atendimentos: list[dict]) -> list[tuple[int, int, int]]:
     return [(a, m, n) for (a, m), n in sorted(contagem.items())]
 
 
-def nomes_salvos(atendimentos: list[dict], pacientes_orto: list[dict]) -> list[str]:
-    """Nomes para completar o campo de paciente: os da ficha e os da ortodontia.
-
-    Se o mesmo nome foi escrito de jeitos diferentes, fica o mais recente.
-    """
-    nomes: dict[str, str] = {}
-    for p in pacientes_orto:
-        nomes[normalizar(p["nome"])] = p["nome"]
-    for a in sorted(atendimentos, key=lambda a: a["data"]):
-        nomes[normalizar(a["nome"])] = a["nome"]
-    return sorted(nomes.values(), key=normalizar)
-
-
 def totais(lista: list[dict]) -> dict:
-    """Soma por situação. `lista` já vem com "situacao" e "nota" de cada atendimento."""
+    """Soma por situação. `lista` já vem com "situacao" e "nota_situacao" de cada atendimento."""
     soma = {PAGO: 0, AGUARDANDO: 0, NAO_PAGO: 0}
     for a in lista:
         soma[a["situacao"]] += a["valor_centavos"] or 0
@@ -204,5 +185,5 @@ def totais(lista: list[dict]) -> dict:
         "a_receber_centavos": soma[AGUARDANDO],
         "nao_pago_centavos": soma[NAO_PAGO],
         "nao_pagos": sum(a["situacao"] == NAO_PAGO for a in lista),
-        "sem_nota": sum(not a["nota"] for a in lista),
+        "sem_nota": sum(a["nota_situacao"] == FALTA for a in lista),
     }

@@ -11,10 +11,11 @@ from . import ficha as fc
 
 COLUNAS = ["Paciente", "Tratamento", "Data", "Valor", "Forma de pag.", "Dividido", "Pago", "Nota"]
 PAGO_POR_EXTENSO = {fc.PAGO: "Sim", fc.AGUARDANDO: "", fc.NAO_PAGO: "Não"}
+NOTA_POR_EXTENSO = {fc.NOTA_OK: "ok", fc.NOTA_NAO_PRECISA: "não precisa", fc.FALTA: ""}
 
 
 def nome_sugerido(ano: int, mes: int) -> str:
-    return f"Ficha de pagamentos - {MESES[mes - 1]} {ano}.xlsx"
+    return f"Atendimentos - {MESES[mes - 1]} {ano}.xlsx"
 
 
 def _dividido(a: dict) -> str:
@@ -24,20 +25,20 @@ def _dividido(a: dict) -> str:
 
 
 def exportar(lista: list[dict], destino: Path, ano: int, mes: int) -> Path:
-    """`lista` vem da API: cada atendimento já tem "situacao" e "nota"."""
+    """`lista` vem da API: cada atendimento já tem "nome", "situacao" e "nota_situacao"."""
     from openpyxl import Workbook
     from openpyxl.styles import Alignment
 
     wb = Workbook()
     ws = wb.active
-    ws.title = f"Pagamentos {mes:02d}-{ano}"
+    ws.title = f"Atendimentos {mes:02d}-{ano}"
     cabecalho(ws, COLUNAS)
     for a in lista:
         valor = Decimal(a["valor_centavos"]) / 100 if a["valor_centavos"] is not None else None
         ws.append([
             a["nome"], a["tratamento"], date.fromisoformat(a["data"]), valor,
             fc.FORMAS.get(a["forma"], ""), _dividido(a), PAGO_POR_EXTENSO[a["situacao"]],
-            "ok" if a["nota"] else "",
+            NOTA_POR_EXTENSO[a["nota_situacao"]],
         ])
 
     ultima = ws.max_row
@@ -53,7 +54,7 @@ def exportar(lista: list[dict], destino: Path, ano: int, mes: int) -> Path:
     ws.cell(total, 4).number_format = MOEDA
     linha_de_total(ws, total, len(COLUNAS))
 
-    larguras(ws, "ABCDEFGH", (34, 20, 12, 14, 15, 10, 8, 8))
+    larguras(ws, "ABCDEFGH", (34, 20, 12, 14, 15, 10, 8, 12))
     ws.freeze_panes = "A2"
     # Cabe numa folha deitada, como o papel.
     ws.page_setup.orientation = "landscape"

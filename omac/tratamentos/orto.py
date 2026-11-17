@@ -14,28 +14,11 @@ import uuid
 from datetime import date
 
 from .. import texto as tx
-from ..texto import normalizar
-from ..whatsapp.mensagens import TelefoneInvalido, normalizar_telefone
+from ..dados import esquema
 
 ATIVO = "ativo"
 ALTA = "alta"
 FINALIZADO = "finalizado"
-
-PAPEIS = {"pai": "pai", "mae": "mãe"}
-
-# Quem foi cadastrado numa versão anterior ganha os campos novos ao abrir.
-_CAMPOS_PADRAO = {
-    "telefone": "",
-    "valor_centavos": None,
-    "agendado_em": "",
-    "finalizado_em": "",
-    "alta_inicio": "",
-    "alta_fim": "",
-    "responsaveis": None,  # {"pai": {"nome", "telefone"}, "mae": {...}, "envia_para": "pai" | "mae"}
-    "atendidos": {},  # "AAAA-MM" → dia em que foi marcado como atendido
-    "altas": [],  # altas que já acabaram: [{"inicio", "fim"}], para o histórico
-    "criado_em": "",  # primeiro mês do histórico
-}
 
 VEIO = "veio"
 NAO_VEIO = "nao_veio"
@@ -45,18 +28,11 @@ FORA = ""  # antes de virar paciente, depois de finalizar, ou mês que ainda nã
 
 
 class PacienteInvalido(ValueError):
-    """Faltou o nome, o nome já existe, ou um valor, data ou telefone não dá para entender."""
+    """Um valor ou uma data não dá para entender, ou o paciente não existe mais."""
 
 
-def completar(paciente: dict) -> dict:
-    # Cópia das listas e dicionários: o padrão não pode ser alterado por um paciente.
-    return {**_CAMPOS_PADRAO, "atendidos": {}, "altas": [], **paciente}
-
-
-def registrar_inicio(paciente: dict, hoje: date) -> None:
-    """Paciente de uma versão anterior começa o histórico no dia em que esta abriu."""
-    if not paciente["criado_em"]:
-        paciente["criado_em"] = hoje.isoformat()
+def completar(tratamento: dict) -> dict:
+    return esquema.completar_item(esquema.TRATAMENTOS, tratamento)
 
 
 def valor_em_centavos(texto) -> int | None:
@@ -64,45 +40,6 @@ def valor_em_centavos(texto) -> int | None:
         return tx.valor_em_centavos(texto)
     except tx.ValorInvalido as e:
         raise PacienteInvalido("Confira o valor da manutenção: use algo como 250,00.") from e
-
-
-_nome_limpo = tx.nome_limpo
-
-
-def _telefone(texto) -> str:
-    # O telefone pode ficar para depois: é pedido de novo na hora de mandar a mensagem.
-    texto = str(texto or "").strip()
-    return normalizar_telefone(texto) if texto else ""
-
-
-def _validar_responsaveis(dados: dict | None) -> dict | None:
-    if not dados:
-        return None
-    limpo = {}
-    for papel, rotulo in PAPEIS.items():
-        pessoa = dados.get(papel) or {}
-        try:
-            limpo[papel] = {"nome": _nome_limpo(pessoa.get("nome")), "telefone": _telefone(pessoa.get("telefone"))}
-        except TelefoneInvalido as e:
-            raise PacienteInvalido(f"Telefone do(a) {rotulo}: {e}") from e
-    envia_para = dados.get("envia_para")
-    if envia_para not in PAPEIS:
-        raise PacienteInvalido("Escolha para quem vão as mensagens: pai ou mãe.")
-    if not limpo[envia_para]["nome"]:
-        raise PacienteInvalido(f"As mensagens vão para o(a) {PAPEIS[envia_para]}: preencha o nome dele(a).")
-    return {**limpo, "envia_para": envia_para}
-
-
-def _validar(dados: dict) -> dict:
-    nome = _nome_limpo(dados.get("nome"))
-    if not nome:
-        raise PacienteInvalido("Diga o nome do paciente.")
-    return {
-        "nome": nome,
-        "telefone": _telefone(dados.get("telefone")),
-        "valor_centavos": valor_em_centavos(dados.get("valor")),
-        "responsaveis": _validar_responsaveis(dados.get("responsaveis")),
-    }
 
 
 # --- Situação ------------------------------------------------------------------------
@@ -139,6 +76,11 @@ def _campos_de_situacao(dados: dict, atual: dict, hoje: date) -> dict:
     raise PacienteInvalido("Escolha a situação do paciente.")
 
 
+def validar(dados: dict, atual: dict | None, hoje: date) -> dict:
+    """Valor e situação já conferidos: {"valor_centavos", "alta_inicio", "alta_fim", "finalizado_em"}."""
+    return {"valor_centavos": valor_em_centavos(dados.get("valor")), **_campos_de_situacao(dados, atual or {}, hoje)}
+
+
 def alta_terminou(paciente: dict, hoje: date) -> bool:
     return situacao(paciente) == ALTA and paciente["alta_fim"] < hoje.isoformat()
 
@@ -154,73 +96,39 @@ def voltar_ao_tratamento(paciente: dict) -> None:
     paciente.update(alta_inicio="", alta_fim="", finalizado_em="")
 
 
-# --- Para quem vai a mensagem --------------------------------------------------------
-
-
-def destino(paciente: dict) -> dict:
-    """{"nome", "telefone", "papel"}: o responsável escolhido ou o próprio paciente."""
-    responsaveis = paciente["responsaveis"]
-    if not responsaveis:
-        return {"nome": paciente["nome"], "telefone": paciente["telefone"], "papel": ""}
-    papel = responsaveis["envia_para"]
-    return {**responsaveis[papel], "papel": PAPEIS[papel]}
-
-
-def guardar_telefone(paciente: dict, telefone: str) -> None:
-    responsaveis = paciente["responsaveis"]
-    if responsaveis:
-        responsaveis[responsaveis["envia_para"]]["telefone"] = telefone
-    else:
-        paciente["telefone"] = telefone
-
-
 # --- Lista ---------------------------------------------------------------------------
 
 
-def _conferir_nome(pacientes: list[dict], nome: str, ignorar: str | None = None) -> None:
-    onde = {ATIVO: "na lista", ALTA: "em Alta temporária", FINALIZADO: "nos Finalizados"}
-    for p in pacientes:
-        if p["id"] != ignorar and normalizar(p["nome"]) == normalizar(nome):
-            raise PacienteInvalido(
-                f"Já existe “{p['nome']}” {onde[situacao(p)]}. Se for outra pessoa, coloque o sobrenome para diferenciar."
-            )
-
-
-def buscar(pacientes: list[dict], paciente_id: str) -> dict:
-    for p in pacientes:
-        if p["id"] == paciente_id:
-            return p
+def buscar(tratamentos: list[dict], tratamento_id: str) -> dict:
+    for t in tratamentos:
+        if t["id"] == tratamento_id:
+            return t
     raise PacienteInvalido("Não encontrei esse paciente. Ele pode ter sido excluído.")
 
 
-def adicionar(pacientes: list[dict], dados: dict, hoje: date | None = None) -> dict:
-    novo = _validar(dados)
-    _conferir_nome(pacientes, novo["nome"])
-    hoje = hoje or date.today()
-    novo.update(_campos_de_situacao(dados, {}, hoje))
-    novo = completar({**novo, "id": uuid.uuid4().hex, "criado_em": hoje.isoformat()})
-    pacientes.append(novo)
-    return novo
+def do_contato(tratamentos: list[dict], contato_id: str) -> dict | None:
+    return next((t for t in tratamentos if t["contato_id"] == contato_id), None)
 
 
-def alterar(pacientes: list[dict], paciente_id: str, dados: dict, hoje: date) -> dict:
-    paciente = buscar(pacientes, paciente_id)
-    # Valida tudo antes: um erro na alta não pode deixar o nome já trocado.
-    novos = _validar(dados)
-    _conferir_nome(pacientes, novos["nome"], ignorar=paciente_id)
-    novos.update(_campos_de_situacao(dados, paciente, hoje))
-    if paciente["alta_inicio"] and novos["alta_inicio"] != paciente["alta_inicio"]:
-        _guardar_alta(paciente)
-    paciente.update(novos)
-    return paciente
+def salvar(tratamentos: list[dict], contato_id: str, dados: dict, hoje: date) -> dict:
+    """Cria o tratamento do contato ou altera o que ele já tem (um por contato)."""
+    atual = do_contato(tratamentos, contato_id)
+    # Valida tudo antes: um erro na alta não pode deixar o valor já trocado.
+    campos = validar(dados, atual, hoje)
+    if atual is None:
+        atual = completar({"id": uuid.uuid4().hex, "contato_id": contato_id, "criado_em": hoje.isoformat()})
+        tratamentos.append(atual)
+    elif atual["alta_inicio"] and campos["alta_inicio"] != atual["alta_inicio"]:
+        _guardar_alta(atual)
+    atual.update(campos)
+    return atual
 
 
-def restaurar(pacientes: list[dict], paciente: dict) -> None:
-    """Desfaz uma exclusão: o paciente volta como estava, com o confere do mês."""
-    if any(p["id"] == paciente.get("id") for p in pacientes):
-        return
-    _conferir_nome(pacientes, paciente["nome"])
-    pacientes.append(completar(paciente))
+def restaurar(tratamentos: list[dict], tratamento: dict) -> None:
+    """Desfaz uma exclusão: o tratamento volta como estava, com o confere e o histórico."""
+    if not any(t["id"] == tratamento.get("id") or t["contato_id"] == tratamento.get("contato_id")
+               for t in tratamentos):
+        tratamentos.append(completar(tratamento))
 
 
 def agendado_no_mes(paciente: dict, hoje: date) -> bool:

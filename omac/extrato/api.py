@@ -92,10 +92,7 @@ class ExtratoApi(ApiBase):
         if not itens:
             return {"erro": "Não há lançamentos neste mês para exportar."}
 
-        pasta_notas = self._cfg["pasta_notas"]
-        notas = None
-        if pasta_notas and Path(pasta_notas).is_dir():
-            notas = self._ler_notas(pasta_notas).do_mes(ano, mes)
+        notas = self._servico_notas.do_mes(ano, mes)
 
         destino = self._dialogo_salvar(
             fechamento.nome_sugerido(ano, mes), "xlsx", "Planilha do Excel",

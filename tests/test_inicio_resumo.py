@@ -5,8 +5,10 @@ from decimal import Decimal
 import pytest
 
 from omac import config, sistema
-from omac.agendamentos import pacientes as pc
 from omac.app import Api
+from omac.dados import esquema
+from omac.inicio import registro
+from omac.tratamentos import orto as pc
 from omac.notas.leitor import Nota
 from omac.resumo import ano as resumo
 from tests.fabrica import criar_pasta_exemplo
@@ -15,7 +17,7 @@ NOV = date(2026, 11, 13)
 
 
 def _paciente(**campos):
-    return pc.completar({"id": "p", "nome": "Ana", "criado_em": "2026-08-10", **campos})
+    return pc.completar({"id": "p", "contato_id": "c", "criado_em": "2026-08-10", **campos})
 
 
 # --- Atendido e histórico ------------------------------------------------------------------
@@ -53,9 +55,9 @@ def test_alta_atual_e_alta_que_acabou_aparecem_como_alta():
 
 def test_mudar_de_alta_para_finalizado_guarda_a_alta():
     pacientes = []
-    p = pc.adicionar(pacientes, {"nome": "Ana", "situacao": "alta", "alta_inicio": "2026-09-01",
-                                 "alta_fim": "2026-10-01"}, date(2026, 8, 1))
-    pc.alterar(pacientes, p["id"], {"nome": "Ana", "situacao": "finalizado"}, date(2026, 10, 20))
+    p = pc.salvar(pacientes, "c", {"situacao": "alta", "alta_inicio": "2026-09-01",
+                                   "alta_fim": "2026-10-01"}, date(2026, 8, 1))
+    pc.salvar(pacientes, "c", {"situacao": "finalizado"}, date(2026, 10, 20))
     assert p["altas"] == [{"inicio": "2026-09-01", "fim": "2026-10-01"}]
     assert pc.situacao_no_mes(p, 2026, 9, NOV) == pc.DE_ALTA
     assert pc.situacao_no_mes(p, 2026, 11, NOV) == pc.FORA  # depois de finalizar
@@ -87,23 +89,24 @@ def api(tmp_path, monkeypatch):
 
 
 def test_api_atendido_e_historico(api):
-    r = api.agendamentos_salvar({"nome": "Ana"})
+    api.contatos_salvar({"nome": "Ana", "orto": True})
+    r = api.tratamentos_listar()
     pid = r["ativos"][0]["id"]
     assert r["ativos"][0]["atendido"] is False
     mes = date.today().isoformat()[:7]
-    r = api.agendamentos_marcar_atendido(pid, mes, True)
+    r = api.tratamentos_marcar_atendido(pid, mes, True)
     assert r["ativos"][0]["atendido"] is True
-    h = api.agendamentos_historico(date.today().year, date.today().month, 3)
+    h = api.tratamentos_historico(date.today().year, date.today().month, 3)
     assert len(h["meses"]) == 3 and h["meses"][-1]["veio"] == 1
     assert h["pacientes"][0]["meses"][-1] == pc.VEIO
-    hp = api.agendamentos_historico_paciente(pid)
+    hp = api.tratamentos_historico_paciente(pid)
     assert hp["nome"] == "Ana" and hp["veio"] == 1
-    assert "erro" in api.agendamentos_marcar_atendido(pid, "2999-01", True)
+    assert "erro" in api.tratamentos_marcar_atendido(pid, "2999-01", True)
 
 
 def test_historico_deixa_de_fora_quem_nao_era_paciente_no_periodo(api):
-    api.agendamentos_salvar({"nome": "Ana"})
-    assert api.agendamentos_historico(2020, 6, 6)["pacientes"] == []
+    api.contatos_salvar({"nome": "Ana", "orto": True})
+    assert api.tratamentos_historico(2020, 6, 6)["pacientes"] == []
 
 
 # --- Resumo do ano ----------------------------------------------------------------------
@@ -141,7 +144,7 @@ def test_resumo_de_ano_que_passou_conta_os_12_meses():
 def test_api_resumo_com_a_pasta_de_exemplo(api, tmp_path):
     pasta = criar_pasta_exemplo(tmp_path / "NFS-e 2026")
     api._cfg.update(pasta_notas=str(pasta), pasta_extratos=str(pasta / "Extratos"))
-    api.pagamentos_salvar({"nome": "Ana", "data": "2026-10-05", "valor": "100"})
+    api.atendimentos_salvar({"nome": "Ana", "data": "2026-10-05", "valor": "100"})
     r = api.resumo_ano(2026)
     out = r["meses"][9]
     assert out["notas"] > 0 and out["faturamento_centavos"] > 0 and out["entradas_centavos"] is not None
@@ -152,35 +155,55 @@ def test_api_resumo_com_a_pasta_de_exemplo(api, tmp_path):
 # --- Início --------------------------------------------------------------------------------
 
 
-def test_api_painel_tem_todos_os_cartoes_mesmo_sem_pastas(api):
-    r = api.inicio_painel()
-    for nome in ("contas", "ficha", "orto", "notas_enviar", "fechamento", "resumo"):
-        assert nome in r and "erro" not in r[nome], (nome, r[nome])
-    assert r["notas_enviar"] == {"sem_pasta": True}
+WIDGETS = ["hoje", "lembretes", "tratamentos", "atendimentos", "relatorio", "contatos", "resumo"]
 
 
-def test_api_painel_um_cartao_com_erro_nao_derruba_os_outros(api, monkeypatch):
-    monkeypatch.setattr(type(api), "_cartao_orto", lambda self, hoje: 1 / 0)
+def test_registro_tem_os_widgets_da_1_6(api):
+    assert [w.id for w in registro.em_ordem()] == WIDGETS
+    for w in registro.em_ordem():
+        assert callable(getattr(api, w.metodo)), w
+
+
+def test_api_painel_tem_todos_os_widgets_mesmo_sem_pastas(api):
     r = api.inicio_painel()
-    assert "erro" in r["orto"] and "erro" not in r["contas"]
+    for nome in WIDGETS:
+        assert nome in r["widgets"] and "erro" not in r["widgets"][nome], (nome, r["widgets"][nome])
+    assert r["widgets"]["lembretes"]["notas_enviar"] == {"sem_pasta": True}
+    assert [c["id"] for c in r["cartoes"]] == WIDGETS
+    assert r["titulos"]["relatorio"] == "Relatório mensal"
+    assert r["data"] == date.today().isoformat()
+
+
+def test_api_painel_um_widget_com_erro_nao_derruba_os_outros(api, monkeypatch):
+    monkeypatch.setattr(type(api), "_widget_tratamentos", lambda self, hoje: 1 / 0)
+    r = api.inicio_painel()["widgets"]
+    assert "erro" in r["tratamentos"] and "erro" not in r["lembretes"]
 
 
 def test_api_painel_pendencias(api):
-    caminho = config.caminho_whatsapp()
+    caminho = config.pasta_dados() / esquema.LEMBRETES
     caminho.parent.mkdir(parents=True, exist_ok=True)
-    caminho.write_text(json.dumps({"contas": [{"nome": "Luz", "dia": 1, "criada_em": "2020-01-01", "pagas": {}}]}),
-                       encoding="utf-8")
-    r = api.inicio_painel()
-    assert r["contas"]["nao_pagas_mes_passado"] == ["Luz"]
-    assert r["contas"]["abertas"][0]["nome"] == "Luz"
+    caminho.write_text(json.dumps({"versao": 1, "contas": [
+        {"nome": "Luz", "dia": 1, "criada_em": "2020-01-01", "pagas": {}}]}), encoding="utf-8")
+    r = api.inicio_painel()["widgets"]
+    assert r["lembretes"]["nao_pagas_mes_passado"] == ["Luz"]
+    assert r["lembretes"]["abertas"][0]["nome"] == "Luz"
 
 
-def test_cartoes_da_tela_inicial():
-    padrao = config.normalizar({})["inicio_cartoes"]
-    assert [c["id"] for c in padrao] == [c["id"] for c in config.CARTOES_INICIO]
-    escolhidos = config.normalizar({"inicio_cartoes": [
+def test_api_painel_avisa_do_backup(api):
+    assert api.inicio_painel()["widgets"]["hoje"]["backup"]["atrasado"] is True
+    api._cfg.update(backup_ultimo=f"{date.today().isoformat()}T10:00:00")
+    assert api._widget_hoje(date.today())["backup"] == {"pasta": False, "automatico": False, "dias": 0,
+                                                         "erro": "", "atrasado": False}
+
+
+def test_widgets_seguem_a_escolha_da_pessoa():
+    padrao = registro.cartoes(config.normalizar({})["inicio_cartoes"])
+    assert [c["id"] for c in padrao] == WIDGETS
+    escolhidos = registro.cartoes(config.normalizar({"inicio_cartoes": [
         {"id": "resumo", "visivel": False, "largo": False}, {"id": "nao_existe"}, {"id": "resumo"}, "lixo",
-    ]})["inicio_cartoes"]
+    ]})["inicio_cartoes"])
     assert escolhidos[0] == {"id": "resumo", "visivel": False, "largo": False}
-    assert len(escolhidos) == len(config.CARTOES_INICIO)  # os que faltaram voltam no fim
+    # O que não existe some; os que faltaram entram no fim, na ordem padrão.
+    assert [c["id"] for c in escolhidos] == ["resumo", *WIDGETS[:-1]]
     assert config.normalizar({"abrir_em": "x"})["abrir_em"] == "inicio"

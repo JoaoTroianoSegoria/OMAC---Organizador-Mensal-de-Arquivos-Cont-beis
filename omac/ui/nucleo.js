@@ -4,8 +4,11 @@
  * Promise. Erros do Python chegam como { erro: "mensagem" }.
  *
  * Cada módulo (notas.js, extrato.js…) se registra assim:
- *   modulos.nome = { aoMostrar() {}, carregar() {}, ligar() {}, aoIniciar() {} };   // nome = data-view do menu
+ *   modulos.nome = { aoMostrar() {}, carregar() {}, ligar() {}, aoIniciar() {}, aoAplicarConfig(cfg) {},
+ *                    antesDeMostrar(aba) {}, irParaAba(aba) {} };   // nome = data-view do menu
  *   Object.assign(acoes, { "minha-acao": (alvo) => {} }); // data-acao dos botões
+ *   registrarWidget("id", { icone: "i-...", desenhar(corpo, dados, painel) {} }); // widget do Início
+ * Os dados de cada widget vêm do Python (@widget no módulo); o Início só percorre o registro.
  */
 "use strict";
 
@@ -26,13 +29,19 @@ const estado = {
 
 const modulos = {};
 const acoes = {};
+const widgets = {};
+
+function registrarWidget(id, definicao) {
+  widgets[id] = definicao;
+}
 
 const api = () => window.pywebview.api;
 
 /* ---------- Início ---------- */
 
 /* Um script vazio ou cortado não gera erro nenhum: sem esta conferência, a tela fica muda. */
-const MODULOS_ESPERADOS = ["inicio", "notas", "extrato", "whatsapp", "agendamentos", "pagamentos", "resumo", "atualizacao"];
+const MODULOS_ESPERADOS = ["inicio", "notas", "extrato", "whatsapp", "contatos", "tratamentos", "atendimentos",
+  "backup", "resumo", "atualizacao"];
 
 async function conferirModulos() {
   for (const nome of MODULOS_ESPERADOS.filter((m) => !modulos[m])) {
@@ -52,6 +61,8 @@ async function iniciar() {
   const r = await api().estado();
   if (r.erro) return mostrarToast(r.erro, { erro: true });
   estado.cfg = r.config;
+  // A passagem dos dados para o formato novo falhou: o app abre, mas nada é gravado.
+  if (r.erro_dados) mostrarToast(r.erro_dados, { erro: true });
   $("#versao").textContent = `versão ${r.versao}`;
   $("#sobre-versao").textContent = r.versao;
 
@@ -104,6 +115,7 @@ function aplicarConfig() {
   mostrarPastas();
   desenharFaixasRecolhiveis();
   ajustarTrilho();
+  Object.values(modulos).forEach((m) => m.aoAplicarConfig?.(c));
 }
 
 let salvarTimer = null;
@@ -279,6 +291,70 @@ function telefoneBR(digitos) {
   return m ? `(${m[1]}) ${m[2]}-${m[3]}` : digitos;
 }
 
+/* Mesmo jeito do Python (texto.normalizar): sem acento, maiúsculas, sem espaço repetido. */
+function normalizarNome(texto) {
+  return String(texto || "").normalize("NFKD").replace(/[\u0300-\u036f]/g, "").toUpperCase()
+    .split(/\s+/).filter(Boolean).join(" ");
+}
+
+function valorParaCampo(centavos) {
+  return centavos == null ? "" : (centavos / 100).toFixed(2).replace(".", ",");
+}
+
+const plural = (n, um, varios) => `${n} ${n === 1 ? um : varios}`;
+
+/* ---------- Peças dos widgets do Início ---------- */
+
+function texto(tag, conteudo, classe = "") {
+  return Object.assign(document.createElement(tag), { className: classe, textContent: conteudo });
+}
+
+function botaoIr(rotulo, view, aba = "") {
+  const b = Object.assign(document.createElement("button"), { type: "button", className: "btn btn-peq", textContent: rotulo });
+  b.dataset.acao = "ir-para";
+  b.dataset.view = view;
+  if (aba) b.dataset.aba = aba;
+  return b;
+}
+
+function numeros(pares) {
+  const dl = Object.assign(document.createElement("dl"), { className: "ini-numeros" });
+  for (const [rotulo, valor, classe] of pares) {
+    const div = document.createElement("div");
+    div.append(texto("dt", rotulo), texto("dd", valor, classe || ""));
+    dl.append(div);
+  }
+  return dl;
+}
+
+function rodape(...botoes) {
+  const div = Object.assign(document.createElement("div"), { className: "ini-rodape" });
+  div.append(...botoes);
+  return div;
+}
+
+/* Lista de frases que levam a uma tela: [[frase, view, aba], ...] */
+function listaDeLinks(itens) {
+  const ul = Object.assign(document.createElement("ul"), { className: "ini-lista ini-lista-links" });
+  for (const [frase, view, aba] of itens) {
+    const li = document.createElement("li");
+    const b = Object.assign(document.createElement("button"), { type: "button", className: "ini-link", textContent: frase });
+    b.dataset.acao = "ir-para";
+    b.dataset.view = view;
+    if (aba) b.dataset.aba = aba;
+    li.append(b);
+    ul.append(li);
+  }
+  return ul;
+}
+
+/* Abrir uma tela já numa aba: cada módulo diz como (modulos.x.irParaAba). */
+function irPara(view, aba) {
+  if (aba) modulos[view]?.antesDeMostrar?.(aba);
+  mostrarView(view);
+  if (aba) modulos[view]?.irParaAba?.(aba);
+}
+
 /* Faixas de aviso que dá para minimizar: seguem visíveis, mostrando só a quantidade. */
 function desenharFaixasRecolhiveis() {
   $$("[data-recolhivel]").forEach((faixa) => {
@@ -353,6 +429,7 @@ Object.assign(acoes, {
     recolherFaixa(faixa, !faixa.classList.contains("recolhida"));
   },
   "abrir-pasta-dados": () => api().abrir_pasta_dados(),
+  "ir-para": (alvo) => irPara(alvo.dataset.view, alvo.dataset.aba),
 });
 
 function ligarEventos() {
