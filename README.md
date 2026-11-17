@@ -27,7 +27,7 @@ extrato do banco precisavam ser passadas à mão para uma planilha que vai para 
   <img src="docs/capturas/resumo.png" alt="Resumo do ano" width="49%">
 </p>
 
-- **O dia numa tela só, em widgets:** Hoje, Lembretes (contas que vencem, com o botão **Paga** ali mesmo, e notas a enviar), Tratamentos, Atendimentos do mês, Relatório mensal (o fechamento do mês anterior), Contatos e Resumo do ano.
+- **O dia numa tela só, em widgets:** Hoje, Lembretes (contas que vencem, com o botão **Paga** ali mesmo, notas a enviar e lembretes em aberto), Tratamentos, Atendimentos do mês, Relatório mensal (o fechamento do mês anterior), Contatos e Resumo do ano.
 - **Hoje:** junta o que está para hoje em todos os módulos, as pendências dos meses anteriores e o aviso de backup atrasado ou com falha. Cada linha leva direto para a tela certa.
 - **Personalizável:** no botão **Personalizar** dá para arrastar os widgets (ou usar as setas, pelo teclado), esconder os que não interessam e deixar um widget largo. Nas Configurações escolhe-se abrir o app no Início ou direto nas notas.
 
@@ -58,17 +58,24 @@ extrato do banco precisavam ser passadas à mão para uma planilha que vai para 
 - **Confere pelo saldo:** cada lançamento é checado com o saldo que o banco informa. Se faltar um período e o saldo tiver mudado nele, o OMAC avisa quanto ficou de fora.
 - **Fechamento do mês em um arquivo só:** abas de extrato, notas e resumo por operação, com fórmulas que acompanham o que for digitado depois.
 
-### WhatsApp
+### Lembretes
 
 <p align="center">
-  <img src="docs/capturas/whatsapp-envio.png" alt="Janela de envio da nota" width="49%">
-  <img src="docs/capturas/whatsapp-lembretes.png" alt="Lembretes do dia" width="49%">
+  <img src="docs/capturas/lembretes-envio.png" alt="Janela de envio da nota" width="49%">
+  <img src="docs/capturas/lembretes-do-dia.png" alt="Lembretes do dia" width="49%">
 </p>
 
-- **Enviar a nota ao paciente:** a mensagem sai pronta e assinada, o PDF é copiado e a conversa abre no aplicativo ou no WhatsApp Web. A pessoa cola o PDF e aperta enviar.
-- **Lista "Notas a enviar":** as notas novas ficam ali, em qualquer mês, até serem enviadas. Dá para seguir direto para a próxima.
-- **Lembretes de contas:** na primeira abertura do dia, uma janela mostra o que vence amanhã ou hoje, e um clique deixa a mensagem pronta para quem cuida dos pagamentos (um contato escolhido nas Configurações).
+<p align="center">
+  <img src="docs/capturas/lembretes-comandos.png" alt="Comandos: textos prontos para copiar" width="49%">
+  <img src="docs/capturas/lembretes-livres.png" alt="Lembretes livres" width="49%">
+</p>
+
+- **Notas a enviar:** a mensagem sai pronta e assinada, o PDF é copiado e a conversa abre no aplicativo ou no WhatsApp Web. A pessoa cola o PDF e aperta enviar. As notas novas ficam na lista, em qualquer mês, até serem enviadas, e dá para seguir direto para a próxima.
+- **Contas:** na primeira abertura do dia, uma janela mostra o que vence amanhã ou hoje, e um clique deixa a mensagem pronta para quem cuida dos pagamentos (um contato escolhido nas Configurações).
+- **Enviar lembrete a qualquer momento:** cada conta em aberto (ou que ficou sem pagar no mês passado) tem o botão de WhatsApp, e no topo há **Enviar lembrete das contas em aberto**. A mensagem já diz "venceu dia X" quando o vencimento passou. O aviso automático continua igual.
 - **Conta paga:** um botão **Paga** no próprio lembrete faz a conta parar de avisar naquele mês. Na lista de contas aparece o mês atual e o anterior; o que não foi marcado até o fim do mês fica como **não paga**.
+- **Lembretes livres:** um título e uma observação, sem data. **Feito** risca e guarda numa lista de feitos (dá para desfazer). Os em aberto aparecem no Início.
+- **Comandos:** textos que se mandam sempre (endereço, horário, cuidados depois do atendimento), separados por categoria. O botão **Copiar** copia exatamente o texto, sem espaço ou linha a mais.
 - **Sem automação no WhatsApp:** o OMAC usa o link oficial e nunca envia nada sozinho, para não colocar o número em risco.
 
 ### Contatos
@@ -224,9 +231,10 @@ omac/
 ├── contatos/         contatos.py · api.py
 ├── tratamentos/      orto.py · mensagens.py · api.py
 ├── atendimentos/     ficha.py · exportar.py · api.py
-├── notas/            leitor.py · pasta.py · servico.py · exportar.py · api.py
+├── notas/            leitor.py · pasta.py · servico.py · envio.py · exportar.py · api.py
 ├── extrato/          leitor.py · pasta.py · regras.py · exportar.py · api.py
-├── whatsapp/         mensagens.py · lembretes.py · api.py
+├── lembretes/        contas.py · livres.py · comandos.py · api.py
+├── whatsapp/         mensagens.py (telefone, link oficial e textos, usado por todos)
 ├── backup/           backup.py · api.py
 ├── resumo/           ano.py · api.py
 ├── inicio/           registro.py (widgets) · api.py
@@ -235,7 +243,7 @@ omac/
 tests/                testes + gerador de notas e extratos de exemplo
 ```
 
-**Dados** (`%APPDATA%\OMAC`): `config.json`, `contatos.json`, `tratamentos.json`, `atendimentos.json`, `lembretes.json`, `notas-enviadas.json`, `regras-extrato.json` e `cache-notas.json`. Regras:
+**Dados** (`%APPDATA%\OMAC`): `config.json`, `contatos.json`, `tratamentos.json`, `atendimentos.json`, `lembretes.json`, `notas-enviadas.json`, `comandos.json`, `regras-extrato.json` e `cache-notas.json`. Regras:
 
 - só `omac/dados` lê e grava arquivos; os módulos pedem ao armazém, que guarda cada arquivo em memória e só lê de novo se ele mudar no disco;
 - todo arquivo tem `"versao"`; mudar o formato = subir a versão em `esquema.py` e escrever um passo em `migracoes.py` (com teste). Campo novo com valor padrão não precisa de migração;
@@ -253,5 +261,5 @@ Para criar um módulo: uma pasta em `omac/` com a classe da API (herdando de `Ap
 - [x] **Ficha de atendimentos** e contas pagas nos lembretes.
 - [x] **Tela inicial personalizável** e **resumo do ano**.
 - [x] **Contatos únicos**, **base de dados nova** e **backup** (1.6.0).
-- [ ] **Lembretes e Comandos** (1.7.0).
+- [x] **Lembretes e Comandos** (1.7.0).
 - [ ] **Relatório mensal**, pesquisa de notas e envio de várias notas de uma vez (1.8.0).
