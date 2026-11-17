@@ -46,17 +46,21 @@ VARIANTES = [
     ("extrato-otimizado", "extrato", {"tema": "claro", "visual": "otimizado"}, {}),
     ("extrato-alto-contraste", "extrato", {"tema": "claro", "alto_contraste": True}, {}),
     ("extrato-regras", "extrato", {"tema": "escuro", "visual": "bonito"}, {"aba": "regras"}),
-    ("whatsapp-enviar", "whatsapp", {"tema": "escuro", "visual": "bonito"}, {"whats": "enviar"}),
-    ("whatsapp-envio", "whatsapp", {"tema": "claro", "visual": "bonito"}, {"whats": "janela"}),
-    ("whatsapp-contas", "whatsapp", {"tema": "claro", "visual": "bonito"}, {"whats": "contas"}),
-    ("whatsapp-lembretes", "notas", {"tema": "escuro", "visual": "bonito"}, {"whats": "lembretes"}),
-    ("whatsapp-envio-otimizado", "whatsapp", {"tema": "escuro", "visual": "otimizado"}, {"whats": "janela"}),
-    ("whatsapp-lembretes-contraste", "notas", {"tema": "claro", "alto_contraste": True}, {"whats": "lembretes"}),
+    ("lembretes-enviar", "lembretes", {"tema": "escuro", "visual": "bonito"}, {"whats": "enviar"}),
+    ("lembretes-envio", "lembretes", {"tema": "claro", "visual": "bonito"}, {"whats": "janela"}),
+    ("lembretes-contas", "lembretes", {"tema": "claro", "visual": "bonito"}, {"whats": "contas"}),
+    ("lembretes-do-dia", "notas", {"tema": "escuro", "visual": "bonito"}, {"whats": "lembretes"}),
+    ("lembretes-envio-otimizado", "lembretes", {"tema": "escuro", "visual": "otimizado"}, {"whats": "janela"}),
+    ("lembretes-do-dia-contraste", "notas", {"tema": "claro", "alto_contraste": True}, {"whats": "lembretes"}),
     ("tratamentos", "tratamentos", {"tema": "claro", "visual": "bonito"}, {"agenda": "lista"}),
     ("tratamentos-mensagem", "tratamentos", {"tema": "escuro", "visual": "bonito"}, {"agenda": "mensagem"}),
     ("atendimentos", "atendimentos", {"tema": "claro", "visual": "bonito"}, {"pag": "lista"}),
     ("atendimentos-atendimento", "atendimentos", {"tema": "escuro", "visual": "bonito"}, {"pag": "janela"}),
     ("notas-avisos-minimizados", "notas", {"tema": "claro", "visual": "bonito", "avisos_recolhidos": ["notas"]}, {}),
+    ("lembretes-livres", "lembretes", {"tema": "claro", "visual": "bonito"}, {"whats": "livres"}),
+    ("lembretes-comandos", "lembretes", {"tema": "claro", "visual": "bonito"}, {"whats": "comandos"}),
+    ("lembretes-comandos-escuro", "lembretes", {"tema": "escuro", "visual": "bonito"}, {"whats": "comandos"}),
+    ("lembretes-enviar-conta", "lembretes", {"tema": "escuro", "visual": "bonito"}, {"whats": "enviar-conta"}),
     ("config-whatsapp", "config", {"tema": "claro", "visual": "bonito"}, {"rolar": "#g-whats"}),
     ("config-claro", "config", {"tema": "claro", "visual": "bonito"}, {}),
     ("config-escuro", "config", {"tema": "escuro", "visual": "bonito"}, {}),
@@ -138,6 +142,26 @@ def _dados_da_1_5(pasta: Path) -> None:
     _gravar(pasta, "config.json", {"lembrete_nome": "Dra. Exemplo", "lembrete_telefone": "5561900000000"})
 
 
+def _preparar_lembretes(api) -> None:
+    """Lembretes livres e comandos de exemplo (uma vez só)."""
+    if api.lembretes_livres()["em_aberto"] or api.comandos_listar()["categorias"]:
+        return
+    feito = api.lembretes_salvar_livre({"titulo": "Pedir resinas ao fornecedor"})["salvo"]
+    api.lembretes_salvar_livre({"titulo": "Ligar para o laboratório", "observacao": "Confirmar a entrega da prótese de sexta"})
+    api.lembretes_salvar_livre({"titulo": "Renovar o alvará da vigilância sanitária"})
+    api.lembretes_marcar_feito(feito["id"], True)
+    geral = api.comandos_salvar_categoria("Geral")["salva"]
+    api.comandos_salvar(geral["id"], {"nome": "Endereço da clínica",
+                                      "texto": "Rua Exemplo, 123, sala 4\nCentro, Brasília - DF\nPerto da praça principal"})
+    api.comandos_salvar(geral["id"], {"nome": "Horário de atendimento",
+                                      "texto": "Atendemos de segunda a sexta, das 8h às 18h, e sábado das 8h às 12h."})
+    api.comandos_salvar(geral["id"], {"nome": "Chave Pix", "texto": "chave@exemplo.com"})
+    pos = api.comandos_salvar_categoria("Pós-atendimento")["salva"]
+    api.comandos_salvar(pos["id"], {"nome": "Cuidados após extração",
+                                    "texto": "Evite alimentos quentes nas primeiras 24 horas.\nNão faça bochechos hoje."})
+    api.comandos_salvar_categoria("Orçamentos")
+
+
 def _preparar_whatsapp(api, caso: str | None) -> None:
     from datetime import date, timedelta
 
@@ -182,6 +206,7 @@ def main() -> None:
                                  "backup_pasta": str(pendrive), **cfg})
                 api._cfg["chave_pix"] = "chave@exemplo.com"
                 _preparar_whatsapp(api, extras.get("whats"))
+                _preparar_lembretes(api)
                 if not api._cfg["backup_ultimo"]:
                     api.backup_agora()
 
@@ -204,10 +229,15 @@ def main() -> None:
                     pagina.click(f'.menu-item[data-view="{view}"]')
                 if view == "extrato":
                     pagina.wait_for_selector("#ext-corpo tr")
-                if "whats" in extras and view == "whatsapp":
+                if "whats" in extras and view == "lembretes":
                     pagina.wait_for_selector("#whats-corpo tr")
-                    if extras["whats"] == "contas":
+                    if extras["whats"] in ("contas", "enviar-conta"):
                         pagina.click('[data-acao="whats-aba"][data-aba="contas"]')
+                    if extras["whats"] == "enviar-conta":
+                        pagina.click('[data-acao="lb-lembrar-todas"]')
+                        pagina.wait_for_selector("#lb-envio-contas[open]")
+                    if extras["whats"] in ("livres", "comandos"):
+                        pagina.click(f'[data-acao="whats-aba"][data-aba="{extras["whats"]}"]')
                     if extras["whats"] == "janela":
                         pagina.click('#whats-corpo [data-acao="whats-enviar"]')
                         pagina.wait_for_selector("#envio[open]")
