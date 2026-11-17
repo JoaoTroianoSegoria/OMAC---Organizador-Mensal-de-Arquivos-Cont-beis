@@ -10,7 +10,7 @@ from omac.notas.leitor import Nota
 from omac.atendimentos import exportar as exp
 from omac.atendimentos import ficha as fc
 from omac.dados import esquema
-from omac.whatsapp import lembretes as lb
+from omac.lembretes import contas as lb
 from tests.fabrica import criar_pasta_exemplo
 
 NOV = date(2026, 11, 13)
@@ -281,26 +281,26 @@ def test_api_contas_de_versao_anterior_ganham_a_data_uma_vez(api):
     caminho = config.pasta_dados() / esquema.LEMBRETES
     caminho.parent.mkdir(parents=True, exist_ok=True)
     caminho.write_text(json.dumps({"versao": 1, "contas": [{"nome": "Luz", "dia": 20}]}), encoding="utf-8")
-    r = api.whatsapp_contas()
+    r = api.lembretes_contas()
     [conta] = r["contas"]
     assert conta["criada_em"] == date.today().isoformat() and conta["mes_passado"] == ""
     assert json.loads(caminho.read_text(encoding="utf-8"))["contas"][0]["criada_em"] == date.today().isoformat()
 
 
 def test_api_marcar_conta_paga(api):
-    api.whatsapp_salvar_conta({"nome": "Luz", "dia": 20})
+    api.lembretes_salvar_conta({"nome": "Luz", "dia": 20})
     mes = date.today().isoformat()[:7]
-    r = api.whatsapp_marcar_paga("luz", mes, True)
+    r = api.lembretes_marcar_paga("luz", mes, True)
     assert r["contas"][0]["este_mes"] == lb.PAGA
-    r = api.whatsapp_marcar_paga("Luz", mes, False)
+    r = api.lembretes_marcar_paga("Luz", mes, False)
     assert r["contas"][0]["este_mes"] == lb.EM_ABERTO
-    assert "erro" in api.whatsapp_marcar_paga("Água", mes, True)
+    assert "erro" in api.lembretes_marcar_paga("Água", mes, True)
 
 
 def test_api_texto_do_lembrete_sem_as_pagas(api):
     api._cfg.update(assistente_nome="João")
-    api.whatsapp_definir_destinatario("Dra. Exemplo")
-    r = api.whatsapp_texto_lembrete([{"nome": "Luz", "situacao": "vence hoje (20/11)"}])
+    api.lembretes_definir_destinatario("Dra. Exemplo")
+    r = api.lembretes_texto([{"nome": "Luz", "situacao": "vence hoje (20/11)"}])
     assert "Luz: vence hoje" in r["mensagem"] and "Dra. Exemplo" in r["mensagem"]
 
 

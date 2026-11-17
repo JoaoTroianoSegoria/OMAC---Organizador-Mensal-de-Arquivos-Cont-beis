@@ -98,18 +98,18 @@ def test_apagar_leva_o_tratamento_e_os_vinculos_e_desfaz_tudo(api):
     _salvar(api, nome="Pedro", orto=True, responsaveis=[{"nome": "Helena", "papel": "mae"}])
     helena = _por_nome(api.contatos_listar())["Helena"]
     pedro = _por_nome(api.contatos_listar())["Pedro"]
-    api.whatsapp_definir_destinatario("Helena")
+    api.lembretes_definir_destinatario("Helena")
     # Pedro manda para a mãe:
     mae = api.tratamentos_preparar_mensagens(api.tratamentos_listar()["ativos"][0]["id"])["destinos"][1]
     api.tratamentos_enviar(api.tratamentos_listar()["ativos"][0]["id"], mae["contato_id"], TEL, "oi")
 
     r = api.contatos_apagar(helena["id"])
     assert set(_por_nome(r)) == {"Pedro"} and _por_nome(r)["Pedro"]["responsaveis"] == []
-    assert api.whatsapp_destinatario()["contato"] is None
+    assert api.lembretes_destinatario()["contato"] is None
     r = api.contatos_restaurar(r["apagado"])
     p = _por_nome(r)["Pedro"]
     assert [x["contato_id"] for x in p["responsaveis"]] == [helena["id"]] and p["envia_para"] == helena["id"]
-    assert api.whatsapp_destinatario()["contato"]["id"] == helena["id"]
+    assert api.lembretes_destinatario()["contato"]["id"] == helena["id"]
 
     r = api.contatos_apagar(pedro["id"])
     assert api.tratamentos_listar()["ativos"] == []
@@ -167,7 +167,7 @@ def test_juntar_passa_tudo_para_quem_fica(api):
     _salvar(api, nome="PEDRO SOUZA LIMA", telefone=TEL)
     _salvar(api, nome="Bia", responsaveis=[{"nome": "PEDRO SOUZA LIMA", "papel": "pai"}])
     api.atendimentos_salvar({"nome": "PEDRO SOUZA LIMA", "data": "2026-11-03"})
-    api.whatsapp_definir_destinatario("PEDRO SOUZA LIMA")
+    api.lembretes_definir_destinatario("PEDRO SOUZA LIMA")
     c = _por_nome(api.contatos_listar())
     fica, sai = c["Pedro Lima"], c["PEDRO SOUZA LIMA"]
     _com_a_conferir(api, [{"tipo": "parecidos", "ids": [fica["id"], sai["id"]]}])
@@ -178,7 +178,7 @@ def test_juntar_passa_tudo_para_quem_fica(api):
     assert set(c) == {"Pedro Lima", "Bia"} and r["a_conferir"] == []
     assert c["Pedro Lima"]["telefone"] == TEL and c["Pedro Lima"]["atendimentos"] == 1
     assert c["Bia"]["responsaveis"][0]["contato_id"] == fica["id"]
-    assert api.whatsapp_destinatario()["contato"]["id"] == fica["id"]
+    assert api.lembretes_destinatario()["contato"]["id"] == fica["id"]
     assert api.tratamentos_listar()["ativos"][0]["nome"] == "Pedro Lima"
 
 

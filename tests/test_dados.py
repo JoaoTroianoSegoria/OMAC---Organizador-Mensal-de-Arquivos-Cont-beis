@@ -61,9 +61,9 @@ def test_erro_no_meio_da_edicao_nao_grava(tmp_path):
 def test_arquivo_mudado_por_fora_e_lido_de_novo(tmp_path):
     a = Armazem(tmp_path)
     with a.editar(esquema.COMANDOS) as d:
-        d["categorias"] = ["um"]
-    _gravar(tmp_path, esquema.COMANDOS, {"versao": 1, "categorias": ["dois", "tres"]})
-    assert a.ler(esquema.COMANDOS)["categorias"] == ["dois", "tres"]
+        d["categorias"] = [{"id": "1", "nome": "um"}]
+    _gravar(tmp_path, esquema.COMANDOS, {"versao": 1, "categorias": [{"id": "2", "nome": "dois"}]})
+    assert a.ler(esquema.COMANDOS)["categorias"] == [{"id": "2", "nome": "dois", "comandos": []}]
 
 
 def test_arquivo_estragado_nunca_e_sobrescrito(tmp_path):
@@ -270,7 +270,7 @@ def test_app_abre_com_os_dados_da_1_5(pasta_dados, tmp_path):
     f = api.atendimentos_listar(2026, 11)
     assert [a["nome"] for a in f["atendimentos"]] == ["Maria Exemplo", "Joana Nova"]
     assert f["atendimentos"][0]["nota_situacao"] == "ok"
-    assert api.whatsapp_destinatario()["contato"]["nome"] == "Dra. Exemplo"
+    assert api.lembretes_destinatario()["contato"]["nome"] == "Dra. Exemplo"
     assert len(api.contatos_listar()["a_conferir"]) == 2
     assert api._cfg["inicio_cartoes"][0]["id"] == "resumo"
 
@@ -291,7 +291,7 @@ def test_item_antigo_ganha_os_campos_novos_sem_regravar(tmp_path):
     assert t["atendidos"] == {} and t["altas"] == [] and t["valor_centavos"] is None
     with a.editar(esquema.TRATAMENTOS) as d:
         d["tratamentos"][0]["atendidos"]["2026-11"] = "x"  # mexer num não pode mudar o padrão dos outros
-    assert esquema.ITENS[esquema.TRATAMENTOS][1]["atendidos"] == {}
+    assert esquema.ITENS[esquema.TRATAMENTOS]["tratamentos"]["atendidos"] == {}
     with a.editar(esquema.TRATAMENTOS):
         pass
     assert (tmp_path / esquema.TRATAMENTOS).read_bytes() != antes  # só gravou pela mudança acima
