@@ -1,0 +1,60 @@
+"""Os arquivos de dados do OMAC: nome, versão atual e conteúdo de um arquivo novo.
+
+Regras (valem para qualquer arquivo novo):
+- todo arquivo tem "versao"; mudar o formato = subir a versão + um passo em migracoes.py;
+- campo novo com valor padrão não precisa de migração (o padrão completa o que faltar);
+- ligação entre arquivos é sempre por id; o nome de uma pessoa só existe em contatos.json;
+- um assunto por arquivo, e nada é regravado na virada do mês (a situação sai das datas).
+"""
+
+from __future__ import annotations
+
+import copy
+
+CONTATOS = "contatos.json"
+TRATAMENTOS = "tratamentos.json"
+ATENDIMENTOS = "atendimentos.json"
+LEMBRETES = "lembretes.json"
+NOTAS_ENVIADAS = "notas-enviadas.json"
+COMANDOS = "comandos.json"
+
+CONFIG = "config.json"
+REGRAS = "regras-extrato.json"
+CACHE_NOTAS = "cache-notas.json"
+
+ARQUIVOS: dict[str, dict] = {
+    # {"id", "nome", "telefone", "responsaveis": [{"contato_id", "papel"}], "envia_para", "criado_em"}
+    # "a_conferir": nomes parecidos ou telefones diferentes que a migração não juntou sozinha.
+    CONTATOS: {"versao": 1, "conteudo": "Os contatos", "padrao": {"contatos": [], "a_conferir": []}},
+    # Ortodontia: {"id", "contato_id", "valor_centavos", situação, altas, atendidos, "criado_em"...}
+    TRATAMENTOS: {"versao": 1, "conteudo": "Os pacientes de ortodontia", "padrao": {"tratamentos": []}},
+    # Ficha: {"id", "contato_id", "tratamento", "data", "valor_centavos", "forma", "parcelas", "pago_em", "nota"}
+    ATENDIMENTOS: {"versao": 1, "conteudo": "Os atendimentos da ficha", "padrao": {"atendimentos": []}},
+    LEMBRETES: {"versao": 1, "conteudo": "As contas e os lembretes",
+                "padrao": {"ultima_abertura": "", "destinatario": "", "contas": [], "livres": []}},
+    NOTAS_ENVIADAS: {"versao": 1, "conteudo": "As notas já enviadas", "padrao": {"inicio": "", "enviadas": {}}},
+    COMANDOS: {"versao": 1, "conteudo": "Os comandos", "padrao": {"categorias": []}},
+}
+
+# Campos de cada item com o valor padrão. Quem foi gravado antes de um campo existir
+# ganha o padrão ao ler (armazem.py), sem precisar de migração.
+ITENS: dict[str, tuple[str, dict]] = {
+    CONTATOS: ("contatos", {"telefone": "", "responsaveis": [], "envia_para": "", "criado_em": ""}),
+    TRATAMENTOS: ("tratamentos", {
+        "valor_centavos": None, "agendado_em": "", "finalizado_em": "", "alta_inicio": "", "alta_fim": "",
+        "atendidos": {},  # "AAAA-MM" → dia em que foi marcado como atendido
+        "altas": [],  # altas que já acabaram: [{"inicio", "fim"}], para o histórico
+        "criado_em": "",  # primeiro mês do histórico
+    }),
+    ATENDIMENTOS: ("atendimentos", {"tratamento": "", "valor_centavos": None, "forma": "", "parcelas": 1,
+                                    "pago_em": "", "nota": ""}),
+}
+
+
+def completar_item(arquivo: str, item: dict) -> dict:
+    """O item com os campos que faltarem (cópia: o padrão nunca é alterado por um item)."""
+    return {**copy.deepcopy(ITENS[arquivo][1]), **item}
+
+
+# O que vai no backup. O cache das notas fica de fora: ele é refeito lendo os PDFs.
+DO_BACKUP = [CONFIG, *ARQUIVOS, REGRAS]
