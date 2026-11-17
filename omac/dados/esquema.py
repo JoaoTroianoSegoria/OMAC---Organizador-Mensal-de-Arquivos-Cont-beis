@@ -36,24 +36,34 @@ ARQUIVOS: dict[str, dict] = {
     COMANDOS: {"versao": 1, "conteudo": "Os comandos", "padrao": {"categorias": []}},
 }
 
-# Campos de cada item com o valor padrão. Quem foi gravado antes de um campo existir
-# ganha o padrão ao ler (armazem.py), sem precisar de migração.
-ITENS: dict[str, tuple[str, dict]] = {
-    CONTATOS: ("contatos", {"telefone": "", "responsaveis": [], "envia_para": "", "criado_em": ""}),
-    TRATAMENTOS: ("tratamentos", {
+# Campos de cada item das listas, com o valor padrão: {arquivo: {lista: campos}}. Quem foi
+# gravado antes de um campo existir ganha o padrão ao ler (armazem.py), sem migração.
+ITENS: dict[str, dict[str, dict]] = {
+    CONTATOS: {"contatos": {"telefone": "", "responsaveis": [], "envia_para": "", "criado_em": ""}},
+    TRATAMENTOS: {"tratamentos": {
         "valor_centavos": None, "agendado_em": "", "finalizado_em": "", "alta_inicio": "", "alta_fim": "",
         "atendidos": {},  # "AAAA-MM" → dia em que foi marcado como atendido
         "altas": [],  # altas que já acabaram: [{"inicio", "fim"}], para o histórico
         "criado_em": "",  # primeiro mês do histórico
-    }),
-    ATENDIMENTOS: ("atendimentos", {"tratamento": "", "valor_centavos": None, "forma": "", "parcelas": 1,
-                                    "pago_em": "", "nota": ""}),
+    }},
+    ATENDIMENTOS: {"atendimentos": {"tratamento": "", "valor_centavos": None, "forma": "", "parcelas": 1,
+                                    "pago_em": "", "nota": ""}},
+    # Contas: {"nome", "dia", "pagas": {"AAAA-MM": dia}, "criada_em"} (criada_em é preenchida em contas.py).
+    # Livres: {"id", "titulo", "observacao", "criado_em", "feito_em"} ("" = em aberto).
+    LEMBRETES: {"contas": {"pagas": {}}, "livres": {"observacao": "", "criado_em": "", "feito_em": ""}},
+    # Categorias: {"id", "nome", "comandos": [{"id", "nome", "texto"}]}.
+    COMANDOS: {"categorias": {"comandos": []}},
 }
 
 
-def completar_item(arquivo: str, item: dict) -> dict:
-    """O item com os campos que faltarem (cópia: o padrão nunca é alterado por um item)."""
-    return {**copy.deepcopy(ITENS[arquivo][1]), **item}
+def completar_item(arquivo: str, item: dict, lista: str | None = None) -> dict:
+    """O item com os campos que faltarem (cópia: o padrão nunca é alterado por um item).
+
+    `lista` só é preciso quando o arquivo tem mais de uma lista.
+    """
+    listas = ITENS[arquivo]
+    padrao = listas[lista] if lista else next(iter(listas.values()))
+    return {**copy.deepcopy(padrao), **item}
 
 
 # O que vai no backup. O cache das notas fica de fora: ele é refeito lendo os PDFs.

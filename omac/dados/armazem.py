@@ -49,9 +49,8 @@ class Armazem:
         dados = copy.deepcopy(info["padrao"])
         if lidos is not None:
             dados.update(migracoes.atualizar(nome, lidos))
-        if nome in esquema.ITENS:
-            chave = esquema.ITENS[nome][0]
-            dados[chave] = [esquema.completar_item(nome, item) for item in dados[chave]]
+        for lista in esquema.ITENS.get(nome, {}):
+            dados[lista] = [esquema.completar_item(nome, item, lista) for item in dados[lista]]
         dados["versao"] = info["versao"]
         self._memoria[nome] = (marca, dados)
         return dados
