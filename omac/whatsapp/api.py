@@ -2,18 +2,18 @@
 
 from __future__ import annotations
 
-import json
-import threading
 from contextlib import contextmanager
 from datetime import date, timedelta
 from pathlib import Path
 
-from .. import config, sistema
+from .. import sistema
+from ..contatos import contatos as ct
+from ..dados import esquema
+from ..inicio.registro import widget
 from ..notas.leitor import Nota, ler_nome_arquivo
 from ..nucleo import ApiBase, seguro
 from ..planilha import MESES
 from ..texto import normalizar
-from . import dados as armazem
 from . import lembretes as lb
 from . import mensagens as msg
 
@@ -25,36 +25,35 @@ def responsavel(nota: Nota) -> str:
 
 
 class WhatsappApi(ApiBase):
-    def __init__(self):
-        super().__init__()
-        self._trava_dados = threading.Lock()
+    @contextmanager
+    def _contas(self):
+        """lembretes.json, com cada conta completa (pagas e desde quando é acompanhada)."""
+        with self._armazem.editar(esquema.LEMBRETES) as d:
+            hoje = date.today()
+            d["contas"] = [lb.completar_conta(c, hoje) for c in d["contas"]]
+            yield d
 
     @contextmanager
-    def _dados(self):
-        with self._trava_dados:
-            caminho = config.caminho_whatsapp()
-            dados = armazem.carregar(caminho)
-            antes = json.dumps(dados, sort_keys=True)
-            hoje = date.today()
-            if not dados["inicio"]:
-                dados["inicio"] = hoje.isoformat()
-            # Depois do "antes": a data em que cada conta começou a ser acompanhada é gravada uma vez só.
-            dados["contas"] = [lb.completar_conta(c, hoje) for c in dados["contas"]]
-            yield dados
-            if json.dumps(dados, sort_keys=True) != antes:
-                armazem.salvar(caminho, dados)
+    def _enviadas(self):
+        with self._armazem.editar(esquema.NOTAS_ENVIADAS) as d:
+            if not d["inicio"]:
+                d["inicio"] = date.today().isoformat()
+            yield d
 
     def _notas(self) -> list[Nota]:
-        pasta = self._cfg["pasta_notas"]
-        if not pasta or not Path(pasta).is_dir():
-            raise ValueError("Escolha a pasta das notas primeiro.")
-        return self._ler_notas(pasta).notas
+        return self._servico_notas.atual().notas
 
     def _nota(self, numero: int) -> Nota:
         nota = next((n for n in self._notas() if n.numero == int(numero)), None)
         if nota is None:
             raise ValueError(f"Não encontrei a nota nº {numero} na pasta.")
         return nota
+
+    def _destinatario(self) -> dict | None:
+        """O contato que recebe os lembretes de contas."""
+        destino = self._armazem.ler(esquema.LEMBRETES)["destinatario"]
+        contatos = self._armazem.ler(esquema.CONTATOS)["contatos"]
+        return next((c for c in contatos if c["id"] == destino), None) if destino else None
 
     def _abrir_conversa(self, telefone: str, texto: str) -> None:
         msg.abrir_conversa(telefone, texto, self._cfg["whatsapp_destino"])
@@ -66,7 +65,7 @@ class WhatsappApi(ApiBase):
         if not self._cfg["pasta_notas"]:
             return {"sem_pasta": True}
         notas = self._notas()
-        with self._dados() as d:
+        with self._enviadas() as d:
             inicio, enviadas = d["inicio"], d["enviadas"]
         pendentes = [n for n in notas if n.emissao.isoformat() >= inicio and str(n.numero) not in enviadas]
         pendentes.sort(key=lambda n: n.numero)
@@ -84,15 +83,14 @@ class WhatsappApi(ApiBase):
 
     @seguro
     def whatsapp_enviadas(self):
-        with self._dados() as d:
+        with self._enviadas() as d:
             return {"numeros": [int(n) for n in d["enviadas"]]}
 
     @seguro
     def whatsapp_preparar_nota(self, numero: int):
         nota = self._nota(numero)
         nome = responsavel(nota)
-        with self._dados() as d:
-            contato = d["contatos"].get(normalizar(nome), {})
+        contato = ct.por_nome(self._lista_de_contatos(), nome) or {}
         return {
             "numero": nota.numero,
             "nome": nome,
@@ -106,8 +104,10 @@ class WhatsappApi(ApiBase):
         telefone = msg.normalizar_telefone(telefone)
         nome = responsavel(nota)
         caminho = Path(self._cfg["pasta_notas"]) / nota.arquivo
-        with self._dados() as d:
-            d["contatos"][normalizar(nome)] = {"nome": nome, "telefone": telefone}
+        # Quem recebe a nota vira contato (ou ganha o telefone que acabou de ser usado).
+        with self._armazem.editar(esquema.CONTATOS) as d:
+            contatos = d["contatos"]
+            ct.obter(contatos, nome)["telefone"] = telefone
 
         # O link do WhatsApp só leva texto: o PDF vai pela área de transferência.
         copiado = sistema.copiar_arquivo(caminho)
@@ -118,36 +118,12 @@ class WhatsappApi(ApiBase):
 
     @seguro
     def whatsapp_marcar_enviada(self, numero: int, enviada: bool = True):
-        with self._dados() as d:
+        with self._enviadas() as d:
             if enviada:
                 d["enviadas"][str(int(numero))] = date.today().isoformat()
             else:
                 d["enviadas"].pop(str(int(numero)), None)
         return {}
-
-    # --- Contatos ---------------------------------------------------------------
-
-    @seguro
-    def whatsapp_contatos(self):
-        with self._dados() as d:
-            contatos = sorted(d["contatos"].values(), key=lambda c: normalizar(c["nome"]))
-        return {"contatos": contatos}
-
-    @seguro
-    def whatsapp_salvar_contato(self, nome: str, telefone: str):
-        nome = " ".join(str(nome).split())
-        if not nome:
-            return {"erro": "Diga o nome do contato."}
-        telefone = msg.normalizar_telefone(telefone)
-        with self._dados() as d:
-            d["contatos"][normalizar(nome)] = {"nome": nome, "telefone": telefone}
-        return self.whatsapp_contatos()
-
-    @seguro
-    def whatsapp_apagar_contato(self, nome: str):
-        with self._dados() as d:
-            d["contatos"].pop(normalizar(nome), None)
-        return self.whatsapp_contatos()
 
     # --- Contas e lembretes -----------------------------------------------------
 
@@ -173,38 +149,39 @@ class WhatsappApi(ApiBase):
 
     @seguro
     def whatsapp_contas(self):
-        with self._dados() as d:
+        with self._contas() as d:
             return self._vista_contas(d["contas"])
 
     @seguro
     def whatsapp_salvar_conta(self, conta: dict, antiga: dict | None = None):
-        with self._dados() as d:
+        with self._contas() as d:
             d["contas"] = lb.adicionar_conta(d["contas"], conta, antiga)
             return self._vista_contas(d["contas"])
 
     @seguro
     def whatsapp_apagar_conta(self, nome: str):
-        with self._dados() as d:
+        with self._contas() as d:
             d["contas"] = lb.remover_conta(d["contas"], nome)
             return self._vista_contas(d["contas"])
 
     @seguro
     def whatsapp_marcar_paga(self, nome: str, mes: str, paga: bool = True):
         """`mes` é "AAAA-MM", o mês do vencimento."""
-        with self._dados() as d:
+        with self._contas() as d:
             lb.marcar_paga(lb.buscar_conta(d["contas"], nome), str(mes)[:7], bool(paga), date.today())
             return self._vista_contas(d["contas"])
 
     @seguro
     def whatsapp_texto_lembrete(self, contas: list[dict]):
         """Refaz a mensagem do lembrete sem as contas que acabaram de ser marcadas como pagas."""
-        return {"mensagem": msg.mensagem_de_lembrete(self._cfg["assistente_nome"], self._cfg["lembrete_nome"], contas)}
+        destino = self._destinatario()
+        return {"mensagem": msg.mensagem_de_lembrete(self._cfg["assistente_nome"], destino["nome"] if destino else "", contas)}
 
     @seguro
     def whatsapp_lembretes(self, forcar: bool = False):
         """Lembretes da primeira abertura do dia. `forcar` mostra os de hoje de novo."""
         hoje = date.today()
-        with self._dados() as d:
+        with self._contas() as d:
             ultima = date.fromisoformat(d["ultima_abertura"]) if d["ultima_abertura"] else None
             if not forcar:
                 if ultima == hoje:
@@ -214,7 +191,8 @@ class WhatsappApi(ApiBase):
             contas = lb.contas_a_avisar(d["contas"], hoje, desde)
 
         fechamento = lb.aviso_de_fechamento(self._cfg["lembrete_fechamento_dia"], hoje, desde)
-        destinatario = self._cfg["lembrete_nome"]
+        destino = self._destinatario()
+        destinatario = destino["nome"] if destino else ""
         return {
             "mostrar": bool(contas or fechamento),
             "contas": contas,
@@ -225,7 +203,53 @@ class WhatsappApi(ApiBase):
 
     @seguro
     def whatsapp_enviar_lembrete(self, mensagem: str):
-        if not self._cfg["lembrete_telefone"]:
-            return {"sem_contato": True}
-        self._abrir_conversa(msg.normalizar_telefone(self._cfg["lembrete_telefone"]), mensagem)
+        destino = self._destinatario()
+        if not destino or not destino["telefone"]:
+            return {"sem_contato": True, "nome": destino["nome"] if destino else ""}
+        self._abrir_conversa(destino["telefone"], mensagem)
         return {}
+
+    # --- Quem recebe os lembretes (Configurações) --------------------------------------------
+
+    @seguro
+    def whatsapp_destinatario(self):
+        destino = self._destinatario()
+        return {"contato": destino, "nomes": sorted(self._nomes_dos_contatos().values(), key=normalizar)}
+
+    @seguro
+    def whatsapp_definir_destinatario(self, nome: str):
+        """Escolhe o contato pelo nome; "" desliga. Um nome que não existe vira contato novo."""
+        nome = " ".join(str(nome or "").split())
+        contato_id = ""
+        if nome:
+            with self._armazem.editar(esquema.CONTATOS) as d:
+                contatos = d["contatos"]
+                contato_id = ct.obter(contatos, nome)["id"]
+        with self._armazem.editar(esquema.LEMBRETES) as d:
+            d["destinatario"] = contato_id
+        return self.whatsapp_destinatario()
+
+    # --- Widget do Início --------------------------------------------------------------------
+
+    @widget("lembretes", "Lembretes", ordem=20)
+    def _widget_lembretes(self, hoje: date) -> dict:
+        with self._contas() as d:
+            contas = d["contas"]
+        anterior = hoje.replace(day=1) - timedelta(days=1)
+        abertas = []
+        for c in contas:
+            if lb.situacao_no_mes(c, hoje.year, hoje.month, hoje) == lb.PAGA:
+                continue
+            vencimento = lb.vencimento_no_mes(c, hoje.year, hoje.month)
+            abertas.append({"nome": c["nome"], "mes": f"{hoje:%Y-%m}", "vencimento": vencimento.isoformat(),
+                            "venceu": vencimento < hoje, "perto": vencimento <= hoje + timedelta(days=1)})
+        abertas.sort(key=lambda c: c["vencimento"])
+        notas = self.whatsapp_a_enviar()
+        return {
+            "abertas": abertas,
+            "total": len(contas),
+            "nao_pagas_mes_passado": [c["nome"] for c in contas
+                                      if lb.situacao_no_mes(c, anterior.year, anterior.month, hoje) == lb.NAO_PAGA],
+            "notas_enviar": {"sem_pasta": True} if notas.get("sem_pasta") else (
+                {"erro": notas["erro"]} if "erro" in notas else {"qtd": len(notas["notas"])}),
+        }

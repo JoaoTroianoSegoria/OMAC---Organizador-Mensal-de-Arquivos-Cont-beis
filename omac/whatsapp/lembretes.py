@@ -4,7 +4,7 @@ Cada conta avisa no dia anterior ao vencimento e no próprio dia. Quem ficou com
 app fechado nesses dias recebe o aviso na próxima vez que abrir. Conta marcada como
 paga naquele mês não avisa mais.
 
-Como na ficha de pagamentos, nada é reescrito na virada do mês: conta sem marcar
+Como na ficha de atendimentos, nada é reescrito na virada do mês: conta sem marcar
 fica "em aberto" até o mês acabar e depois aparece como "não paga".
 """
 
