@@ -8,6 +8,8 @@ from functools import wraps
 from pathlib import Path
 
 from . import APP_NOME, APP_NOME_COMPLETO, __version__, config, sistema
+from .dados import Armazem, migracoes
+from .notas.servico import ServicoNotas
 
 CHAVES_DE_PASTA = {"pasta_notas", "pasta_extratos"}
 
@@ -41,8 +43,14 @@ class ApiBase:
 
     def __init__(self):
         self._janela = None
+        pasta = config.pasta_dados()
+        # Antes de ler qualquer coisa: passa os dados de uma versão antiga para o formato atual.
+        erro = migracoes.preparar(pasta)
+        self._armazem = Armazem(pasta)
+        self._armazem.bloqueio = erro
         self._cfg = config.carregar()
         self._trava = threading.Lock()
+        self._servico_notas = ServicoNotas(lambda: self._cfg["pasta_notas"], self._progresso)
 
     @seguro
     def estado(self):
@@ -51,6 +59,7 @@ class ApiBase:
             "nome": APP_NOME,
             "nome_completo": APP_NOME_COMPLETO,
             "config": self._cfg,
+            "erro_dados": self._armazem.bloqueio,
         }
 
     @seguro

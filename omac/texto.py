@@ -33,3 +33,17 @@ def valor_em_centavos(texto) -> int | None:
 
 def nome_limpo(texto) -> str:
     return " ".join(str(texto or "").split())
+
+
+def mesma_pessoa(nome_a: str, nome_b: str) -> bool:
+    """Um dos nomes pode ter um sobrenome a mais ou a menos que o outro.
+
+    Com uma palavra só, precisa ser igual: "Pedro" não pode achar qualquer Pedro.
+    """
+    a, b = normalizar(nome_a).split(), normalizar(nome_b).split()
+    if not a or not b:
+        return False
+    if a == b:
+        return True
+    menor, maior = sorted((a, b), key=len)
+    return len(menor) >= 2 and menor[0] == maior[0] and set(menor) <= set(maior)

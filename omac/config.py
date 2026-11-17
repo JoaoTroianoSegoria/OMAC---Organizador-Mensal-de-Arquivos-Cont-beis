@@ -2,15 +2,17 @@
 
 from __future__ import annotations
 
-import json
 import os
 import sys
 from pathlib import Path
 
 from . import sistema
-from .armazem import salvar_json
+from .dados.arquivo import DadosIlegiveis, ler_json, salvar_json
+
+VERSAO = 2  # 2 = 1.6.0 (sem o telefone dos lembretes, que virou contato)
 
 PADRAO = {
+    "versao": VERSAO,
     "pasta_notas": "",
     "pasta_extratos": "",
     "visual": "bonito",  # "bonito" (liquid glass) | "otimizado"
@@ -22,29 +24,24 @@ PADRAO = {
     "pasta_saida": "",
     "assistente_nome": "",  # assina as mensagens: "*Assistente Fulano:*"
     "whatsapp_destino": "app",  # "app" (instalado) | "web" (navegador)
-    "lembrete_nome": "",  # quem recebe os lembretes de contas
-    "lembrete_telefone": "",
     "lembrete_fechamento_dia": 1,  # dia do mês para lembrar do fechamento; 0 = desligado
     "chave_pix": "",  # vai na mensagem de cobrança da manutenção
-    "tratamentos": ["Limpeza", "Manutenção", "Botox"],  # sugestões da ficha de pagamentos
+    "tratamentos": ["Limpeza", "Manutenção", "Botox"],  # sugestões da ficha de atendimentos
     "avisos_recolhidos": [],  # faixas minimizadas: "notas", "extrato"
     "atualizacao_automatica": True,  # procura versão nova ao abrir (instalar é sempre opcional)
     "atualizacao_adiada_em": "",  # dia em que a pessoa clicou em "Agora não"
     "abrir_em": "inicio",  # tela ao abrir: "inicio" | "notas"
-    "inicio_cartoes": [],  # ordem e escolhas dos cartões da tela inicial (vazio = padrão)
+    "inicio_cartoes": [],  # ordem e escolhas dos widgets do Início (vazio = padrão)
+    # Backup
+    "backup_pasta": "",
+    "backup_automatico": False,
+    "backup_frequencia": "semana",  # "dia" | "semana" | "mes"
+    "backup_dia_semana": 0,  # 0 = segunda ... 6 = domingo
+    "backup_dia_mes": 1,  # 1 a 28
+    "backup_arquivos": False,  # guardar também as notas e os extratos
+    "backup_ultimo": "",  # data e hora do último backup que deu certo
+    "backup_erro": "",  # o que deu errado na última tentativa automática
 }
-
-# Cartões da tela inicial, na ordem padrão. "largo" ocupa a linha toda.
-CARTOES_INICIO = [
-    {"id": "hoje", "visivel": True, "largo": True},
-    {"id": "contas", "visivel": True, "largo": False},
-    {"id": "orto", "visivel": True, "largo": False},
-    {"id": "ficha", "visivel": True, "largo": False},
-    {"id": "notas_enviar", "visivel": True, "largo": False},
-    {"id": "fechamento", "visivel": True, "largo": False},
-    {"id": "avisos", "visivel": True, "largo": False},
-    {"id": "resumo", "visivel": True, "largo": True},
-]
 
 _VALIDOS = {
     "visual": {"bonito", "otimizado"},
@@ -52,6 +49,7 @@ _VALIDOS = {
     "formato": {"xlsx", "csv"},
     "whatsapp_destino": {"app", "web"},
     "abrir_em": {"inicio", "notas"},
+    "backup_frequencia": {"dia", "semana", "mes"},
 }
 
 
@@ -66,33 +64,19 @@ def caminho_cache() -> Path:
     return pasta_dados() / "cache-notas.json"
 
 
-def caminho_whatsapp() -> Path:
-    return pasta_dados() / "whatsapp.json"
-
-
 def caminho_regras() -> Path:
     return pasta_dados() / "regras-extrato.json"
 
 
-def caminho_agendamentos() -> Path:
-    return pasta_dados() / "agendamentos.json"
-
-
-def caminho_pagamentos() -> Path:
-    return pasta_dados() / "pagamentos.json"
-
-
 def carregar() -> dict:
     cfg = dict(PADRAO)
-    arquivo = pasta_dados() / "config.json"
     try:
-        cfg.update(json.loads(arquivo.read_text(encoding="utf-8")))
-    except FileNotFoundError:
-        # Primeira vez: em PC fraco já começa no modo otimizado.
-        if sistema.pc_modesto():
-            cfg["visual"] = "otimizado"
-    except (OSError, ValueError):
-        pass
+        lidos = ler_json(pasta_dados() / "config.json", "As configurações")
+    except DadosIlegiveis:
+        lidos = {}  # configuração estragada: volta ao padrão (os dados ficam em outros arquivos)
+    if lidos is None and sistema.pc_modesto():
+        cfg["visual"] = "otimizado"  # primeira vez num PC fraco: já começa no modo otimizado
+    cfg.update(lidos or {})
     return normalizar(cfg)
 
 
@@ -111,16 +95,20 @@ def normalizar(cfg: dict) -> dict:
         limpo["escala_fonte"] = min(2.0, max(1.0, float(limpo["escala_fonte"])))
     except (TypeError, ValueError):
         limpo["escala_fonte"] = 1.0
-    for chave in ("alto_contraste", "reduzir_movimento", "atualizacao_automatica"):
+    limpo["versao"] = VERSAO
+    for chave in ("alto_contraste", "reduzir_movimento", "atualizacao_automatica",
+                  "backup_automatico", "backup_arquivos"):
         limpo[chave] = bool(limpo[chave])
     for chave in ("pasta_notas", "pasta_extratos", "pasta_saida",
-                  "assistente_nome", "lembrete_nome", "lembrete_telefone", "chave_pix",
-                  "atualizacao_adiada_em"):
+                  "assistente_nome", "chave_pix", "atualizacao_adiada_em",
+                  "backup_pasta", "backup_ultimo", "backup_erro"):
         limpo[chave] = str(limpo[chave] or "")
     try:
         limpo["lembrete_fechamento_dia"] = min(28, max(0, int(limpo["lembrete_fechamento_dia"])))
     except (TypeError, ValueError):
         limpo["lembrete_fechamento_dia"] = PADRAO["lembrete_fechamento_dia"]
+    limpo["backup_dia_semana"] = _inteiro(limpo["backup_dia_semana"], 0, 6, 0)
+    limpo["backup_dia_mes"] = _inteiro(limpo["backup_dia_mes"], 1, 28, 1)
     limpo["tratamentos"] = _lista_de_nomes(limpo["tratamentos"], PADRAO["tratamentos"])
     limpo["inicio_cartoes"] = _cartoes(limpo["inicio_cartoes"])
     recolhidos = limpo["avisos_recolhidos"]
@@ -143,13 +131,19 @@ def _lista_de_nomes(valor, padrao: list[str]) -> list[str]:
     return limpos
 
 
+def _inteiro(valor, menor: int, maior: int, padrao: int) -> int:
+    try:
+        return min(maior, max(menor, int(valor)))
+    except (TypeError, ValueError):
+        return padrao
+
+
 def _cartoes(valor) -> list[dict]:
-    """Mantém a ordem e as escolhas da pessoa; cartão novo de uma versão futura entra no fim."""
-    padrao = {c["id"]: c for c in CARTOES_INICIO}
+    """Só confere o formato. Quais widgets existem quem sabe é o Início (inicio/registro.py)."""
     escolhidos, vistos = [], set()
     for item in valor if isinstance(valor, list) else []:
-        if isinstance(item, dict) and item.get("id") in padrao and item["id"] not in vistos:
+        if isinstance(item, dict) and isinstance(item.get("id"), str) and item["id"] not in vistos:
             vistos.add(item["id"])
             escolhidos.append({"id": item["id"], "visivel": bool(item.get("visivel", True)),
                                "largo": bool(item.get("largo", False))})
-    return escolhidos + [dict(c) for c in CARTOES_INICIO if c["id"] not in vistos]
+    return escolhidos
