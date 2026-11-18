@@ -361,7 +361,21 @@ def _destino(p):
 
 def test_sem_escolha_o_destino_e_o_proprio_paciente(api):
     assert _destino(_novo(api)["ativos"][0]) == {"nome": "Maria Exemplo", "telefone": TEL, "papel": ""}
-    assert _destino(_crianca(api, nome="Ana Exemplo"))["nome"] == "Ana Exemplo"
+    com_telefone = _crianca(api, nome="Ana Exemplo", telefone="(61) 90000-0000")
+    assert _destino(com_telefone)["nome"] == "Ana Exemplo"
+
+
+def test_sem_telefone_e_sem_escolha_vai_para_o_responsavel_com_telefone(api):
+    p = _crianca(api)  # Pedro não tem telefone; a mãe tem
+    assert _destino(p) == {"nome": "Helena Exemplo", "telefone": TEL_MAE, "papel": "mãe"}
+
+
+def test_lista_mostra_todos_os_responsaveis(api):
+    p = _crianca(api, telefone="(61) 90000-0000")
+    assert [(r["nome"], r["papel"]) for r in p["responsaveis"]] == [
+        ("Helena Exemplo", "mãe"), ("Carlos Exemplo", "pai")]
+    assert p["destino"]["papel"] == ""  # as mensagens continuam indo para o próprio paciente
+    assert _novo(api)["ativos"][0]["responsaveis"] == []
 
 
 @pytest.mark.parametrize("papel, nome, tel", [("mãe", "Helena Exemplo", TEL_MAE), ("pai", "Carlos Exemplo", TEL_PAI)])

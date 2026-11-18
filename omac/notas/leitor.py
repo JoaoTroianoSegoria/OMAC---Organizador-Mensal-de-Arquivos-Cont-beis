@@ -92,6 +92,13 @@ def ler_nome_arquivo(nome: str) -> tuple[int, str] | None:
     return int(m.group("numero")), paciente
 
 
+
+def responsavel(nota: Nota) -> str:
+    """Quem recebe a nota. O nome do arquivo é o do responsável, mesmo com dependente."""
+    lido = ler_nome_arquivo(nota.arquivo)
+    return lido[1] if lido else nota.paciente
+
+
 # --- Conteúdo do PDF -------------------------------------------------------
 
 _RE_NUMERO = re.compile(r"N[ÚU]MERO DA NFS-E\s*\n\s*(\d+)", re.IGNORECASE)

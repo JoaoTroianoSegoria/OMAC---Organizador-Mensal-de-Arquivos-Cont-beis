@@ -122,6 +122,7 @@ const NOMES_DOS_ARQUIVOS = {
   "lembretes.json": "Contas e lembretes",
   "notas-enviadas.json": "Notas já enviadas",
   "comandos.json": "Comandos",
+  "modelos.json": "Modelos",
   "regras-extrato.json": "Regras do extrato",
 };
 
@@ -131,7 +132,12 @@ async function escolherBackupParaRestaurar() {
   if (r.erro) return mostrarToast(r.erro, { erro: true });
   backup.restaurando = r;
   $("#bk-restaurar-texto").textContent = `Backup de ${r.data ? quandoFoi(r.data) : "data desconhecida"}, feito na versão ${r.versao || "?"} do OMAC. Ele tem:`;
-  $("#bk-restaurar-arquivos").replaceChildren(...r.arquivos.map((n) => texto("li", NOMES_DOS_ARQUIVOS[n] || n)));
+  // Os arquivos dos modelos (modelos/…) aparecem numa linha só.
+  const dados = r.arquivos.filter((n) => !n.startsWith("modelos/"));
+  const qtdModelos = r.arquivos.length - dados.length;
+  const linhas = dados.map((n) => texto("li", NOMES_DOS_ARQUIVOS[n] || n));
+  if (qtdModelos) linhas.push(texto("li", plural(qtdModelos, "arquivo de modelo", "arquivos de modelos")));
+  $("#bk-restaurar-arquivos").replaceChildren(...linhas);
   $("#bk-restaurar-erro").hidden = true;
   $("#bk-restaurar").showModal();
 }
@@ -150,7 +156,7 @@ async function restaurarBackup() {
 }
 
 /* Depois de recarregar, diz que deu certo e onde ficaram os dados de antes. */
-document.addEventListener("DOMContentLoaded", () => {
+omacQuandoPronto(() => {
   let guardados = null;
   try {
     guardados = sessionStorage.getItem("omac-restaurado");

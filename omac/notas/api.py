@@ -4,9 +4,13 @@ from __future__ import annotations
 
 from pathlib import Path
 
+from datetime import date
+
 from .. import config, sistema
 from ..nucleo import ApiBase, seguro
 from . import exportar as exp
+from . import pesquisa
+from .leitor import responsavel
 
 
 class NotasApi(ApiBase):
@@ -27,6 +31,26 @@ class NotasApi(ApiBase):
             "canceladas_movidas": v.canceladas_movidas,
             "competencias": v.competencias(),
             "qtd_pasta": len(v.notas),
+        }
+
+    @seguro
+    def notas_pesquisar(self, texto: str, escopo: str, ano: int, mes: int, de: str = "", ate: str = ""):
+        """Pesquisa no mês escolhido, no ano todo (a pasta inteira) ou num período (de–até)."""
+        v = self._servico_notas.ja_lida() or self._servico_notas.atual()
+        if escopo == "mes":
+            notas = v.do_mes(int(ano), int(mes))
+            inicio = fim = None
+        elif escopo == "periodo":
+            inicio, fim = _data_ou_nada(de), _data_ou_nada(ate)
+            if inicio and fim and inicio > fim:
+                inicio, fim = fim, inicio
+            notas = v.notas
+        else:
+            notas, inicio, fim = v.notas, None, None
+        achadas = pesquisa.filtrar(notas, texto, inicio, fim)
+        return {
+            "notas": [_nota_para_js(n) for n in achadas],
+            "total_centavos": sum(int(n.valor * 100) for n in achadas),
         }
 
     @seguro
@@ -71,5 +95,13 @@ def _nota_para_js(n) -> dict:
         "competencia": n.competencia.isoformat(),
         "arquivo": n.arquivo,
         "dependente": n.dependente,
+        "responsavel": responsavel(n),
         "avisos": n.avisos,
     }
+
+
+def _data_ou_nada(texto: str) -> date | None:
+    try:
+        return date.fromisoformat(texto) if texto else None
+    except ValueError:
+        return None

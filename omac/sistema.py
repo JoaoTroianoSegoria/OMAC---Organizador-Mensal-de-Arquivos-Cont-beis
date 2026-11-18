@@ -28,6 +28,22 @@ def abrir(caminho: str | Path) -> None:
         subprocess.Popen(["xdg-open", caminho])
 
 
+def imprimir(caminho: str | Path) -> bool:
+    """Manda o arquivo para a impressora padrão pelo programa dele (Word, leitor de PDF…).
+
+    Devolve False quando o sistema não sabe imprimir esse tipo direto: aí o arquivo é aberto
+    e a pessoa imprime com Ctrl + P.
+    """
+    if sys.platform == "win32":
+        try:
+            os.startfile(str(caminho), "print")  # noqa: S606
+            return True
+        except OSError:
+            pass
+    abrir(caminho)
+    return False
+
+
 def mostrar_na_pasta(caminho: str | Path) -> None:
     caminho = Path(caminho)
     if sys.platform == "win32":
@@ -51,21 +67,66 @@ def abrir_link(url: str) -> None:
 
 def copiar_arquivo(caminho: str | Path) -> bool:
     """Põe o arquivo na área de transferência, como o Ctrl+C do Explorador."""
-    if sys.platform != "win32":
+    return copiar_arquivos([caminho])
+
+
+def copiar_arquivos(caminhos: list[str | Path]) -> bool:
+    """Põe vários arquivos juntos na área de transferência: um Ctrl+V cola todos."""
+    if sys.platform != "win32" or not caminhos:
         return False
-    # O caminho vai pelo ambiente para não precisar escapar aspas no comando.
+    # Os caminhos vão pelo ambiente, um por linha, para não precisar escapar aspas no comando.
     try:
         resultado = subprocess.run(
             ["powershell", "-NoProfile", "-NonInteractive", "-Command",
-             "Set-Clipboard -LiteralPath $env:OMAC_ARQUIVO"],
-            env={**os.environ, "OMAC_ARQUIVO": str(caminho)},
+             "Set-Clipboard -LiteralPath ($env:OMAC_ARQUIVOS -split \"`n\")"],
+            env={**os.environ, "OMAC_ARQUIVOS": "\n".join(str(c) for c in caminhos)},
             creationflags=subprocess.CREATE_NO_WINDOW,
             capture_output=True,
-            timeout=20,
+            timeout=30,
         )
     except (OSError, subprocess.SubprocessError):
         return False  # quem chamou mostra o arquivo na pasta
     return resultado.returncode == 0
+
+
+def colar_quando_abrir(titulo: str = "WhatsApp", limite: float = 15.0, espera: float = 1.5) -> bool:
+    """Experimental: espera a janela do WhatsApp do computador ficar na frente e aperta Ctrl+V.
+
+    Só cola se a janela da frente for mesmo o WhatsApp (título igual), para nunca colar em
+    outro lugar. O Enter é sempre da pessoa. Devolve se colou.
+    """
+    if sys.platform != "win32":
+        return False
+    import ctypes
+    import time
+
+    user32 = ctypes.windll.user32
+
+    def janela_da_frente():
+        hwnd = user32.GetForegroundWindow()
+        buf = ctypes.create_unicode_buffer(256)
+        user32.GetWindowTextW(hwnd, buf, 256)
+        return hwnd, buf.value.strip()
+
+    fim = time.monotonic() + limite
+    while time.monotonic() < fim:
+        hwnd, nome = janela_da_frente()
+        if nome == titulo:
+            time.sleep(espera)  # a conversa termina de abrir
+            if janela_da_frente()[0] != hwnd:
+                return False  # a pessoa mudou de janela: não cola
+            ctrl, v, solta = 0x11, 0x56, 0x2
+            user32.keybd_event(ctrl, 0, 0, 0)
+            user32.keybd_event(v, 0, 0, 0)
+            user32.keybd_event(v, 0, solta, 0)
+            user32.keybd_event(ctrl, 0, solta, 0)
+            return True
+        time.sleep(0.25)
+    return False
+
+
+def colar_sozinho_disponivel() -> bool:
+    return sys.platform == "win32"
 
 
 _CHAVE_INICIO = r"Software\Microsoft\Windows\CurrentVersion\Run"

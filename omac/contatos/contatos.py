@@ -151,9 +151,15 @@ def destinos(contatos: list[dict], contato: dict) -> list[dict]:
 
 
 def destino_escolhido(contatos: list[dict], contato: dict) -> dict:
-    """A última escolha, ou o próprio contato."""
+    """A última escolha. Sem escolha: o próprio contato, ou, se ele não tem telefone (criança),
+    o primeiro responsável que tem."""
     lista = destinos(contatos, contato)
-    return next((d for d in lista if d["contato_id"] == contato["envia_para"]), lista[0])
+    escolhido = next((d for d in lista if d["contato_id"] == contato["envia_para"]), None)
+    if escolhido:
+        return escolhido
+    if not lista[0]["telefone"]:
+        return next((d for d in lista[1:] if d["telefone"]), lista[0])
+    return lista[0]
 
 
 # --- Apagar e desfazer ----------------------------------------------------------------------

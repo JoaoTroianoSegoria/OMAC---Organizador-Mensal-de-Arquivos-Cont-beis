@@ -133,10 +133,13 @@ def test_destinos_e_ultima_escolha():
     pedro, helena = contatos
     pedro["responsaveis"] = [{"contato_id": helena["id"], "papel": "mae"}]
     assert [d["papel"] for d in ct.destinos(contatos, pedro)] == ["", "mãe"]
-    assert ct.destino_escolhido(contatos, pedro)["nome"] == "Pedro"
+    assert ct.destino_escolhido(contatos, pedro)["nome"] == "Helena"  # Pedro não tem telefone
     pedro["envia_para"] = helena["id"]
     assert ct.destino_escolhido(contatos, pedro)["telefone"] == TEL
     pedro["envia_para"] = "sumiu"
+    # Pedro sem telefone: sem escolha válida, vai para quem tem telefone.
+    assert ct.destino_escolhido(contatos, pedro)["nome"] == "Helena"
+    pedro["telefone"] = "5561988880000"
     assert ct.destino_escolhido(contatos, pedro)["nome"] == "Pedro"
 
 

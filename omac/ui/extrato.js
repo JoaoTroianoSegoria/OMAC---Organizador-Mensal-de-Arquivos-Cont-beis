@@ -1,32 +1,30 @@
-/* OMAC — módulo de extrato bancário. */
+/* OMAC — extrato bancário: as abas "Extrato bancário" e "Regras do extrato" do Relatório mensal. */
 "use strict";
 
 const extrato = {
   dados: null,
   chave: "",
   carregando: false,
-  aba: "lancamentos",
   filtro: "todos",
   editando: null, // regra que o formulário está alterando
   voltarParaLancamentos: false,
 };
 const chaveExtrato = () => `${estado.ano}-${estado.mes}-${estado.cfg.pasta_extratos}`;
 
+/* Não é uma tela: o Relatório mensal (relatorio.js) chama quando a aba aparece. */
 modulos.extrato = {
   aoMostrar() {
-    preencherSeletores($("#ext-sel-mes"), $("#ext-sel-ano"), extrato.dados?.meses ?? []);
+    preencherSeletores($("#sel-mes"), $("#sel-ano"), extrato.dados?.meses ?? []);
     if (extrato.chave !== chaveExtrato()) carregarExtrato();
   },
   carregar: carregarExtrato,
   ligar() {
-    $("#ext-atualizar").addEventListener("click", carregarExtrato);
     $("#form-regra").addEventListener("submit", salvarRegra);
   },
 };
 
 Object.assign(acoes, {
   "ext-exportar": exportarFechamento,
-  "ext-aba": (alvo) => mostrarAba(alvo.dataset.aba),
   "ext-filtro": (alvo) => { extrato.filtro = alvo.dataset.filtro; desenharLancamentos(); },
   "ext-criar-regra": (alvo) => criarRegraDaLinha(Number(alvo.dataset.indice)),
   "ext-regra-editar": (alvo) => editarRegra(extrato.dados.regras[Number(alvo.dataset.indice)]),
@@ -41,7 +39,7 @@ async function carregarExtrato() {
   if (!estado.cfg.pasta_extratos) return mostrarSemPasta();
   extrato.carregando = true;
   extrato.chave = chaveExtrato();
-  const btn = $("#ext-atualizar");
+  const btn = $("#rel-atualizar");
   btn.disabled = true;
   btn.classList.add("girando");
   try {
@@ -49,7 +47,7 @@ async function carregarExtrato() {
     if (r.sem_pasta) return mostrarSemPasta();
     if (r.erro) return mostrarToast(r.erro, { erro: true });
     extrato.dados = r;
-    preencherSeletores($("#ext-sel-mes"), $("#ext-sel-ano"), r.meses);
+    if (relatorio.aba !== "notas") preencherSeletores($("#sel-mes"), $("#sel-ano"), r.meses);
     desenharExtrato();
   } finally {
     btn.disabled = false;
@@ -60,17 +58,8 @@ async function carregarExtrato() {
 
 function mostrarSemPasta() {
   $("#ext-sem-pasta").hidden = false;
-  $("#ext-abas").hidden = true;
   $("#ext-painel").hidden = true;
-  $("#ext-regras").hidden = true;
   $("#ext-exportar").disabled = true;
-}
-
-function mostrarAba(aba) {
-  extrato.aba = aba;
-  $$("#ext-abas .escolha").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.aba === aba)));
-  $("#ext-painel").hidden = aba !== "lancamentos";
-  $("#ext-regras").hidden = aba !== "regras";
 }
 
 function desenharExtrato() {
@@ -78,8 +67,7 @@ function desenharExtrato() {
   const nomeMes = `${MESES[estado.mes - 1]} de ${estado.ano}`;
   const vazio = d.lancamentos.length === 0;
   $("#ext-sem-pasta").hidden = true;
-  $("#ext-abas").hidden = false;
-  mostrarAba(extrato.aba);
+  $("#ext-painel").hidden = false;
 
   $("#ext-entradas").textContent = real.format(d.entradas_centavos / 100);
   $("#ext-saidas").textContent = real.format(d.saidas_centavos / 100);
@@ -236,14 +224,14 @@ function limparFormulario() {
   const voltar = extrato.voltarParaLancamentos;
   extrato.voltarParaLancamentos = false;
   preencherFormulario({ sentido: "saida", quando: "", operacao: "" }, false);
-  if (voltar) mostrarAba("lancamentos");
+  if (voltar) mostrarAbaDoRelatorio("extrato");
 }
 
 function criarRegraDaLinha(indice) {
   const l = extrato.dados.lancamentos[indice];
   extrato.voltarParaLancamentos = true;
   preencherFormulario({ sentido: l.sentido, quando: l.descricao || l.tipo, operacao: "" }, false);
-  mostrarAba("regras");
+  mostrarAbaDoRelatorio("regras");
   $("#conteudo").scrollTop = 0;
   $("#regra-operacao").focus();
 }
@@ -307,6 +295,6 @@ registrarWidget("relatorio", {
         f.lancamentos ? "" : "ini-alerta"],
     ];
     corpo.append(texto("p", `${f.nome_mes} de ${f.ano}`, "ini-subtitulo"), numeros(linhas),
-      rodape(botaoIr("Abrir notas", "notas"), botaoIr("Abrir extrato", "extrato")));
+      rodape(botaoIr("Abrir notas", "relatorio", "notas"), botaoIr("Abrir extrato", "relatorio", "extrato")));
   },
 });

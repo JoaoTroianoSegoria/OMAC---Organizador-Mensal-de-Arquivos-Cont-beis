@@ -33,7 +33,10 @@ class TratamentosApi(ApiBase):
         def vista(t: dict) -> dict:
             c = contatos[t["contato_id"]]
             return {**t, "nome": c["nome"], "telefone": c["telefone"], "situacao": orto.situacao(t),
-                    "destino": ct.destino_escolhido(lista_contatos, c)}
+                    "destino": ct.destino_escolhido(lista_contatos, c),
+                    # Todos os responsáveis, para a lista mostrar (não só quem recebe as mensagens).
+                    "responsaveis": [{"contato_id": d["contato_id"], "nome": d["nome"], "papel": d["papel"]}
+                                     for d in ct.destinos(lista_contatos, c)[1:]]}
 
         ordenados = sorted(tratamentos, key=lambda t: normalizar(contatos[t["contato_id"]]["nome"]))
         na_situacao = lambda s: [t for t in ordenados if orto.situacao(t) == s]  # noqa: E731

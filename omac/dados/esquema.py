@@ -17,6 +17,7 @@ ATENDIMENTOS = "atendimentos.json"
 LEMBRETES = "lembretes.json"
 NOTAS_ENVIADAS = "notas-enviadas.json"
 COMANDOS = "comandos.json"
+MODELOS = "modelos.json"
 
 CONFIG = "config.json"
 REGRAS = "regras-extrato.json"
@@ -34,6 +35,8 @@ ARQUIVOS: dict[str, dict] = {
                 "padrao": {"ultima_abertura": "", "destinatario": "", "contas": [], "livres": []}},
     NOTAS_ENVIADAS: {"versao": 1, "conteudo": "As notas já enviadas", "padrao": {"inicio": "", "enviadas": {}}},
     COMANDOS: {"versao": 1, "conteudo": "Os comandos", "padrao": {"categorias": []}},
+    # Os arquivos ficam em modelos/<arquivo> (ver omac/modelos/modelos.py).
+    MODELOS: {"versao": 1, "conteudo": "Os modelos", "padrao": {"modelos": []}},
 }
 
 # Campos de cada item das listas, com o valor padrão: {arquivo: {lista: campos}}. Quem foi
@@ -53,6 +56,8 @@ ITENS: dict[str, dict[str, dict]] = {
     LEMBRETES: {"contas": {"pagas": {}}, "livres": {"observacao": "", "criado_em": "", "feito_em": ""}},
     # Categorias: {"id", "nome", "comandos": [{"id", "nome", "texto"}]}.
     COMANDOS: {"categorias": {"comandos": []}},
+    # Modelos: {"id", "titulo", "arquivo", "nome_original", "criado_em"}.
+    MODELOS: {"modelos": {"nome_original": "", "criado_em": ""}},
 }
 
 

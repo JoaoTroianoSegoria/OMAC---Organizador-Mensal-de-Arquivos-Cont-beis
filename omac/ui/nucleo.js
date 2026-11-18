@@ -40,7 +40,7 @@ const api = () => window.pywebview.api;
 /* ---------- Início ---------- */
 
 /* Um script vazio ou cortado não gera erro nenhum: sem esta conferência, a tela fica muda. */
-const MODULOS_ESPERADOS = ["inicio", "notas", "extrato", "lembretes", "contatos", "tratamentos", "atendimentos",
+const MODULOS_ESPERADOS = ["inicio", "relatorio", "notas", "extrato", "lembretes", "modelos", "contatos", "tratamentos", "atendimentos",
   "backup", "resumo", "atualizacao"];
 
 async function conferirModulos() {
@@ -74,13 +74,15 @@ async function iniciar() {
 
   aplicarConfig();
   ligarEventos();
-  mostrarView(estado.cfg.abrir_em === "notas" ? "notas" : "inicio");
+  // "notas" é o valor antigo de quem abria nas Notas fiscais: hoje é o Relatório mensal.
+  if (estado.cfg.abrir_em === "notas") irPara("relatorio", "notas");
+  else mostrarView("inicio");
   carregarInicioAutomatico();
   Object.values(modulos).forEach((m) => m.aoIniciar?.());
 }
 
-// DOMContentLoaded: espera os scripts dos módulos, que vêm depois deste.
-document.addEventListener("DOMContentLoaded", () => {
+// Espera os scripts dos módulos, que o index.html carrega depois deste.
+omacQuandoPronto(() => {
   if (window.pywebview && window.pywebview.api) iniciar();
   else window.addEventListener("pywebviewready", iniciar, { once: true });
 });
@@ -191,9 +193,8 @@ async function escolherPasta(chave) {
   if (r.erro) return mostrarToast(r.erro, { erro: true });
   estado.cfg = r.config;
   aplicarConfig();
-  const destino = chave === "pasta_extratos" ? "extrato" : "notas";
-  mostrarView(destino);
-  await modulos[destino].carregar();
+  irPara("relatorio", chave === "pasta_extratos" ? "extrato" : "notas");
+  await modulos.relatorio.carregar();
 }
 
 /* ---------- Navegação ---------- */
@@ -391,7 +392,8 @@ function mostrarToast(texto, { erro = false, acoes: botoes = [] } = {}) {
   caixa.className = "toast-acoes";
   for (const [rotulo, fn] of botoes) {
     const b = Object.assign(document.createElement("button"), { className: "btn btn-peq", textContent: rotulo });
-    b.addEventListener("click", fn);
+    // Desfazer vale uma vez só: o aviso sai junto. ("Abrir" e "Mostrar na pasta" ficam.)
+    b.addEventListener("click", rotulo === "Desfazer" ? () => { t.remove(); fn(); } : fn);
     caixa.append(b);
   }
   const fechar = Object.assign(document.createElement("button"), { className: "btn btn-peq btn-icone" });

@@ -7,8 +7,8 @@
 Aplicativo para Windows que automatiza a rotina contábil mensal de uma clínica odontológica.</p>
 
 <p align="center">
-  <img src="docs/capturas/notas-claro.png" alt="Tela de notas fiscais no tema claro" width="49%">
-  <img src="docs/capturas/notas-escuro.png" alt="Tela de notas fiscais no tema escuro" width="49%">
+  <img src="docs/capturas/notas-claro.png" alt="Relatório mensal, aba de notas fiscais, no tema claro" width="49%">
+  <img src="docs/capturas/notas-escuro.png" alt="Relatório mensal, aba de notas fiscais, no tema escuro" width="49%">
 </p>
 
 > Todas as imagens usam **notas de exemplo geradas pelo próprio projeto**. Nenhum dado real de paciente está neste repositório.
@@ -27,9 +27,9 @@ extrato do banco precisavam ser passadas à mão para uma planilha que vai para 
   <img src="docs/capturas/resumo.png" alt="Resumo do ano" width="49%">
 </p>
 
-- **O dia numa tela só, em widgets:** Hoje, Lembretes (contas que vencem, com o botão **Paga** ali mesmo, notas a enviar e lembretes em aberto), Tratamentos, Atendimentos do mês, Relatório mensal (o fechamento do mês anterior), Contatos e Resumo do ano.
+- **O dia numa tela só, em widgets:** Hoje, Lembretes (contas que vencem, com o botão **Paga** ali mesmo, notas a enviar e lembretes em aberto), Tratamentos, Atendimentos do mês, Relatório mensal (o fechamento do mês anterior), Contatos, Resumo do ano e Modelos (com o botão **Imprimir**).
 - **Hoje:** junta o que está para hoje em todos os módulos, as pendências dos meses anteriores e o aviso de backup atrasado ou com falha. Cada linha leva direto para a tela certa.
-- **Personalizável:** no botão **Personalizar** dá para arrastar os widgets (ou usar as setas, pelo teclado), esconder os que não interessam e deixar um widget largo. Nas Configurações escolhe-se abrir o app no Início ou direto nas notas.
+- **Personalizável:** no botão **Personalizar** dá para arrastar os widgets (ou usar as setas, pelo teclado), esconder os que não interessam e deixar um widget largo. Nas Configurações escolhe-se abrir o app no Início ou direto no Relatório mensal.
 
 ### Resumo do ano
 
@@ -37,7 +37,16 @@ extrato do banco precisavam ser passadas à mão para uma planilha que vai para 
 - **Tabela completa:** notas, faturamento, entradas e saídas do banco e o recebido e pendente da ficha de atendimentos.
 - **Mês sem dado fica em branco**, com um aviso de quais meses não têm nota lida. O mês atual não entra na média, porque ainda não acabou.
 
-### Notas fiscais
+### Relatório mensal
+
+Notas fiscais, extrato bancário e as regras do extrato em abas de uma tela só, com **um seletor de mês só**: trocar o mês numa aba vale para as outras.
+
+<p align="center">
+  <img src="docs/capturas/relatorio-pesquisa.png" alt="Pesquisa de notas com três notas escolhidas na ilha de baixo" width="49%">
+  <img src="docs/capturas/relatorio-envio-lote.png" alt="Janela de envio de várias notas juntas" width="49%">
+</p>
+
+#### Notas fiscais
 
 - **Lê a pasta de PDFs das notas do ano** (ex.: `NFS-e 2026`) e monta a planilha do mês em um clique, em **Excel (.xlsx)** ou **CSV**.
 - **Filtra pela data de competência**, não pela de emissão. Uma nota emitida em 03/11 com competência em outubro entra no relatório de outubro.
@@ -45,8 +54,12 @@ extrato do banco precisavam ser passadas à mão para uma planilha que vai para 
 - **Notas canceladas** ficam fora do relatório e são movidas sozinhas para a subpasta `Canceladas`.
 - **Avisos antes de mandar para a contabilidade:** descrição sem "tratamento odontológico", número do arquivo diferente do número da nota, nota repetida, PDF ilegível, nome de arquivo fora do padrão.
 - **Rápido em PC antigo:** cada nota é lida uma única vez (≈5 ms) e fica em cache. Nas próximas vezes, só as notas novas são lidas.
+- **Pesquisa num campo só:** nome do paciente ou do responsável, dependente, número, valor (`150`, `1.500,00`) ou data (`05/10`, `10/2026`). Cada palavra precisa aparecer na nota (`maria 150`). Procura no mês escolhido, no ano todo ou num período (de–até), sempre pela competência.
+- **Escolher várias notas:** uma caixa em cada nota. A escolha não se perde ao pesquisar de novo, e fica numa ilha presa embaixo da tela, com o total, o **x** para tirar uma nota e o botão **Enviar**.
+- **Enviar várias de uma vez:** se as notas são da mesma pessoa, o contato dela (ou de um responsável) já vem escolhido; se são de pessoas diferentes, escolhe-se o contato na lista. Uma mensagem só lista as notas, e **todos os PDFs vão juntos para a área de transferência**: um <kbd>Ctrl</kbd> + <kbd>V</kbd> na conversa cola todos. Depois o OMAC pergunta se marca todas como enviadas.
+- **Colar sozinho (experimental, desligado de início):** no WhatsApp do computador, o OMAC espera a conversa aparecer e aperta <kbd>Ctrl</kbd> + <kbd>V</kbd>. Só cola se a janela da frente for mesmo o WhatsApp. O Enter é sempre da pessoa.
 
-### Extrato bancário
+#### Extrato bancário
 
 <p align="center">
   <img src="docs/capturas/extrato-claro.png" alt="Tela de extrato bancário" width="49%">
@@ -76,7 +89,20 @@ extrato do banco precisavam ser passadas à mão para uma planilha que vai para 
 - **Conta paga:** um botão **Paga** no próprio lembrete faz a conta parar de avisar naquele mês. Na lista de contas aparece o mês atual e o anterior; o que não foi marcado até o fim do mês fica como **não paga**.
 - **Lembretes livres:** um título e uma observação, sem data. **Feito** risca e guarda numa lista de feitos (dá para desfazer). Os em aberto aparecem no Início.
 - **Comandos:** textos que se mandam sempre (endereço, horário, cuidados depois do atendimento), separados por categoria. O botão **Copiar** copia exatamente o texto, sem espaço ou linha a mais.
-- **Sem automação no WhatsApp:** o OMAC usa o link oficial e nunca envia nada sozinho, para não colocar o número em risco.
+- **Sem automação no WhatsApp:** o OMAC usa o link oficial e nunca envia nada sozinho, para não colocar o número em risco. O máximo é o "colar sozinho" das notas, que a pessoa liga se quiser; o Enter continua sendo dela.
+
+### Modelos
+
+<p align="center">
+  <img src="docs/capturas/modelos.png" alt="Modelos com os botões Imprimir, Abrir e Baixar" width="49%">
+  <img src="docs/capturas/modelos-janela.png" alt="Janela de alterar um modelo" width="49%">
+</p>
+
+- **Os documentos que a clínica imprime sempre** (atestado, receita, termo de consentimento, ficha de anamnese): PDF, Word (.docx ou .doc), .odt, .rtf, .txt ou imagem, cada um com um título. O título já vem do nome do arquivo.
+- **O OMAC guarda uma cópia** na pasta de dados dele: o arquivo original pode ser movido ou apagado, e os modelos entram no backup.
+- **Imprimir** manda direto para a impressora padrão pelo programa do arquivo (Word, leitor de PDF). Se o Windows não souber imprimir aquele tipo direto, o OMAC abre o arquivo e avisa para apertar <kbd>Ctrl</kbd> + <kbd>P</kbd>.
+- **Abrir** mostra uma cópia: dá para preencher o nome do paciente sem estragar o modelo. **Baixar** salva uma cópia onde a pessoa escolher.
+- **Alterar** troca o título ou o arquivo; **apagar** tem desfazer. No Início, o widget Modelos imprime com um clique.
 
 ### Contatos
 
@@ -129,7 +155,7 @@ extrato do banco precisavam ser passadas à mão para uma planilha que vai para 
   <img src="docs/capturas/config-backup.png" alt="Backup nas Configurações" width="70%">
 </p>
 
-- **Um arquivo por backup**, `OMAC-backup-AAAA-MM-DD.zip`, com contatos, tratamentos, atendimentos, contas, regras e configurações, mais um manifesto com a versão e a data. Ficam os 12 mais novos.
+- **Um arquivo por backup**, `OMAC-backup-AAAA-MM-DD.zip`, com contatos, tratamentos, atendimentos, contas, comandos, modelos (com os arquivos), regras e configurações, mais um manifesto com a versão e a data. Ficam os 12 mais novos.
 - **Automático:** todo dia, toda semana (no dia escolhido) ou todo mês (no dia escolhido). É feito ao abrir o OMAC e de hora em hora com ele aberto; se o computador estava desligado no dia, faz na próxima vez.
 - **Notas e extratos também (opcional):** cópia para as pastas `Notas` e `Extratos` do backup, só do que é novo ou mudou, sem nunca apagar nada de lá.
 - **Restaurar:** escolhe o zip, vê a data e a versão, e o OMAC guarda os dados atuais em `antes-de-restaurar` antes de trocar. Backup de uma versão mais nova que o app é recusado.
@@ -174,7 +200,7 @@ Dados de saúde são dados sensíveis. O OMAC:
 - não envia nenhum dado seu para a internet: a única saída é a conversa do WhatsApp que a própria pessoa abre e envia;
 - guarda configurações e cache só no computador (`%APPDATA%\OMAC`), em uma pasta separada do programa, que as atualizações não alteram;
 - para procurar versão nova, só consulta o GitHub, sem enviar nenhum dado seu, e dá para desligar nas Configurações;
-- guarda os contatos, os tratamentos e a ficha de atendimentos só no computador, e o backup só na pasta que a própria pessoa escolhe;
+- guarda os contatos, os tratamentos, a ficha de atendimentos e os modelos só no computador, e o backup só na pasta que a própria pessoa escolhe;
 - deixa o nome de quem mandou Pix fora da planilha do fechamento;
 - guarda as regras do extrato (com nomes de fornecedores) só no computador, nunca no código;
 - tem um `.gitignore` que bloqueia PDF, planilhas e extratos, para nenhum dado real ir parar no GitHub.
@@ -231,9 +257,10 @@ omac/
 ├── contatos/         contatos.py · api.py
 ├── tratamentos/      orto.py · mensagens.py · api.py
 ├── atendimentos/     ficha.py · exportar.py · api.py
-├── notas/            leitor.py · pasta.py · servico.py · envio.py · exportar.py · api.py
+├── notas/            leitor.py · pasta.py · servico.py · pesquisa.py · envio.py · exportar.py · api.py
 ├── extrato/          leitor.py · pasta.py · regras.py · exportar.py · api.py
 ├── lembretes/        contas.py · livres.py · comandos.py · api.py
+├── modelos/          modelos.py · api.py
 ├── whatsapp/         mensagens.py (telefone, link oficial e textos, usado por todos)
 ├── backup/           backup.py · api.py
 ├── resumo/           ano.py · api.py
@@ -243,14 +270,14 @@ omac/
 tests/                testes + gerador de notas e extratos de exemplo
 ```
 
-**Dados** (`%APPDATA%\OMAC`): `config.json`, `contatos.json`, `tratamentos.json`, `atendimentos.json`, `lembretes.json`, `notas-enviadas.json`, `comandos.json`, `regras-extrato.json` e `cache-notas.json`. Regras:
+**Dados** (`%APPDATA%\OMAC`): `config.json`, `contatos.json`, `tratamentos.json`, `atendimentos.json`, `lembretes.json`, `notas-enviadas.json`, `comandos.json`, `modelos.json` (e a pasta `modelos/` com os arquivos), `regras-extrato.json` e `cache-notas.json`. Regras:
 
 - só `omac/dados` lê e grava arquivos; os módulos pedem ao armazém, que guarda cada arquivo em memória e só lê de novo se ele mudar no disco;
 - todo arquivo tem `"versao"`; mudar o formato = subir a versão em `esquema.py` e escrever um passo em `migracoes.py` (com teste). Campo novo com valor padrão não precisa de migração;
 - ligação entre arquivos é sempre por id; o nome de uma pessoa só existe em `contatos.json`;
 - a situação sai das datas: nada é regravado na virada do mês.
 
-Para criar um módulo: uma pasta em `omac/` com a classe da API (herdando de `ApiBase`), que entra na lista de `Api` em `app.py`, e um `.js` em `ui/` que se registra em `modulos` e `acoes`. Os métodos de cada módulo levam o nome dele (`atendimentos_listar`, `_lista_ficha`…): como todos viram uma classe só, dois métodos com o mesmo nome se apagariam sem erro, e um teste confere isso. Para ter um widget no Início: `@widget("id", "Título", ordem=…)` no método que monta os dados e `registrarWidget("id", {…})` no `.js`.
+Para criar um módulo: uma pasta em `omac/` com a classe da API (herdando de `ApiBase`), que entra na lista de `Api` em `app.py`, e um `.js` em `ui/` que se registra em `modulos` e `acoes` (e entra no `index.html`). Os scripts da tela dividem o mesmo espaço de nomes: duas funções com o mesmo nome em arquivos diferentes também se apagariam, e outro teste confere isso. Os métodos de cada módulo levam o nome dele (`atendimentos_listar`, `_lista_ficha`…): como todos viram uma classe só, dois métodos com o mesmo nome se apagariam sem erro, e um teste confere isso. Para ter um widget no Início: `@widget("id", "Título", ordem=…)` no método que monta os dados e `registrarWidget("id", {…})` no `.js`.
 
 ## Próximos passos
 
@@ -262,4 +289,4 @@ Para criar um módulo: uma pasta em `omac/` com a classe da API (herdando de `Ap
 - [x] **Tela inicial personalizável** e **resumo do ano**.
 - [x] **Contatos únicos**, **base de dados nova** e **backup** (1.6.0).
 - [x] **Lembretes e Comandos** (1.7.0).
-- [ ] **Relatório mensal**, pesquisa de notas e envio de várias notas de uma vez (1.8.0).
+- [x] **Relatório mensal**, pesquisa de notas, envio de várias notas de uma vez e **Modelos** para imprimir (1.8.0).
