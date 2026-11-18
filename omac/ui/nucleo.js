@@ -81,8 +81,8 @@ async function iniciar() {
   Object.values(modulos).forEach((m) => m.aoIniciar?.());
 }
 
-// DOMContentLoaded: espera os scripts dos módulos, que vêm depois deste.
-document.addEventListener("DOMContentLoaded", () => {
+// Espera os scripts dos módulos, que o index.html carrega depois deste.
+omacQuandoPronto(() => {
   if (window.pywebview && window.pywebview.api) iniciar();
   else window.addEventListener("pywebviewready", iniciar, { once: true });
 });

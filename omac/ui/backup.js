@@ -156,7 +156,7 @@ async function restaurarBackup() {
 }
 
 /* Depois de recarregar, diz que deu certo e onde ficaram os dados de antes. */
-document.addEventListener("DOMContentLoaded", () => {
+omacQuandoPronto(() => {
   let guardados = null;
   try {
     guardados = sessionStorage.getItem("omac-restaurado");

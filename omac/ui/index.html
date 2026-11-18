@@ -27,6 +27,7 @@
     }
     window.addEventListener("error", function (e) {
       const alvo = e.target;
+      if (alvo && alvo.dataset && alvo.dataset.omacCarregador) return; // o carregador tenta de novo e avisa
       if (alvo && alvo !== window && (alvo.src || alvo.href)) {
         omacMostrarErroDeTela("Não carregou: " + String(alvo.src || alvo.href).split("/").pop());
       } else {
@@ -36,6 +37,40 @@
     window.addEventListener("unhandledrejection", function (e) {
       omacMostrarErroDeTela("Erro: " + (e.reason && e.reason.message || e.reason));
     });
+
+    /* Os scripts da tela, na ordem. Carregam um por vez e, se o servidor falhar, tentam de novo:
+     * no .exe de 32 bits o servidor interno às vezes recusa os primeiros pedidos quando chegam
+     * muitos juntos. Quem precisa de todos carregados usa omacQuandoPronto(fn). */
+    const OMAC_SCRIPTS = ["nucleo.js", "relatorio.js", "notas.js", "extrato.js", "lembretes.js", "modelos.js",
+      "contatos.js", "tratamentos.js", "atendimentos.js", "backup.js", "resumo.js", "inicio.js", "atualizacao.js"];
+    const OMAC_TENTATIVAS = 4;
+    window.omacScriptsProntos = false;
+    function omacQuandoPronto(fn) {
+      if (window.omacScriptsProntos) fn();
+      else document.addEventListener("omac-scripts-prontos", fn, { once: true });
+    }
+    function omacCarregarScripts(i = 0, tentativa = 1) {
+      if (i >= OMAC_SCRIPTS.length) {
+        window.omacScriptsProntos = true;
+        document.dispatchEvent(new Event("omac-scripts-prontos"));
+        return;
+      }
+      const nome = OMAC_SCRIPTS[i];
+      const s = document.createElement("script");
+      s.dataset.omacCarregador = "1";
+      s.src = tentativa === 1 ? nome : nome + "?tentativa=" + tentativa;
+      s.onload = function () { omacCarregarScripts(i + 1, 1); };
+      s.onerror = function () {
+        s.remove();
+        if (tentativa < OMAC_TENTATIVAS) {
+          setTimeout(function () { omacCarregarScripts(i, tentativa + 1); }, 120 * tentativa);
+          return;
+        }
+        omacMostrarErroDeTela("Não carregou: " + nome + " (" + OMAC_TENTATIVAS + " tentativas)");
+        omacCarregarScripts(i + 1, 1);
+      };
+      document.body.appendChild(s);
+    }
   </script>
 </head>
 <body>
@@ -1650,18 +1685,6 @@
 
   <div class="avisos-flutuantes" id="toasts" aria-live="polite"></div>
 
-  <script src="nucleo.js"></script>
-  <script src="relatorio.js"></script>
-  <script src="notas.js"></script>
-  <script src="extrato.js"></script>
-  <script src="lembretes.js"></script>
-  <script src="modelos.js"></script>
-  <script src="contatos.js"></script>
-  <script src="tratamentos.js"></script>
-  <script src="atendimentos.js"></script>
-  <script src="backup.js"></script>
-  <script src="resumo.js"></script>
-  <script src="inicio.js"></script>
-  <script src="atualizacao.js"></script>
+  <script>omacCarregarScripts();</script>
 </body>
 </html>
