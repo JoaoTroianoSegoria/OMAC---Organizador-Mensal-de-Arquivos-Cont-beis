@@ -1,4 +1,5 @@
-/* OMAC — módulo de WhatsApp. Tokens e componentes vêm de estilo.css. */
+/* OMAC — Lembretes (notas a enviar, contas, lembretes livres, comandos) e as janelas.
+ * Tokens e componentes vêm de estilo.css. */
 
 .c-acao-nota { width: 6.5rem; white-space: nowrap; }
 .btn-enviada { color: var(--acento); }
@@ -49,3 +50,41 @@
 [data-contraste="alto"] .modal-erro,
 [data-contraste="alto"] .lembrete-conta .btn[aria-pressed="true"] { color: var(--texto); }
 [data-contraste="alto"] #whats-qtd { color: inherit; }
+
+/* ---------- Contas: enviar lembrete ---------- */
+.lb-barra-contas { align-items: center; flex-wrap: wrap; }
+.lb-barra-texto { flex: 1 1 16rem; margin: 0; font-weight: 600; }
+#contas-tabela .c-acoes-alta { width: 8rem; }
+
+/* ---------- Lembretes livres ---------- */
+.lb-livres { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: .6rem; }
+.lb-livre { display: flex; align-items: flex-start; gap: .75rem; padding: .85rem 1rem; }
+.lb-livre-corpo { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: .25rem; }
+.lb-livre-obs { margin: 0; color: var(--texto-2); white-space: pre-wrap; overflow-wrap: anywhere; }
+.lb-livre-botoes { display: flex; align-items: center; gap: .25rem; flex-shrink: 0; }
+.lb-feito strong { text-decoration: line-through; color: var(--texto-2); }
+.lb-feitos { gap: .75rem; }
+.lb-feitos summary { cursor: pointer; font-weight: 600; }
+.lb-feitos .lb-livre { background: none; box-shadow: none; border: 1px solid var(--solido-borda); }
+.lb-feitos .lb-livre::before, .lb-feitos .lb-livre::after { display: none; }
+#form-livre textarea { min-height: 4.5rem; }
+
+/* ---------- Comandos ---------- */
+.lb-categorias-barra { align-items: center; flex-wrap: wrap; }
+.lb-categorias { flex: 1 1 20rem; flex-wrap: wrap; }
+.lb-categorias .escolha { flex: 0 1 auto; }
+.lb-categoria-cab { display: flex; align-items: center; justify-content: space-between; gap: .75rem; flex-wrap: wrap; }
+.lb-categoria-cab h2 { font-size: 1.15rem; }
+.lb-categoria-ferramentas { display: flex; align-items: center; gap: .35rem; flex-wrap: wrap; }
+#lb-categoria-botoes { display: inline-flex; gap: .15rem; }
+.lb-seta-esq { transform: rotate(-90deg); }
+.lb-seta-dir { transform: rotate(90deg); }
+.lb-comandos { list-style: none; margin: 0; padding: 0; display: grid; gap: .75rem;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 20rem), 1fr)); }
+.lb-comando { display: flex; flex-direction: column; gap: .5rem; padding: .85rem 1rem; min-width: 0; }
+.lb-comando-cab { display: flex; align-items: center; gap: .5rem; }
+.lb-comando-rodape { display: flex; align-items: center; justify-content: space-between; gap: .5rem; margin-top: auto; padding-top: .25rem; }
+.lb-comando-texto {
+  margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; color: var(--texto-2);
+  max-height: 9.5rem; overflow: auto; font-size: .92rem; line-height: 1.45;
+}

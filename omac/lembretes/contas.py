@@ -1,4 +1,4 @@
-"""Quais lembretes mostrar ao abrir o app, e quais contas já foram pagas.
+"""Contas a pagar: quais lembretes mostrar ao abrir o app e quais contas já foram pagas.
 
 Cada conta avisa no dia anterior ao vencimento e no próprio dia. Quem ficou com o
 app fechado nesses dias recebe o aviso na próxima vez que abrir. Conta marcada como
@@ -129,8 +129,10 @@ def _desde(ultima_abertura: date | None, hoje: date) -> date:
 def _situacao(vencimento: date, hoje: date) -> str:
     if vencimento == hoje:
         return f"vence hoje ({vencimento:%d/%m})"
-    if vencimento > hoje:
+    if vencimento == hoje + timedelta(days=1):
         return f"vence amanhã ({vencimento:%d/%m})"
+    if vencimento > hoje:
+        return f"vence dia {vencimento:%d/%m}"
     return f"venceu dia {vencimento:%d/%m}"
 
 
@@ -150,6 +152,24 @@ def contas_a_avisar(contas: list[dict], hoje: date, ultima_abertura: date | None
                     "situacao": _situacao(vencimento, hoje),
                 })
     itens.sort(key=lambda i: i["vencimento"])
+    return [{**i, "vencimento": i["vencimento"].isoformat()} for i in itens]
+
+
+def contas_em_aberto(contas: list[dict], hoje: date, nome: str | None = None) -> list[dict]:
+    """O que ainda não foi pago, a qualquer momento: a conta deste mês em aberto e a do mês
+    passado que ficou sem pagar. Serve para o botão "Enviar lembrete" (não muda o aviso automático).
+    """
+    anterior = hoje.replace(day=1) - timedelta(days=1)
+    itens = []
+    for conta in contas:
+        if nome is not None and normalizar(conta["nome"]) != normalizar(nome):
+            continue
+        for ano, mes, aberta in ((anterior.year, anterior.month, NAO_PAGA), (hoje.year, hoje.month, EM_ABERTO)):
+            if situacao_no_mes(conta, ano, mes, hoje) == aberta:
+                vencimento = vencimento_no_mes(conta, ano, mes)
+                itens.append({"nome": conta["nome"], "mes": _mes(ano, mes), "vencimento": vencimento,
+                              "situacao": _situacao(vencimento, hoje)})
+    itens.sort(key=lambda i: (i["vencimento"], normalizar(i["nome"])))
     return [{**i, "vencimento": i["vencimento"].isoformat()} for i in itens]
 
 

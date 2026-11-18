@@ -40,7 +40,7 @@ const api = () => window.pywebview.api;
 /* ---------- Início ---------- */
 
 /* Um script vazio ou cortado não gera erro nenhum: sem esta conferência, a tela fica muda. */
-const MODULOS_ESPERADOS = ["inicio", "notas", "extrato", "whatsapp", "contatos", "tratamentos", "atendimentos",
+const MODULOS_ESPERADOS = ["inicio", "notas", "extrato", "lembretes", "contatos", "tratamentos", "atendimentos",
   "backup", "resumo", "atualizacao"];
 
 async function conferirModulos() {

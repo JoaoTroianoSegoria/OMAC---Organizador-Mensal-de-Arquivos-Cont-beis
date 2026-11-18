@@ -18,18 +18,19 @@ from .extrato import regras as rg
 from .extrato.api import ExtratoApi
 from .extrato.pasta import varrer as varrer_extratos
 from .inicio.api import InicioApi
+from .lembretes.api import LembretesApi
 from .notas import exportar as exp
 from .notas.api import NotasApi
+from .notas.envio import EnvioNotasApi
 from .notas.pasta import varrer
 from .resumo.api import ResumoApi
 from .tratamentos.api import TratamentosApi
-from .whatsapp.api import WhatsappApi
 
 PASTA_EXTRATOS_TESTE = "Extratos"
 
 
-class Api(NotasApi, ExtratoApi, WhatsappApi, ContatosApi, TratamentosApi, AtendimentosApi, ResumoApi,
-          InicioApi, BackupApi, AtualizacaoApi):
+class Api(NotasApi, EnvioNotasApi, ExtratoApi, LembretesApi, ContatosApi, TratamentosApi, AtendimentosApi,
+          ResumoApi, InicioApi, BackupApi, AtualizacaoApi):
     """Tudo o que a interface pode chamar. Módulo novo entra nesta lista de classes."""
 
 
