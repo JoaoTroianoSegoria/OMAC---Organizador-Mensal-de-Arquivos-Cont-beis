@@ -19,6 +19,7 @@ from .extrato.api import ExtratoApi
 from .extrato.pasta import varrer as varrer_extratos
 from .inicio.api import InicioApi
 from .lembretes.api import LembretesApi
+from .modelos.api import ModelosApi
 from .notas import exportar as exp
 from .notas.api import NotasApi
 from .notas.envio import EnvioNotasApi
@@ -30,7 +31,7 @@ PASTA_EXTRATOS_TESTE = "Extratos"
 
 
 class Api(NotasApi, EnvioNotasApi, ExtratoApi, LembretesApi, ContatosApi, TratamentosApi, AtendimentosApi,
-          ResumoApi, InicioApi, BackupApi, AtualizacaoApi):
+          ModelosApi, ResumoApi, InicioApi, BackupApi, AtualizacaoApi):
     """Tudo o que a interface pode chamar. Módulo novo entra nesta lista de classes."""
 
 
@@ -88,8 +89,8 @@ _SONDA_TELA = """(function () {
     modulos: typeof modulos === "undefined" ? null : Object.keys(modulos),
     erros: window.omacErrosDeTela,
     arquivos: arquivos,
-    meses: document.querySelectorAll("#ext-sel-mes option").length,
-    anos: document.querySelectorAll("#ext-sel-ano option").length,
+    meses: document.querySelectorAll("#sel-mes option").length,
+    anos: document.querySelectorAll("#sel-ano option").length,
     lancamentos: document.querySelectorAll("#ext-corpo tr").length,
   };
 })()"""
@@ -116,7 +117,7 @@ def autoteste_tela(pasta: str, saida: str) -> int:
             janela.events.loaded.wait(60)
             time.sleep(6)
             relatorio["notas"] = janela.evaluate_js(_SONDA_TELA)
-            janela.evaluate_js('mostrarView("extrato")')
+            janela.evaluate_js('irPara("relatorio", "extrato")')
             time.sleep(8)
             relatorio["extrato"] = janela.evaluate_js(_SONDA_TELA)
         except Exception:  # noqa: BLE001

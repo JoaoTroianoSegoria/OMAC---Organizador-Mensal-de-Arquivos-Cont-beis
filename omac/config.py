@@ -24,6 +24,7 @@ PADRAO = {
     "pasta_saida": "",
     "assistente_nome": "",  # assina as mensagens: "*Assistente Fulano:*"
     "whatsapp_destino": "app",  # "app" (instalado) | "web" (navegador)
+    "colar_sozinho": False,  # experimental: o OMAC aperta Ctrl+V na conversa (só o app do WhatsApp)
     "lembrete_fechamento_dia": 1,  # dia do mês para lembrar do fechamento; 0 = desligado
     "chave_pix": "",  # vai na mensagem de cobrança da manutenção
     "tratamentos": ["Limpeza", "Manutenção", "Botox"],  # sugestões da ficha de atendimentos
@@ -97,7 +98,7 @@ def normalizar(cfg: dict) -> dict:
         limpo["escala_fonte"] = 1.0
     limpo["versao"] = VERSAO
     for chave in ("alto_contraste", "reduzir_movimento", "atualizacao_automatica",
-                  "backup_automatico", "backup_arquivos"):
+                  "backup_automatico", "backup_arquivos", "colar_sozinho"):
         limpo[chave] = bool(limpo[chave])
     for chave in ("pasta_notas", "pasta_extratos", "pasta_saida",
                   "assistente_nome", "chave_pix", "atualizacao_adiada_em",
