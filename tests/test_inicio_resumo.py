@@ -155,7 +155,7 @@ def test_api_resumo_com_a_pasta_de_exemplo(api, tmp_path):
 # --- Início --------------------------------------------------------------------------------
 
 
-WIDGETS = ["hoje", "lembretes", "tratamentos", "atendimentos", "relatorio", "contatos", "resumo"]
+WIDGETS = ["hoje", "lembretes", "tratamentos", "atendimentos", "relatorio", "contatos", "resumo", "modelos"]
 
 
 def test_registro_tem_os_widgets_da_1_6(api):
@@ -205,5 +205,5 @@ def test_widgets_seguem_a_escolha_da_pessoa():
     ]})["inicio_cartoes"])
     assert escolhidos[0] == {"id": "resumo", "visivel": False, "largo": False}
     # O que não existe some; os que faltaram entram no fim, na ordem padrão.
-    assert [c["id"] for c in escolhidos] == ["resumo", *WIDGETS[:-1]]
+    assert [c["id"] for c in escolhidos] == ["resumo", *(w for w in WIDGETS if w != "resumo")]
     assert config.normalizar({"abrir_em": "x"})["abrir_em"] == "inicio"
