@@ -34,34 +34,40 @@ VARIANTES = [
     ("tratamentos-paciente", "tratamentos", {"tema": "escuro", "visual": "bonito"}, {"agenda": "paciente"}),
     ("config-backup", "config", {"tema": "claro", "visual": "bonito", "backup_automatico": True}, {"rolar": "#g-backup"}),
     # arquivo, view, configurações, extras ("pasta": "vazia" | "mes": n)
-    ("notas-claro", "notas", {"tema": "claro", "visual": "bonito"}, {}),
-    ("notas-escuro", "notas", {"tema": "escuro", "visual": "bonito"}, {}),
-    ("notas-otimizado", "notas", {"tema": "claro", "visual": "otimizado"}, {}),
-    ("notas-alto-contraste", "notas", {"tema": "claro", "alto_contraste": True}, {}),
-    ("notas-texto-grande", "notas", {"tema": "claro", "escala_fonte": 1.5}, {}),
-    ("notas-pasta-vazia", "notas", {"tema": "escuro", "visual": "bonito"}, {"pasta": "vazia"}),
-    ("notas-mes-vazio", "notas", {"tema": "escuro", "visual": "bonito"}, {"mes": 3}),
-    ("extrato-claro", "extrato", {"tema": "claro", "visual": "bonito"}, {}),
-    ("extrato-escuro", "extrato", {"tema": "escuro", "visual": "bonito"}, {}),
-    ("extrato-otimizado", "extrato", {"tema": "claro", "visual": "otimizado"}, {}),
-    ("extrato-alto-contraste", "extrato", {"tema": "claro", "alto_contraste": True}, {}),
-    ("extrato-regras", "extrato", {"tema": "escuro", "visual": "bonito"}, {"aba": "regras"}),
+    ("notas-claro", "relatorio", {"tema": "claro", "visual": "bonito"}, {}),
+    ("notas-escuro", "relatorio", {"tema": "escuro", "visual": "bonito"}, {}),
+    ("notas-otimizado", "relatorio", {"tema": "claro", "visual": "otimizado"}, {}),
+    ("notas-alto-contraste", "relatorio", {"tema": "claro", "alto_contraste": True}, {}),
+    ("notas-texto-grande", "relatorio", {"tema": "claro", "escala_fonte": 1.5}, {}),
+    ("notas-pasta-vazia", "relatorio", {"tema": "escuro", "visual": "bonito"}, {"pasta": "vazia"}),
+    ("notas-mes-vazio", "relatorio", {"tema": "escuro", "visual": "bonito"}, {"mes": 3}),
+    ("extrato-claro", "relatorio", {"tema": "claro", "visual": "bonito"}, {"aba": "extrato"}),
+    ("extrato-escuro", "relatorio", {"tema": "escuro", "visual": "bonito"}, {"aba": "extrato"}),
+    ("extrato-otimizado", "relatorio", {"tema": "claro", "visual": "otimizado"}, {"aba": "extrato"}),
+    ("extrato-alto-contraste", "relatorio", {"tema": "claro", "alto_contraste": True}, {"aba": "extrato"}),
+    ("extrato-regras", "relatorio", {"tema": "escuro", "visual": "bonito"}, {"aba": "regras"}),
     ("lembretes-enviar", "lembretes", {"tema": "escuro", "visual": "bonito"}, {"whats": "enviar"}),
     ("lembretes-envio", "lembretes", {"tema": "claro", "visual": "bonito"}, {"whats": "janela"}),
     ("lembretes-contas", "lembretes", {"tema": "claro", "visual": "bonito"}, {"whats": "contas"}),
-    ("lembretes-do-dia", "notas", {"tema": "escuro", "visual": "bonito"}, {"whats": "lembretes"}),
+    ("lembretes-do-dia", "relatorio", {"tema": "escuro", "visual": "bonito"}, {"whats": "lembretes"}),
     ("lembretes-envio-otimizado", "lembretes", {"tema": "escuro", "visual": "otimizado"}, {"whats": "janela"}),
-    ("lembretes-do-dia-contraste", "notas", {"tema": "claro", "alto_contraste": True}, {"whats": "lembretes"}),
+    ("lembretes-do-dia-contraste", "relatorio", {"tema": "claro", "alto_contraste": True}, {"whats": "lembretes"}),
     ("tratamentos", "tratamentos", {"tema": "claro", "visual": "bonito"}, {"agenda": "lista"}),
     ("tratamentos-mensagem", "tratamentos", {"tema": "escuro", "visual": "bonito"}, {"agenda": "mensagem"}),
     ("atendimentos", "atendimentos", {"tema": "claro", "visual": "bonito"}, {"pag": "lista"}),
     ("atendimentos-atendimento", "atendimentos", {"tema": "escuro", "visual": "bonito"}, {"pag": "janela"}),
-    ("notas-avisos-minimizados", "notas", {"tema": "claro", "visual": "bonito", "avisos_recolhidos": ["notas"]}, {}),
+    ("notas-avisos-minimizados", "relatorio", {"tema": "claro", "visual": "bonito", "avisos_recolhidos": ["notas"]}, {}),
     ("lembretes-livres", "lembretes", {"tema": "claro", "visual": "bonito"}, {"whats": "livres"}),
     ("lembretes-comandos", "lembretes", {"tema": "claro", "visual": "bonito"}, {"whats": "comandos"}),
     ("lembretes-comandos-escuro", "lembretes", {"tema": "escuro", "visual": "bonito"}, {"whats": "comandos"}),
     ("lembretes-enviar-conta", "lembretes", {"tema": "escuro", "visual": "bonito"}, {"whats": "enviar-conta"}),
     ("config-whatsapp", "config", {"tema": "claro", "visual": "bonito"}, {"rolar": "#g-whats"}),
+    ("relatorio-pesquisa", "relatorio", {"tema": "claro", "visual": "bonito"}, {"escolher": "pesquisa"}),
+    ("relatorio-envio-lote", "relatorio", {"tema": "claro", "visual": "bonito"}, {"escolher": "enviar"}),
+    ("relatorio-escuro", "relatorio", {"tema": "escuro", "visual": "bonito"}, {"escolher": "pesquisa"}),
+    ("modelos", "modelos", {"tema": "claro", "visual": "bonito"}, {}),
+    ("modelos-escuro", "modelos", {"tema": "escuro", "visual": "bonito"}, {}),
+    ("modelos-janela", "modelos", {"tema": "claro", "visual": "bonito"}, {"modelo": "janela"}),
     ("config-claro", "config", {"tema": "claro", "visual": "bonito"}, {}),
     ("config-escuro", "config", {"tema": "escuro", "visual": "bonito"}, {}),
 ]
@@ -162,6 +168,19 @@ def _preparar_lembretes(api) -> None:
     api.comandos_salvar_categoria("Orçamentos")
 
 
+def _preparar_modelos(api, pasta: Path) -> None:
+    """Modelos de exemplo (arquivos de mentira, só para a tela)."""
+    if api.modelos_listar()["modelos"]:
+        return
+    pasta.mkdir(parents=True, exist_ok=True)
+    for nome, titulo in [("Atestado_de_comparecimento.pdf", ""), ("Receita.docx", "Receita simples"),
+                         ("termo-clareamento.pdf", "Termo de consentimento: clareamento"),
+                         ("Orientacoes_pos_cirurgia.pdf", "Orientações depois da cirurgia"),
+                         ("ficha-anamnese.docx", "Ficha de anamnese")]:
+        (pasta / nome).write_bytes(b"exemplo")
+        api.modelos_salvar({"titulo": titulo or nome.rsplit(".", 1)[0].replace("_", " "), "caminho": str(pasta / nome)})
+
+
 def _preparar_whatsapp(api, caso: str | None) -> None:
     from datetime import date, timedelta
 
@@ -207,6 +226,7 @@ def main() -> None:
                 api._cfg["chave_pix"] = "chave@exemplo.com"
                 _preparar_whatsapp(api, extras.get("whats"))
                 _preparar_lembretes(api)
+                _preparar_modelos(api, Path(tmp) / "Documentos")
                 if not api._cfg["backup_ultimo"]:
                     api.backup_agora()
 
@@ -225,10 +245,28 @@ def main() -> None:
                 if "mes" in extras:
                     pagina.select_option("#sel-mes", str(extras["mes"]))
                     pagina.wait_for_selector("#notas-vazio:not([hidden])")
-                if view != "notas":
+                if view != "relatorio":
                     pagina.click(f'.menu-item[data-view="{view}"]')
-                if view == "extrato":
-                    pagina.wait_for_selector("#ext-corpo tr")
+                if extras.get("aba") in ("extrato", "regras"):
+                    pagina.click(f'[data-acao="rel-aba"][data-aba="{extras["aba"]}"]')
+                    pagina.wait_for_selector("#ext-corpo tr" if extras["aba"] == "extrato" else "#regras-corpo tr")
+                if "escolher" in extras:
+                    for numero in ("801", "802"):
+                        pagina.check(f'#tabela-corpo .rel-escolher[data-numero="{numero}"]')
+                    pagina.fill("#rel-busca", "costa")
+                    pagina.wait_for_timeout(500)
+                    pagina.check('#tabela-corpo .rel-escolher[data-numero="803"]')
+                    if extras["escolher"] == "enviar":
+                        pagina.click('[data-acao="rel-enviar-lote"]')
+                        pagina.wait_for_selector("#rel-lote[open]")
+                        pagina.fill("#rel-lote-contato", "FERNANDA COSTA")
+                        pagina.dispatch_event("#rel-lote-contato", "change")
+                        pagina.wait_for_selector("#rel-lote-envio:not([hidden])")
+                if view == "modelos":
+                    pagina.wait_for_selector(".md-cartao")
+                    if extras.get("modelo") == "janela":
+                        pagina.click('.md-cartao:has-text("Receita") [data-acao="md-editar"]')
+                        pagina.wait_for_selector("#md-modelo[open]")
                 if "whats" in extras and view == "lembretes":
                     pagina.wait_for_selector("#whats-corpo tr")
                     if extras["whats"] in ("contas", "enviar-conta"):
@@ -268,8 +306,6 @@ def main() -> None:
                     pagina.wait_for_selector("#lembretes[open]")
                 if "rolar" in extras:
                     pagina.locator(extras["rolar"]).scroll_into_view_if_needed()
-                if "aba" in extras:
-                    pagina.click(f'[data-acao="ext-aba"][data-aba="{extras["aba"]}"]')
                 pagina.wait_for_timeout(400)
                 pagina.screenshot(path=str(saida / f"{nome}.png"))
                 pagina.close()
