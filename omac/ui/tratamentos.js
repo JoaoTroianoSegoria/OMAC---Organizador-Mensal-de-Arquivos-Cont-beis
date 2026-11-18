@@ -92,11 +92,16 @@ function celulaPaciente(p) {
   const td = document.createElement("td");
   const caixa = Object.assign(document.createElement("div"), { className: "paciente" });
   caixa.append(Object.assign(document.createElement("span"), { textContent: p.nome }));
-  if (p.destino.papel) {
-    caixa.append(Object.assign(document.createElement("span"), {
-      className: "etiqueta", textContent: `${p.destino.papel}: ${p.destino.nome}`,
-      title: "As mensagens deste paciente vão para este responsável",
-    }));
+  // Todos os responsáveis; quem recebe as mensagens ganha o ícone do WhatsApp.
+  for (const r of p.responsaveis || []) {
+    const recebe = r.contato_id === p.destino.contato_id;
+    const et = Object.assign(document.createElement("span"), {
+      className: `etiqueta ag-resp${recebe ? " etiqueta-acento ag-recebe" : ""}`,
+      title: recebe ? "As mensagens deste paciente vão para este responsável" : "Responsável",
+    });
+    if (recebe) et.innerHTML = '<svg class="ic"><use href="#i-whats"/></svg>';
+    et.append(`${r.papel}: ${r.nome}`);
+    caixa.append(et);
   }
   td.append(caixa);
   return td;
