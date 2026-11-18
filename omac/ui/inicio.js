@@ -201,7 +201,7 @@ function pendenciasDeHoje(w) {
   }
   const f = w.relatorio;
   if (ok(f) && f.dia_lembrete && new Date().getDate() >= f.dia_lembrete && f.lancamentos === 0) {
-    itens.push([`Falta o extrato de ${f.nome_mes.toLowerCase()} para o fechamento`, "extrato"]);
+    itens.push([`Falta o extrato de ${f.nome_mes.toLowerCase()} para o fechamento`, "relatorio", "extrato"]);
   }
   if (ok(w.contatos) && w.contatos.a_conferir) {
     itens.push([`${plural(w.contatos.a_conferir, "contato para conferir", "contatos para conferir")}`, "contatos"]);

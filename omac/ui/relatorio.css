@@ -1,0 +1,62 @@
+/* OMAC — Relatório mensal: pesquisa de notas, escolha de notas e a ilha embaixo.
+ * Tokens e componentes vêm de estilo.css. */
+
+/* ---------- Pesquisa ---------- */
+.rel-pesquisa { align-items: flex-end; }
+.rel-busca { flex: 1 1 18rem; }
+#rel-escopo { flex-wrap: wrap; }
+#rel-escopo .escolha { flex: 0 1 auto; min-height: 2.6rem; padding: .3rem .95rem; }
+.rel-periodo { display: flex; flex-wrap: wrap; gap: 1rem; }
+.rel-periodo .campo { min-width: 10rem; }
+.select select:disabled { opacity: .5; cursor: not-allowed; }
+
+/* ---------- Escolher notas ---------- */
+.c-sel { width: 3rem; text-align: center !important; padding-left: .9rem !important; padding-right: 0 !important; }
+.tabela tr.rel-escolhida td { background: var(--acento-suave); }
+
+/* ---------- Ilha das notas escolhidas ---------- */
+/* Fica presa embaixo enquanto a lista rola. Altura fixa: muitas notas rolam dentro dela. */
+.rel-ilha {
+  position: sticky; bottom: .9rem; z-index: 5;
+  display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: .9rem 1.25rem;
+  height: 7.25rem; padding: .85rem 1.1rem;
+  background: color-mix(in srgb, var(--solido) 94%, transparent);
+  border-color: var(--acento);
+  box-shadow: 0 .8rem 2.2rem rgba(0, 0, 0, .22);
+}
+.rel-ilha[hidden] { display: none; }
+.rel-ilha-info { display: flex; flex-direction: column; align-items: flex-start; gap: .25rem; min-width: 10rem; }
+.rel-ilha-total { font-size: 1.15rem; font-weight: 700; font-variant-numeric: tabular-nums; }
+.rel-ilha-lista {
+  list-style: none; margin: 0; padding: .1rem .25rem .1rem 0;
+  display: flex; flex-wrap: wrap; align-content: flex-start; gap: .4rem;
+  height: 100%; overflow-y: auto;
+}
+.rel-chip {
+  display: inline-flex; align-items: center; gap: .3rem;
+  padding: .1rem .2rem .1rem .65rem; border-radius: 999px;
+  background: var(--acento-suave); font-size: .8rem; font-weight: 600;
+  max-width: 100%;
+}
+.rel-chip span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rel-chip-tirar {
+  display: inline-grid; place-items: center; flex: none;
+  width: 1.45rem; height: 1.45rem; border: 0; border-radius: 50%;
+  background: transparent; color: var(--texto-2); cursor: pointer;
+}
+.rel-chip-tirar .ic { width: .95rem; height: .95rem; }
+.rel-chip-tirar:hover { background: var(--vidro-forte); color: var(--texto); }
+.rel-ilha-enviar { min-width: 8rem; }
+
+/* Tela estreita: a lista vai para baixo, os botões ficam em cima. */
+[data-trilho] .rel-ilha { grid-template-columns: minmax(0, 1fr) auto; }
+[data-trilho] .rel-ilha { height: 9.5rem; grid-template-rows: auto minmax(0, 1fr); }
+[data-trilho] .rel-ilha-lista { grid-column: 1 / -1; grid-row: 2; }
+[data-trilho] .rel-ilha-info { flex-direction: row; align-items: center; flex-wrap: wrap; gap: .5rem .9rem; }
+
+/* ---------- Janela de envio ---------- */
+.rel-lote-notas { max-height: 9.5rem; overflow-y: auto; font-variant-numeric: tabular-nums; }
+.rel-lote-total { font-weight: 700; }
+.rel-lote-envio { display: flex; flex-direction: column; gap: 1rem; }
+.rel-lote-colar { display: flex; flex-direction: column; gap: .3rem; }
+.rel-lote-colar .dica { margin: 0 0 0 1.9rem; }

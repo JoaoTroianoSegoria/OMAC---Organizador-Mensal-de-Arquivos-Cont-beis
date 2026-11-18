@@ -1,0 +1,34 @@
+/* OMAC — Modelos. Tokens e componentes vêm de estilo.css. */
+
+.md-busca { flex: 1 1 18rem; }
+
+.md-lista {
+  list-style: none; margin: 0; padding: 0;
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(17rem, 1fr)); gap: 1rem;
+}
+.md-cartao { display: flex; flex-direction: column; gap: .6rem; padding: 1rem 1.1rem; }
+.md-topo { display: flex; align-items: flex-start; gap: .65rem; }
+.md-titulo { flex: 1; min-width: 0; margin: 0; font-size: 1.05rem; line-height: 1.35; overflow-wrap: anywhere; }
+.md-tipo {
+  flex: none; padding: .15rem .45rem; border-radius: var(--raio-p);
+  font-size: .7rem; font-weight: 800; letter-spacing: .03em;
+  color: var(--acento-forte); background: var(--acento-suave);
+}
+.md-tipo-pdf { color: #b42318; background: color-mix(in srgb, #d92d20 14%, transparent); }
+.md-tipo-word { color: #1d4ed8; background: color-mix(in srgb, #2563eb 14%, transparent); }
+[data-tema="escuro"] .md-tipo { color: var(--acento); }
+[data-tema="escuro"] .md-tipo-pdf { color: #fda29b; background: color-mix(in srgb, #f04438 22%, transparent); }
+[data-tema="escuro"] .md-tipo-word { color: #93c5fd; background: color-mix(in srgb, #3b82f6 24%, transparent); }
+.md-original { margin: 0; font-size: .85rem; color: var(--texto-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.md-sumiu { margin: 0; font-size: .85rem; color: var(--aviso-texto); }
+.md-acoes { display: flex; flex-wrap: wrap; gap: .5rem; margin-top: auto; }
+
+/* Janela */
+.md-arquivo {
+  display: flex; align-items: center; gap: .6rem; min-height: 2.6rem;
+  padding: .35rem .45rem .35rem .8rem; border-radius: var(--raio-p);
+  border: 1px solid var(--vidro-borda); background: var(--vidro-forte);
+}
+.md-arquivo > .ic { flex: none; color: var(--texto-3); }
+.md-arquivo-nome { flex: 1; min-width: 0; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.md-arquivo-vazio { font-weight: 400; color: var(--texto-3); }

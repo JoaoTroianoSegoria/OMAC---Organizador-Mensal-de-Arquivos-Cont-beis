@@ -87,7 +87,7 @@ Object.assign(acoes, {
   "lb-comando-mover": (alvo) => moverComando(alvo.dataset.id, Number(alvo.dataset.passo)),
   "lb-copiar": (alvo) => copiarComando(alvo.dataset.id),
   "whats-fechar-lembretes": () => $("#lembretes").close(),
-  "whats-ir-extrato": () => { $("#lembretes").close(); mostrarView("extrato"); },
+  "whats-ir-extrato": () => { $("#lembretes").close(); irPara("relatorio", "extrato"); },
   "whats-enviar-lembrete": enviarLembrete,
 });
 
@@ -203,7 +203,7 @@ async function abrirConversa() {
 
 function notasMudaram() {
   notasEstado.chave = "";
-  if (estado.view === "notas") carregarNotas();
+  if (estado.view === "relatorio" && relatorio.aba === "notas") carregarNotas();
 }
 
 async function concluirEnvio(irParaProxima) {

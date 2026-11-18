@@ -6,7 +6,9 @@
   <title>OMAC</title>
   <link rel="stylesheet" href="estilo.css">
   <link rel="stylesheet" href="extrato.css">
+  <link rel="stylesheet" href="relatorio.css">
   <link rel="stylesheet" href="lembretes.css">
+  <link rel="stylesheet" href="modelos.css">
   <link rel="stylesheet" href="tratamentos.css">
   <link rel="stylesheet" href="atendimentos.css">
   <link rel="stylesheet" href="contatos.css">
@@ -78,6 +80,7 @@
       <symbol id="i-juntar" viewBox="0 0 24 24"><path d="M5 4v4a4 4 0 0 0 4 4h6a4 4 0 0 1 4 4v4M19 4v4a4 4 0 0 1-4 4"/><path d="m16 17 3 3 3-3"/></symbol>
       <symbol id="i-sino" viewBox="0 0 24 24"><path d="M6 9.5a6 6 0 0 1 12 0c0 5 2 6.5 2 6.5H4s2-1.5 2-6.5zM10 19.5a2.2 2.2 0 0 0 4 0"/></symbol>
       <symbol id="i-copiar" viewBox="0 0 24 24"><rect x="8.5" y="8.5" width="12" height="12" rx="2"/><path d="M15.5 8.5V5.5a2 2 0 0 0-2-2h-8a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h3"/></symbol>
+      <symbol id="i-impressora" viewBox="0 0 24 24"><path d="M7 8.5V3.5h10v5M7 17.5H5a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="7" y="14" width="10" height="7" rx="1"/></symbol>
       <symbol id="i-cadeado" viewBox="0 0 24 24"><rect x="4.5" y="10.5" width="15" height="10" rx="2"/><path d="M8 10.5V7.5a4 4 0 0 1 8 0v3"/></symbol>
     </defs>
   </svg>
@@ -102,11 +105,8 @@
         <button class="menu-item" data-view="inicio">
           <svg class="ic"><use href="#i-casa"/></svg><span class="rotulo">Início</span>
         </button>
-        <button class="menu-item" data-view="notas">
-          <svg class="ic"><use href="#i-notas"/></svg><span class="rotulo">Notas fiscais</span>
-        </button>
-        <button class="menu-item" data-view="extrato">
-          <svg class="ic"><use href="#i-banco"/></svg><span class="rotulo">Extrato bancário</span>
+        <button class="menu-item" data-view="relatorio">
+          <svg class="ic"><use href="#i-notas"/></svg><span class="rotulo">Relatório mensal</span>
         </button>
         <button class="menu-item" data-view="resumo">
           <svg class="ic"><use href="#i-grafico"/></svg><span class="rotulo">Resumo do ano</span>
@@ -122,6 +122,9 @@
         </button>
         <button class="menu-item" data-view="lembretes">
           <svg class="ic"><use href="#i-sino"/></svg><span class="rotulo">Lembretes</span>
+        </button>
+        <button class="menu-item" data-view="modelos">
+          <svg class="ic"><use href="#i-impressora"/></svg><span class="rotulo">Modelos</span>
         </button>
       </nav>
 
@@ -157,34 +160,54 @@
         <div class="ini-grade" id="ini-grade"></div>
       </section>
 
-      <!-- ============ NOTAS FISCAIS ============ -->
-      <section class="view" id="view-notas" aria-labelledby="t-notas" hidden>
+      <!-- ============ RELATÓRIO MENSAL (notas fiscais + extrato) ============ -->
+      <section class="view" id="view-relatorio" aria-labelledby="t-relatorio" hidden>
         <header class="topo">
           <div>
-            <h1 id="t-notas">Notas fiscais</h1>
-            <p class="sub">Relatório do mês pela <strong>data de competência</strong></p>
+            <h1 id="t-relatorio">Relatório mensal</h1>
+            <p class="sub" id="rel-sub">Notas e extrato do mês, pela <strong>data de competência</strong></p>
           </div>
           <div class="topo-acoes">
-            <button class="btn" id="btn-atualizar" title="Ler a pasta de novo">
+            <button class="btn" id="rel-atualizar" data-acao="rel-atualizar" title="Ler a pasta de novo">
               <svg class="ic"><use href="#i-atualizar"/></svg><span>Atualizar</span>
             </button>
-            <button class="btn" data-acao="exportar" data-formato="csv" title="Exportar como CSV" disabled>
+            <button class="btn" data-acao="exportar" data-formato="csv" data-rel-acao="notas" title="Exportar como CSV" disabled>
               <svg class="ic"><use href="#i-baixar"/></svg><span>CSV</span>
             </button>
-            <button class="btn btn-primario" data-acao="exportar" data-formato="xlsx" disabled>
+            <button class="btn btn-primario" data-acao="exportar" data-formato="xlsx" data-rel-acao="notas" disabled>
               <svg class="ic"><use href="#i-baixar"/></svg><span>Exportar Excel</span>
+            </button>
+            <button class="btn btn-primario" id="ext-exportar" data-acao="ext-exportar" data-rel-acao="extrato" title="Planilha do mês com extrato, notas e resumo" hidden disabled>
+              <svg class="ic"><use href="#i-baixar"/></svg><span>Exportar fechamento</span>
             </button>
           </div>
         </header>
 
-        <div class="barra vidro">
-          <div class="campo campo-pasta">
+        <div class="escolhas abas" id="rel-abas">
+          <button class="escolha" data-acao="rel-aba" data-aba="notas" aria-pressed="true">Notas fiscais <span class="ag-qtd" id="rel-qtd-notas"></span></button>
+          <button class="escolha" data-acao="rel-aba" data-aba="extrato" aria-pressed="false">Extrato bancário</button>
+          <button class="escolha" data-acao="rel-aba" data-aba="regras" aria-pressed="false">Regras do extrato</button>
+        </div>
+
+        <div class="barra vidro" id="rel-barra">
+          <div class="campo campo-pasta" data-rel-pasta="notas">
             <span class="rotulo-campo">Pasta das notas</span>
             <div class="pasta-linha">
               <svg class="ic ic-suave"><use href="#i-pasta"/></svg>
               <span class="pasta-texto" id="pasta-texto" data-pasta="pasta_notas">Nenhuma pasta escolhida</span>
               <button class="btn btn-peq" data-acao="escolher-pasta" data-chave="pasta_notas">Alterar</button>
               <button class="btn btn-peq btn-icone" data-acao="abrir-pasta" data-chave="pasta_notas" title="Abrir a pasta no Explorador" aria-label="Abrir a pasta no Explorador">
+                <svg class="ic"><use href="#i-abrir"/></svg>
+              </button>
+            </div>
+          </div>
+          <div class="campo campo-pasta" data-rel-pasta="extrato" hidden>
+            <span class="rotulo-campo">Pasta dos extratos</span>
+            <div class="pasta-linha">
+              <svg class="ic ic-suave"><use href="#i-pasta"/></svg>
+              <span class="pasta-texto" data-pasta="pasta_extratos">Nenhuma pasta escolhida</span>
+              <button class="btn btn-peq" data-acao="escolher-pasta" data-chave="pasta_extratos">Alterar</button>
+              <button class="btn btn-peq btn-icone" data-acao="abrir-pasta" data-chave="pasta_extratos" title="Abrir a pasta no Explorador" aria-label="Abrir a pasta no Explorador">
                 <svg class="ic"><use href="#i-abrir"/></svg>
               </button>
             </div>
@@ -199,209 +222,202 @@
           </div>
         </div>
 
-        <div class="progresso vidro" id="progresso" hidden>
-          <span id="progresso-texto">Lendo as notas…</span>
-          <div class="trilho" role="progressbar" aria-label="Lendo as notas" aria-valuemin="0" aria-valuemax="100" id="progresso-barra"><div class="trilho-cheio" id="progresso-cheio"></div></div>
-        </div>
+        <!-- Aba: notas fiscais -->
+        <div class="rel-aba" id="rel-notas">
+          <div class="progresso vidro" id="progresso" hidden>
+            <span id="progresso-texto">Lendo as notas…</span>
+            <div class="trilho" role="progressbar" aria-label="Lendo as notas" aria-valuemin="0" aria-valuemax="100" id="progresso-barra"><div class="trilho-cheio" id="progresso-cheio"></div></div>
+          </div>
 
-        <!-- Sem pasta -->
-        <div class="vazio vidro" id="sem-pasta" hidden>
-          <span class="vazio-icone"><svg class="ic"><use href="#i-pasta"/></svg></span>
-          <h2>Escolha a pasta das notas</h2>
-          <p>É a pasta onde você salva os PDFs das notas do ano, por exemplo <strong>NFS-e 2026</strong>.<br>O OMAC lembra dela nas próximas vezes.</p>
-          <button class="btn btn-primario" data-acao="escolher-pasta" data-chave="pasta_notas"><svg class="ic"><use href="#i-pasta"/></svg><span>Escolher pasta</span></button>
-        </div>
+          <!-- Sem pasta -->
+          <div class="vazio vidro" id="sem-pasta" hidden>
+            <span class="vazio-icone"><svg class="ic"><use href="#i-pasta"/></svg></span>
+            <h2>Escolha a pasta das notas</h2>
+            <p>É a pasta onde você salva os PDFs das notas do ano, por exemplo <strong>NFS-e 2026</strong>.<br>O OMAC lembra dela nas próximas vezes.</p>
+            <button class="btn btn-primario" data-acao="escolher-pasta" data-chave="pasta_notas"><svg class="ic"><use href="#i-pasta"/></svg><span>Escolher pasta</span></button>
+          </div>
 
-        <div id="painel-notas" hidden>
-          <div class="resumo" id="resumo">
-            <div class="cartao vidro">
-              <span class="cartao-rotulo">Notas no mês</span>
-              <strong class="cartao-valor" id="res-qtd">0</strong>
+          <div id="painel-notas" hidden>
+            <div class="barra vidro rel-pesquisa">
+              <div class="campo campo-texto rel-busca">
+                <label class="rotulo-campo" for="rel-busca">Pesquisar notas</label>
+                <span class="ct-busca-caixa"><svg class="ic"><use href="#i-busca"/></svg><input id="rel-busca" type="search" autocomplete="off" placeholder="Nome, dependente, número, valor ou data"></span>
+              </div>
+              <div class="campo">
+                <span class="rotulo-campo" id="rel-escopo-rotulo">Onde procurar</span>
+                <div class="escolhas" id="rel-escopo" role="group" aria-labelledby="rel-escopo-rotulo">
+                  <button class="escolha" type="button" data-acao="rel-escopo" data-escopo="mes" aria-pressed="true">Mês escolhido</button>
+                  <button class="escolha" type="button" data-acao="rel-escopo" data-escopo="ano" aria-pressed="false">Ano todo</button>
+                  <button class="escolha" type="button" data-acao="rel-escopo" data-escopo="periodo" aria-pressed="false">Período</button>
+                </div>
+              </div>
+              <div class="rel-periodo" id="rel-periodo" hidden>
+                <div class="campo campo-texto">
+                  <label class="rotulo-campo" for="rel-de">De</label>
+                  <input id="rel-de" type="date">
+                </div>
+                <div class="campo campo-texto">
+                  <label class="rotulo-campo" for="rel-ate">Até</label>
+                  <input id="rel-ate" type="date">
+                </div>
+              </div>
             </div>
-            <div class="cartao vidro">
-              <span class="cartao-rotulo">Valor total</span>
-              <strong class="cartao-valor" id="res-total">R$ 0,00</strong>
-            </div>
-            <button class="cartao vidro cartao-avisos" id="res-avisos-cartao" data-acao="ver-avisos">
-              <span class="cartao-rotulo">Avisos</span>
-              <strong class="cartao-valor" id="res-avisos">0</strong>
-            </button>
-          </div>
 
-          <div class="faixa faixa-info vidro" id="faixa-canceladas" hidden>
-            <svg class="ic"><use href="#i-cancelada"/></svg>
-            <div><strong id="canceladas-titulo"></strong><ul class="lista-simples" id="canceladas-lista"></ul></div>
-          </div>
-
-          <div class="faixa faixa-aviso faixa-recolhivel vidro" id="faixa-avisos" data-recolhivel="notas" hidden tabindex="-1">
-            <svg class="ic"><use href="#i-alerta"/></svg>
-            <div class="faixa-corpo">
-              <button type="button" class="faixa-cab" data-acao="alternar-avisos" aria-controls="avisos-lista">
-                <strong>Confira antes de mandar para a contabilidade</strong>
-                <span class="faixa-qtd"></span>
-                <span class="faixa-acao"></span>
-                <svg class="ic faixa-seta"><use href="#i-seta"/></svg>
-              </button>
-              <ul class="lista-simples" id="avisos-lista"></ul>
-            </div>
-          </div>
-
-          <div class="tabela-caixa vidro" id="tabela-caixa">
-            <table class="tabela" id="tabela">
-              <caption class="so-leitor" id="tabela-legenda"></caption>
-              <thead>
-                <tr>
-                  <th scope="col" class="c-num">Nº</th>
-                  <th scope="col">Paciente</th>
-                  <th scope="col" class="c-valor">Valor</th>
-                  <th scope="col" class="c-data">Emissão</th>
-                  <th scope="col" class="c-data">Competência</th>
-                  <th scope="col" class="c-acao c-acao-nota"><span class="so-leitor">Enviar e abrir PDF</span></th>
-                </tr>
-              </thead>
-              <tbody id="tabela-corpo"></tbody>
-              <tfoot>
-                <tr>
-                  <td></td>
-                  <th scope="row" id="rod-qtd">Total</th>
-                  <td class="c-valor" id="rod-total"></td>
-                  <td colspan="3"></td>
-                </tr>
-              </tfoot>
-            </table>
-          </div>
-
-          <!-- Nenhuma nota na pasta ou no mês escolhido -->
-          <div class="vazio vidro" id="notas-vazio" hidden>
-            <span class="vazio-icone"><svg class="ic"><use id="notas-vazio-ic" href="#i-notas"/></svg></span>
-            <h2 id="notas-vazio-titulo"></h2>
-            <p id="notas-vazio-texto"></p>
-            <div class="vazio-meses" id="notas-vazio-meses"></div>
-            <div class="vazio-acoes" id="notas-vazio-acoes">
-              <button class="btn" data-acao="abrir-pasta" data-chave="pasta_notas"><svg class="ic"><use href="#i-abrir"/></svg><span>Abrir a pasta</span></button>
-              <button class="btn btn-primario" data-acao="escolher-pasta" data-chave="pasta_notas"><svg class="ic"><use href="#i-pasta"/></svg><span>Escolher outra pasta</span></button>
-            </div>
-          </div>
-
-        </div>
-      </section>
-
-      <!-- ============ EXTRATO BANCÁRIO ============ -->
-      <section class="view" id="view-extrato" aria-labelledby="t-extrato" hidden>
-        <header class="topo">
-          <div>
-            <h1 id="t-extrato">Extrato bancário</h1>
-            <p class="sub">Entradas e saídas do mês, lidas dos PDFs do <strong>Banco Inter</strong></p>
-          </div>
-          <div class="topo-acoes">
-            <button class="btn" id="ext-atualizar" title="Ler a pasta de novo">
-              <svg class="ic"><use href="#i-atualizar"/></svg><span>Atualizar</span>
-            </button>
-            <button class="btn btn-primario" id="ext-exportar" data-acao="ext-exportar" title="Planilha do mês com extrato, notas e resumo" disabled>
-              <svg class="ic"><use href="#i-baixar"/></svg><span>Exportar fechamento</span>
-            </button>
-          </div>
-        </header>
-
-        <div class="barra vidro">
-          <div class="campo campo-pasta">
-            <span class="rotulo-campo">Pasta dos extratos</span>
-            <div class="pasta-linha">
-              <svg class="ic ic-suave"><use href="#i-pasta"/></svg>
-              <span class="pasta-texto" data-pasta="pasta_extratos">Nenhuma pasta escolhida</span>
-              <button class="btn btn-peq" data-acao="escolher-pasta" data-chave="pasta_extratos">Alterar</button>
-              <button class="btn btn-peq btn-icone" data-acao="abrir-pasta" data-chave="pasta_extratos" title="Abrir a pasta no Explorador" aria-label="Abrir a pasta no Explorador">
-                <svg class="ic"><use href="#i-abrir"/></svg>
+            <div class="resumo" id="resumo">
+              <div class="cartao vidro">
+                <span class="cartao-rotulo">Notas no mês</span>
+                <strong class="cartao-valor" id="res-qtd">0</strong>
+              </div>
+              <div class="cartao vidro">
+                <span class="cartao-rotulo">Valor total</span>
+                <strong class="cartao-valor" id="res-total">R$ 0,00</strong>
+              </div>
+              <button class="cartao vidro cartao-avisos" id="res-avisos-cartao" data-acao="ver-avisos">
+                <span class="cartao-rotulo">Avisos</span>
+                <strong class="cartao-valor" id="res-avisos">0</strong>
               </button>
             </div>
-          </div>
-          <div class="campo">
-            <label class="rotulo-campo" for="ext-sel-mes">Mês</label>
-            <span class="select"><select id="ext-sel-mes" data-sel-mes></select></span>
-          </div>
-          <div class="campo">
-            <label class="rotulo-campo" for="ext-sel-ano">Ano</label>
-            <span class="select"><select id="ext-sel-ano" data-sel-ano></select></span>
+
+            <div class="faixa faixa-info vidro" id="faixa-canceladas" hidden>
+              <svg class="ic"><use href="#i-cancelada"/></svg>
+              <div><strong id="canceladas-titulo"></strong><ul class="lista-simples" id="canceladas-lista"></ul></div>
+            </div>
+
+            <div class="faixa faixa-aviso faixa-recolhivel vidro" id="faixa-avisos" data-recolhivel="notas" hidden tabindex="-1">
+              <svg class="ic"><use href="#i-alerta"/></svg>
+              <div class="faixa-corpo">
+                <button type="button" class="faixa-cab" data-acao="alternar-avisos" aria-controls="avisos-lista">
+                  <strong>Confira antes de mandar para a contabilidade</strong>
+                  <span class="faixa-qtd"></span>
+                  <span class="faixa-acao"></span>
+                  <svg class="ic faixa-seta"><use href="#i-seta"/></svg>
+                </button>
+                <ul class="lista-simples" id="avisos-lista"></ul>
+              </div>
+            </div>
+
+            <div class="tabela-caixa vidro" id="tabela-caixa">
+              <table class="tabela" id="tabela">
+                <caption class="so-leitor" id="tabela-legenda"></caption>
+                <thead>
+                  <tr>
+                    <th scope="col" class="c-sel"><input type="checkbox" class="confere" id="rel-marcar-todas" aria-label="Escolher todas as notas da lista"></th>
+                    <th scope="col" class="c-num">Nº</th>
+                    <th scope="col">Paciente</th>
+                    <th scope="col" class="c-valor">Valor</th>
+                    <th scope="col" class="c-data">Emissão</th>
+                    <th scope="col" class="c-data">Competência</th>
+                    <th scope="col" class="c-acao c-acao-nota"><span class="so-leitor">Enviar e abrir PDF</span></th>
+                  </tr>
+                </thead>
+                <tbody id="tabela-corpo"></tbody>
+                <tfoot>
+                  <tr>
+                    <td></td>
+                    <td></td>
+                    <th scope="row" id="rod-qtd">Total</th>
+                    <td class="c-valor" id="rod-total"></td>
+                    <td colspan="3"></td>
+                  </tr>
+                </tfoot>
+              </table>
+            </div>
+
+            <!-- Nenhuma nota na pasta ou no mês escolhido -->
+            <div class="vazio vidro" id="notas-vazio" hidden>
+              <span class="vazio-icone"><svg class="ic"><use id="notas-vazio-ic" href="#i-notas"/></svg></span>
+              <h2 id="notas-vazio-titulo"></h2>
+              <p id="notas-vazio-texto"></p>
+              <div class="vazio-meses" id="notas-vazio-meses"></div>
+              <div class="vazio-acoes" id="notas-vazio-pesquisa" hidden>
+                <button class="btn btn-primario" data-acao="rel-limpar-pesquisa"><svg class="ic"><use href="#i-fechar"/></svg><span>Limpar a pesquisa</span></button>
+              </div>
+              <div class="vazio-acoes" id="notas-vazio-acoes">
+                <button class="btn" data-acao="abrir-pasta" data-chave="pasta_notas"><svg class="ic"><use href="#i-abrir"/></svg><span>Abrir a pasta</span></button>
+                <button class="btn btn-primario" data-acao="escolher-pasta" data-chave="pasta_notas"><svg class="ic"><use href="#i-pasta"/></svg><span>Escolher outra pasta</span></button>
+              </div>
+            </div>
+
           </div>
         </div>
 
-        <!-- Sem pasta -->
-        <div class="vazio vidro" id="ext-sem-pasta" hidden>
-          <span class="vazio-icone"><svg class="ic"><use href="#i-pasta"/></svg></span>
-          <h2>Escolha a pasta dos extratos</h2>
-          <p>Baixe o extrato em PDF no site do Inter e salve sempre na mesma pasta.<br>O OMAC junta os arquivos sozinho, mesmo que os períodos se repitam.</p>
-          <button class="btn btn-primario" data-acao="escolher-pasta" data-chave="pasta_extratos"><svg class="ic"><use href="#i-pasta"/></svg><span>Escolher pasta</span></button>
-        </div>
-
-        <div class="escolhas abas" id="ext-abas" hidden>
-          <button class="escolha" data-acao="ext-aba" data-aba="lancamentos" aria-pressed="true">Lançamentos</button>
-          <button class="escolha" data-acao="ext-aba" data-aba="regras" aria-pressed="false">Regras de preenchimento</button>
-        </div>
-
-        <div class="painel-coluna" id="ext-painel" hidden>
-          <div class="resumo" id="ext-resumo">
-            <div class="cartao vidro">
-              <span class="cartao-rotulo">Entradas</span>
-              <strong class="cartao-valor" id="ext-entradas">R$ 0,00</strong>
-            </div>
-            <div class="cartao vidro">
-              <span class="cartao-rotulo">Saídas</span>
-              <strong class="cartao-valor" id="ext-saidas">R$ 0,00</strong>
-            </div>
-            <div class="cartao vidro">
-              <span class="cartao-rotulo">Saldo no fim do mês</span>
-              <strong class="cartao-valor" id="ext-saldo">R$ 0,00</strong>
-            </div>
-            <button class="cartao vidro cartao-avisos" id="ext-preencher-cartao" data-acao="ext-filtro" data-filtro="preencher">
-              <span class="cartao-rotulo">A preencher</span>
-              <strong class="cartao-valor" id="ext-preencher">0</strong>
-            </button>
+        <!-- Aba: extrato bancário -->
+        <div class="rel-aba" id="rel-extrato" hidden>
+          <!-- Sem pasta -->
+          <div class="vazio vidro" id="ext-sem-pasta" hidden>
+            <span class="vazio-icone"><svg class="ic"><use href="#i-pasta"/></svg></span>
+            <h2>Escolha a pasta dos extratos</h2>
+            <p>Baixe o extrato em PDF no site do Inter e salve sempre na mesma pasta.<br>O OMAC junta os arquivos sozinho, mesmo que os períodos se repitam.</p>
+            <button class="btn btn-primario" data-acao="escolher-pasta" data-chave="pasta_extratos"><svg class="ic"><use href="#i-pasta"/></svg><span>Escolher pasta</span></button>
           </div>
 
-          <div class="faixa faixa-aviso faixa-recolhivel vidro" id="ext-faixa-avisos" data-recolhivel="extrato" hidden>
-            <svg class="ic"><use href="#i-alerta"/></svg>
-            <div class="faixa-corpo">
-              <button type="button" class="faixa-cab" data-acao="alternar-avisos" aria-controls="ext-avisos">
-                <strong>Confira antes de mandar para a contabilidade</strong>
-                <span class="faixa-qtd"></span>
-                <span class="faixa-acao"></span>
-                <svg class="ic faixa-seta"><use href="#i-seta"/></svg>
+          <div class="painel-coluna" id="ext-painel" hidden>
+            <div class="resumo" id="ext-resumo">
+              <div class="cartao vidro">
+                <span class="cartao-rotulo">Entradas</span>
+                <strong class="cartao-valor" id="ext-entradas">R$ 0,00</strong>
+              </div>
+              <div class="cartao vidro">
+                <span class="cartao-rotulo">Saídas</span>
+                <strong class="cartao-valor" id="ext-saidas">R$ 0,00</strong>
+              </div>
+              <div class="cartao vidro">
+                <span class="cartao-rotulo">Saldo no fim do mês</span>
+                <strong class="cartao-valor" id="ext-saldo">R$ 0,00</strong>
+              </div>
+              <button class="cartao vidro cartao-avisos" id="ext-preencher-cartao" data-acao="ext-filtro" data-filtro="preencher">
+                <span class="cartao-rotulo">A preencher</span>
+                <strong class="cartao-valor" id="ext-preencher">0</strong>
               </button>
-              <ul class="lista-simples" id="ext-avisos"></ul>
+            </div>
+
+            <div class="faixa faixa-aviso faixa-recolhivel vidro" id="ext-faixa-avisos" data-recolhivel="extrato" hidden>
+              <svg class="ic"><use href="#i-alerta"/></svg>
+              <div class="faixa-corpo">
+                <button type="button" class="faixa-cab" data-acao="alternar-avisos" aria-controls="ext-avisos">
+                  <strong>Confira antes de mandar para a contabilidade</strong>
+                  <span class="faixa-qtd"></span>
+                  <span class="faixa-acao"></span>
+                  <svg class="ic faixa-seta"><use href="#i-seta"/></svg>
+                </button>
+                <ul class="lista-simples" id="ext-avisos"></ul>
+              </div>
+            </div>
+
+            <div class="escolhas ext-filtros" id="ext-filtros">
+              <button class="escolha" data-acao="ext-filtro" data-filtro="todos">Todos</button>
+              <button class="escolha" data-acao="ext-filtro" data-filtro="entrada">Entradas</button>
+              <button class="escolha" data-acao="ext-filtro" data-filtro="saida">Saídas</button>
+              <button class="escolha" data-acao="ext-filtro" data-filtro="preencher">A preencher</button>
+            </div>
+
+            <div class="tabela-caixa vidro" id="ext-tabela-caixa">
+              <table class="tabela ext-tabela">
+                <caption class="so-leitor" id="ext-legenda"></caption>
+                <thead>
+                  <tr>
+                    <th scope="col" class="c-data">Data</th>
+                    <th scope="col">Operação</th>
+                    <th scope="col">Descrição no banco</th>
+                    <th scope="col" class="c-valor">Valor</th>
+                    <th scope="col" class="c-valor">Saldo</th>
+                  </tr>
+                </thead>
+                <tbody id="ext-corpo"></tbody>
+              </table>
+            </div>
+
+            <div class="vazio vidro" id="ext-vazio" hidden>
+              <span class="vazio-icone"><svg class="ic"><use id="ext-vazio-ic" href="#i-banco"/></svg></span>
+              <h2 id="ext-vazio-titulo"></h2>
+              <p id="ext-vazio-texto"></p>
+              <div class="vazio-meses" id="ext-vazio-meses"></div>
             </div>
           </div>
 
-          <div class="escolhas ext-filtros" id="ext-filtros">
-            <button class="escolha" data-acao="ext-filtro" data-filtro="todos">Todos</button>
-            <button class="escolha" data-acao="ext-filtro" data-filtro="entrada">Entradas</button>
-            <button class="escolha" data-acao="ext-filtro" data-filtro="saida">Saídas</button>
-            <button class="escolha" data-acao="ext-filtro" data-filtro="preencher">A preencher</button>
-          </div>
-
-          <div class="tabela-caixa vidro" id="ext-tabela-caixa">
-            <table class="tabela ext-tabela">
-              <caption class="so-leitor" id="ext-legenda"></caption>
-              <thead>
-                <tr>
-                  <th scope="col" class="c-data">Data</th>
-                  <th scope="col">Operação</th>
-                  <th scope="col">Descrição no banco</th>
-                  <th scope="col" class="c-valor">Valor</th>
-                  <th scope="col" class="c-valor">Saldo</th>
-                </tr>
-              </thead>
-              <tbody id="ext-corpo"></tbody>
-            </table>
-          </div>
-
-          <div class="vazio vidro" id="ext-vazio" hidden>
-            <span class="vazio-icone"><svg class="ic"><use id="ext-vazio-ic" href="#i-banco"/></svg></span>
-            <h2 id="ext-vazio-titulo"></h2>
-            <p id="ext-vazio-texto"></p>
-            <div class="vazio-meses" id="ext-vazio-meses"></div>
-          </div>
         </div>
 
+        <!-- Aba: regras do extrato -->
         <div class="painel-coluna" id="ext-regras" hidden>
           <form class="grupo vidro form-regra" id="form-regra">
             <h2 id="form-regra-titulo">Nova regra</h2>
@@ -450,6 +466,17 @@
             <button class="btn btn-peq" data-acao="ext-regras-importar">Carregar de um arquivo</button>
             <button class="btn btn-peq" data-acao="ext-regras-exportar">Salvar em um arquivo</button>
           </div>
+        </div>
+
+        <!-- Notas escolhidas: ficam aqui embaixo enquanto a pesquisa muda -->
+        <div class="rel-ilha vidro" id="rel-ilha" role="region" aria-label="Notas escolhidas" hidden>
+          <div class="rel-ilha-info">
+            <strong id="rel-ilha-titulo"></strong>
+            <span class="rel-ilha-total" id="rel-ilha-total"></span>
+            <button class="btn btn-peq" type="button" data-acao="rel-limpar-selecao">Limpar</button>
+          </div>
+          <ul class="rel-ilha-lista" id="rel-ilha-lista" aria-label="Notas escolhidas"></ul>
+          <button class="btn btn-primario rel-ilha-enviar" type="button" data-acao="rel-enviar-lote"><svg class="ic"><use href="#i-whats"/></svg><span>Enviar</span></button>
         </div>
       </section>
 
@@ -951,6 +978,39 @@
       </section>
 
       <!-- ============ CONFIGURAÇÕES ============ -->
+      <!-- ============ MODELOS ============ -->
+      <section class="view" id="view-modelos" aria-labelledby="t-modelos" hidden>
+        <header class="topo">
+          <div>
+            <h1 id="t-modelos">Modelos</h1>
+            <p class="sub">Documentos que você imprime sempre. O OMAC guarda uma cópia de cada um</p>
+          </div>
+          <div class="topo-acoes">
+            <button class="btn btn-primario" data-acao="md-novo"><svg class="ic"><use href="#i-mais"/></svg><span>Adicionar modelo</span></button>
+          </div>
+        </header>
+
+        <div class="barra vidro md-barra" id="md-barra" hidden>
+          <div class="campo campo-texto md-busca">
+            <label class="rotulo-campo" for="md-busca">Pesquisar</label>
+            <span class="ct-busca-caixa"><svg class="ic"><use href="#i-busca"/></svg><input id="md-busca" type="search" autocomplete="off" placeholder="Título do modelo"></span>
+          </div>
+        </div>
+
+        <ul class="md-lista" id="md-lista" aria-label="Modelos"></ul>
+
+        <div class="vazio vidro" id="md-vazio" hidden>
+          <span class="vazio-icone"><svg class="ic"><use href="#i-impressora"/></svg></span>
+          <h2 id="md-vazio-titulo"></h2>
+          <p id="md-vazio-texto"></p>
+          <div class="vazio-acoes" id="md-vazio-acoes">
+            <button class="btn btn-primario" data-acao="md-novo"><svg class="ic"><use href="#i-mais"/></svg><span>Adicionar modelo</span></button>
+          </div>
+        </div>
+
+        <p class="dica" id="md-dica" hidden><strong>Imprimir</strong> manda direto para a impressora padrão. Para escolher outra impressora ou o número de cópias, use <strong>Abrir</strong> e depois <kbd>Ctrl</kbd> + <kbd>P</kbd>. Abrir mostra uma cópia: o que você escrever nela não muda o modelo.</p>
+      </section>
+
       <section class="view" id="view-config" aria-labelledby="t-config" hidden>
         <header class="topo"><div><h1 id="t-config">Configurações</h1><p class="sub">As mudanças são salvas na hora</p></div></header>
 
@@ -1225,6 +1285,54 @@
     </form>
   </dialog>
 
+  <!-- Enviar várias notas de uma vez -->
+  <dialog class="modal vidro modal-largo" id="rel-lote" aria-labelledby="rel-lote-titulo">
+    <form id="form-rel-lote" class="modal-corpo">
+      <h2 id="rel-lote-titulo"></h2>
+      <ul class="lista-simples rel-lote-notas" id="rel-lote-notas"></ul>
+      <div class="campo campo-texto" id="rel-lote-contato-campo">
+        <label class="rotulo-campo" for="rel-lote-contato">Contato que vai receber</label>
+        <span class="ct-busca-caixa"><svg class="ic"><use href="#i-busca"/></svg><input id="rel-lote-contato" type="search" autocomplete="off" list="rel-lote-contatos" placeholder="Digite o nome do contato"></span>
+        <datalist id="rel-lote-contatos"></datalist>
+        <p class="dica" id="rel-lote-contato-dica"></p>
+      </div>
+      <fieldset class="opcao" id="rel-lote-destinos-campo" hidden>
+        <legend>Enviar para</legend>
+        <div class="escolhas ag-destinos" id="rel-lote-destinos"></div>
+      </fieldset>
+      <div class="rel-lote-envio" id="rel-lote-envio" hidden>
+        <div class="campo campo-texto">
+          <label class="rotulo-campo" for="rel-lote-telefone">Telefone com DDD</label>
+          <input id="rel-lote-telefone" type="tel" autocomplete="off" placeholder="(61) 90000-0000">
+        </div>
+        <div class="campo campo-texto">
+          <label class="rotulo-campo" for="rel-lote-mensagem">Mensagem</label>
+          <textarea id="rel-lote-mensagem" rows="5"></textarea>
+        </div>
+        <div class="rel-lote-colar" id="rel-lote-colar-campo" hidden>
+          <label class="ag-caixa">
+            <input type="checkbox" class="confere" id="rel-lote-colar">
+            <span>Colar os PDFs sozinho na conversa <span class="etiqueta">experimental</span></span>
+          </label>
+          <p class="dica">Só no WhatsApp do computador: o OMAC espera a conversa abrir e aperta Ctrl + V por você. Se não der certo, é só apertar Ctrl + V. O Enter é sempre seu.</p>
+        </div>
+      </div>
+      <p class="modal-erro" id="rel-lote-erro" role="alert" hidden></p>
+      <div class="faixa faixa-info" id="rel-lote-passo" hidden>
+        <svg class="ic"><use href="#i-whats"/></svg>
+        <div id="rel-lote-passo-texto"></div>
+      </div>
+      <div class="modal-acoes" id="rel-lote-acoes-1">
+        <button class="btn" type="button" data-acao="rel-lote-fechar">Cancelar</button>
+        <button class="btn btn-primario" type="submit" id="rel-lote-abrir"><svg class="ic"><use href="#i-whats"/></svg><span>Copiar os PDFs e abrir o WhatsApp</span></button>
+      </div>
+      <div class="modal-acoes" id="rel-lote-acoes-2" hidden>
+        <button class="btn" type="button" data-acao="rel-lote-fechar">Agora não</button>
+        <button class="btn btn-primario" type="button" id="rel-lote-marcar" data-acao="rel-lote-marcar"><svg class="ic"><use href="#i-ok"/></svg><span id="rel-lote-marcar-texto"></span></button>
+      </div>
+    </form>
+  </dialog>
+
   <!-- Lembretes do dia -->
   <dialog class="modal vidro" id="lembretes" aria-labelledby="lembretes-titulo">
     <div class="modal-corpo">
@@ -1298,6 +1406,32 @@
       <p class="modal-erro" id="lb-categoria-erro" role="alert" hidden></p>
       <div class="modal-acoes">
         <button class="btn" type="button" data-acao="lb-categoria-fechar">Cancelar</button>
+        <button class="btn btn-primario" type="submit">Salvar</button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- Modelo (novo ou alterar) -->
+  <dialog class="modal vidro" id="md-modelo" aria-labelledby="md-modelo-titulo">
+    <form id="form-md-modelo" class="modal-corpo">
+      <h2 id="md-modelo-titulo"></h2>
+      <div class="campo">
+        <span class="rotulo-campo" id="md-arquivo-rotulo">Arquivo</span>
+        <div class="md-arquivo" aria-labelledby="md-arquivo-rotulo">
+          <svg class="ic"><use href="#i-notas"/></svg>
+          <span class="md-arquivo-nome" id="md-arquivo-nome"></span>
+          <button class="btn btn-peq" type="button" data-acao="md-escolher-arquivo" id="md-escolher"></button>
+        </div>
+        <p class="dica">PDF, Word, .odt, .rtf, .txt ou imagem. O OMAC guarda uma cópia: o arquivo original pode ser movido ou apagado depois.</p>
+      </div>
+      <div class="campo campo-texto">
+        <label class="rotulo-campo" for="md-titulo">Título</label>
+        <input id="md-titulo" type="text" autocomplete="off" placeholder="Ex.: Atestado de comparecimento" required>
+      </div>
+      <p class="modal-erro" id="md-modelo-erro" role="alert" hidden></p>
+      <div class="modal-acoes">
+        <button class="btn btn-perigo" type="button" id="md-apagar" data-acao="md-apagar"><svg class="ic"><use href="#i-lixeira"/></svg><span>Apagar</span></button>
+        <button class="btn" type="button" data-acao="md-fechar">Cancelar</button>
         <button class="btn btn-primario" type="submit">Salvar</button>
       </div>
     </form>
@@ -1517,9 +1651,11 @@
   <div class="avisos-flutuantes" id="toasts" aria-live="polite"></div>
 
   <script src="nucleo.js"></script>
+  <script src="relatorio.js"></script>
   <script src="notas.js"></script>
   <script src="extrato.js"></script>
   <script src="lembretes.js"></script>
+  <script src="modelos.js"></script>
   <script src="contatos.js"></script>
   <script src="tratamentos.js"></script>
   <script src="atendimentos.js"></script>
