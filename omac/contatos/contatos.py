@@ -47,6 +47,20 @@ def cpf(texto, de_quem: str = "") -> str:
         raise ContatoInvalido(str(e)) from e
 
 
+def nascimento(texto, hoje: date | None = None) -> str:
+    """AAAA-MM-DD (como vem do campo de data), ou vazio. Data no futuro não vale."""
+    texto = str(texto or "").strip()
+    if not texto:
+        return ""
+    try:
+        dia = date.fromisoformat(texto)
+    except ValueError:
+        raise ContatoInvalido("Confira a data de nascimento.") from None
+    if dia > (hoje or date.today()) or dia.year < 1900:
+        raise ContatoInvalido("A data de nascimento não pode ser depois de hoje.")
+    return dia.isoformat()
+
+
 def novo(nome: str, telefone_: str = "", hoje: date | None = None) -> dict:
     return completar({"id": uuid.uuid4().hex, "nome": nome_limpo(nome), "telefone": telefone_,
                       "criado_em": (hoje or date.today()).isoformat()})
@@ -131,6 +145,7 @@ def salvar(contatos: list[dict], dados: dict, contato_id: str | None, hoje: date
     conferir_nome(contatos, nome, ignorar=contato_id)
     fone = telefone(dados.get("telefone"))
     numeros = cpf(dados.get("cpf"))
+    nasceu = nascimento(dados.get("nascimento"), hoje)
     atual = buscar(contatos, contato_id) if contato_id else None
     # Os responsáveis podem criar contatos: trabalha numa cópia e só troca no fim.
     copia = [dict(c) for c in contatos]
@@ -143,7 +158,8 @@ def salvar(contatos: list[dict], dados: dict, contato_id: str | None, hoje: date
         atual = buscar(contatos, contato_id)
     # Quem abre a janela sem o campo do CPF (uma versão antiga da tela) não apaga o que existe.
     atual.update(nome=nome, telefone=fone, responsaveis=responsaveis,
-                 cpf=numeros if "cpf" in dados else atual.get("cpf", ""))
+                 cpf=numeros if "cpf" in dados else atual.get("cpf", ""),
+                 nascimento=nasceu if "nascimento" in dados else atual.get("nascimento", ""))
     ids = {r["contato_id"] for r in responsaveis}
     if atual["envia_para"] and atual["envia_para"] not in ids:
         atual["envia_para"] = ""
@@ -262,6 +278,8 @@ def juntar(manter: dict, tirar: dict) -> None:
         manter["envia_para"] = tirar["envia_para"]
     if not manter.get("cpf"):
         manter["cpf"] = tirar.get("cpf", "")
+    if not manter.get("nascimento"):
+        manter["nascimento"] = tirar.get("nascimento", "")
     if not manter.get("nota_para"):
         manter["nota_para"] = tirar.get("nota_para", "")
     manter["criado_em"] = min(x for x in (manter["criado_em"], tirar["criado_em"]) if x) \
