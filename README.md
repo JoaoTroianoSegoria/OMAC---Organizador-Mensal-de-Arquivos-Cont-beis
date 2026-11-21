@@ -83,6 +83,7 @@ Notas fiscais, extrato bancário e as regras do extrato em abas de uma tela só,
   <img src="docs/capturas/lembretes-livres.png" alt="Lembretes livres" width="49%">
 </p>
 
+- **Mensagem do seu jeito:** em Configurações → WhatsApp, o texto da nota (e o de várias notas juntas) é escrito com variáveis como `[primeiro-nome-do-responsavel]`, `[data-competencia]`, `[mes-competencia]`, `[numero-da-nota]`, `[valor]` e `[lista-das-notas]`, com prévia na hora e o botão **Voltar ao padrão**.
 - **Notas a enviar:** a mensagem sai pronta e assinada, o PDF é copiado e a conversa abre no aplicativo ou no WhatsApp Web. A pessoa cola o PDF e aperta enviar. As notas novas ficam na lista, em qualquer mês, até serem enviadas, e dá para seguir direto para a próxima.
 - **Contas:** na primeira abertura do dia, uma janela mostra o que vence amanhã ou hoje, e um clique deixa a mensagem pronta para quem cuida dos pagamentos (um contato escolhido nas Configurações).
 - **Enviar lembrete a qualquer momento:** cada conta em aberto (ou que ficou sem pagar no mês passado) tem o botão de WhatsApp, e no topo há **Enviar lembrete das contas em aberto**. A mensagem já diz "venceu dia X" quando o vencimento passou. O aviso automático continua igual.
@@ -147,7 +148,7 @@ Notas fiscais, extrato bancário e as regras do extrato em abas de uma tela só,
 - **A ficha de papel, dentro do app:** paciente, tratamento, data, valor, forma de pagamento (Pix PJ, Pix PF, dinheiro, débito ou crédito), em quantas vezes no crédito, pago e nota.
 - **Pago sem esforço:** fica em branco enquanto espera; se o mês acabar sem marcar, aparece como **não pago**. Pagou depois, é só marcar.
 - **Nota em três situações:** **ok** (achada sozinha na pasta, ou marcada como emitida), **falta emitir** e **não precisa**. Dinheiro e Pix PF já sugerem "não precisa", e dá para trocar.
-- **Emitir:** onde falta a nota aparece o botão **Emitir**, que abre uma janela com o nome e o CPF de quem recebe a nota (o paciente ou um responsável, e a última escolha fica guardada), cada um com o botão **Copiar**, e o botão para abrir o site onde a nota é emitida (configurável).
+- **Emitir:** onde falta a nota e o atendimento já foi pago aparece o botão **Emitir** (antes de pagar ele não aparece, para não emitir sem querer), que abre uma janela com o nome e o CPF de quem recebe a nota (o paciente ou um responsável, e a última escolha fica guardada), cada um com o botão **Copiar**, e o botão para abrir o site onde a nota é emitida (configurável).
 - **O paciente é um contato:** o campo completa com a lista de contatos; um nome novo vira contato ao salvar. Paciente de ortodontia já vem com a manutenção e o valor.
 - **Resumo do mês:** recebido, a receber, não pago e quantos estão sem nota, com filtros. **Exportar Excel:** a ficha do mês em uma folha deitada, pronta para imprimir.
 
@@ -168,7 +169,7 @@ Notas fiscais, extrato bancário e as regras do extrato em abas de uma tela só,
 - **Visual "Bonito"**, com efeito de vidro líquido, cantos arredondados e temas claro/escuro (ou automático, seguindo o Windows).
 - **Visual "Otimizado"**, sem transparências nem animações, para computador fraco. Ele já vem ligado sozinho na primeira vez em PCs com pouca memória.
 - **Acessibilidade:** texto de 100% a 200% (também com <kbd>Ctrl</kbd> + <kbd>+</kbd> / <kbd>−</kbd> / <kbd>0</kbd>), alto contraste, opção de reduzir animações, navegação por teclado e leitores de tela.
-- **Valores escondidos:** o OMAC sempre abre com os valores como **R$ ----**, para quem passa perto do computador não ver. O **olho** ao lado dos totais (Notas, Extrato, Atendimentos, Resumo e no Início) mostra ou esconde todos de uma vez, e depois de alguns minutos sem mexer eles se escondem de novo (o tempo fica nas Configurações).
+- **Valores escondidos:** o OMAC sempre abre com os valores como **R$ ----**, para quem passa perto do computador não ver. O botão **Valores**, com o olho, fica no canto de cima de cada tela com dinheiro (Início, Relatório mensal, Resumo, Atendimentos, Tratamentos e Lembretes) e mostra ou esconde todos de uma vez, e depois de alguns minutos sem mexer eles se escondem de novo (o tempo fica nas Configurações).
 - **Avisos que minimizam:** a faixa de avisos fica só com a quantidade, sem sumir, e abre de novo com um clique.
 - **Aviso de versão nova:** o OMAC avisa e abre o download no navegador. Trocar a pasta do programa não mexe nos dados.
 - **Menu lateral preparado para novos módulos.**
@@ -195,6 +196,8 @@ NFS-e Nº 000000836 - NOME DO PACIENTE - 03-11 - 31-10.pdf   ← competência di
 ```
 
 Número, valor e datas são lidos **de dentro do PDF**. Do nome do arquivo sai só o nome do paciente.
+
+Esse é o padrão, mas cada empresa nomeia de um jeito: em **Configurações → Notas fiscais** dá para escrever o formato com variáveis (`[numero-da-nota]`, `[nome-do-paciente]`, `[data-de-emissao]`, `[data-competencia]`), por exemplo `Nota [numero-da-nota] - [nome-do-paciente]`. O OMAC testa o formato nos arquivos da pasta antes de salvar e mostra quantos entendeu. Ali também fica a **descrição esperada do serviço** (o padrão é "tratamento odontológico"; em branco, não avisa).
 
 ## Privacidade (LGPD)
 
@@ -294,3 +297,4 @@ Para criar um módulo: uma pasta em `omac/` com a classe da API (herdando de `Ap
 - [x] **Lembretes e Comandos** (1.7.0).
 - [x] **Relatório mensal**, pesquisa de notas, envio de várias notas de uma vez e **Modelos** para imprimir (1.8.0).
 - [x] **CPF nos contatos** com a janela **Emitir**, **valores escondidos** e **lembretes que repetem** (1.9.0).
+- [x] **Formato do nome das notas** e **mensagem com variáveis** configuráveis, olho no topo das telas e blocos encaixados no Início e nas Configurações (1.10.0).
