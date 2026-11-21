@@ -112,7 +112,7 @@ def test_tratamento_sem_acento_nao_gera_aviso():
 def test_arquivo_fora_do_padrao_usa_tomador():
     n = interpretar_texto(texto_nota(), "nota qualquer.pdf")
     assert n.paciente == "RESPONSAVEL EXEMPLO"
-    assert any("fora do padrão" in a for a in n.avisos)
+    assert any("fora do formato" in a for a in n.avisos)
 
 
 def test_numero_do_arquivo_diferente():
