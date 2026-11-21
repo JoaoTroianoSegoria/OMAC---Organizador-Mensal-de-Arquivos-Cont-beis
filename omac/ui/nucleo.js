@@ -363,7 +363,11 @@ function ligarMural(grade) {
   });
   const vigiar = (mudancas = []) => {
     for (const m of mudancas) m.removedNodes.forEach((n) => { if (n.nodeType === 1) observador.unobserve(n); });
-    for (const item of grade.children) observador.observe(item); // observar de novo não repete
+    // Blocos novos já saem com a altura certa, antes de a tela ser pintada (sem o "pulo").
+    for (const item of grade.children) {
+      if (!item.style.gridRowEnd) ajustar(item);
+      observador.observe(item); // observar de novo não repete
+    }
   };
   new MutationObserver(vigiar).observe(grade, { childList: true });
   vigiar();
