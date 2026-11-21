@@ -263,7 +263,7 @@ def test_lembrete_so_na_primeira_abertura_do_dia(api):
     primeira = api.lembretes_do_dia()
     assert primeira["mostrar"] is True
     assert primeira["contas"][0]["nome"] == "Aluguel"
-    assert api.lembretes_do_dia() == {"mostrar": False}
+    assert api.lembretes_do_dia()["mostrar"] is False
     # O botão "ver os lembretes" mostra de novo.
     assert api.lembretes_do_dia(True)["mostrar"] is True
 

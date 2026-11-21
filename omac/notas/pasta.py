@@ -15,7 +15,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Callable
 
-from .leitor import VERSAO_LEITOR, Nota, NotaIlegivel, ler_nota
+from .leitor import PADRAO, VERSAO_LEITOR, Nota, NotaIlegivel, Regras, ler_nota
 
 PASTA_CANCELADAS = "Canceladas"
 
@@ -43,14 +43,16 @@ class Varredura:
 class Cache:
     """Resultado da leitura de cada PDF, por nome + tamanho + data de modificação."""
 
-    def __init__(self, caminho: Path | None):
+    def __init__(self, caminho: Path | None, regras: Regras = PADRAO):
         self.caminho = caminho
+        self.regras = regras.assinatura()
         self.itens: dict[str, dict] = {}
         self._alterado = False
         if caminho and caminho.exists():
             try:
                 dados = json.loads(caminho.read_text(encoding="utf-8"))
-                if dados.get("versao") == VERSAO_LEITOR:
+                # Outra versão do leitor, ou outro formato/serviço nas Configurações: lê tudo de novo.
+                if dados.get("versao") == VERSAO_LEITOR and dados.get("regras", PADRAO.assinatura()) == self.regras:
                     self.itens = dados.get("itens", {})
             except (OSError, ValueError):
                 pass  # cache corrompido: começa do zero
@@ -88,7 +90,8 @@ class Cache:
             return
         self.caminho.parent.mkdir(parents=True, exist_ok=True)
         tmp = self.caminho.with_suffix(".tmp")
-        tmp.write_text(json.dumps({"versao": VERSAO_LEITOR, "itens": self.itens}), encoding="utf-8")
+        tmp.write_text(json.dumps({"versao": VERSAO_LEITOR, "regras": self.regras, "itens": self.itens}),
+                       encoding="utf-8")
         tmp.replace(self.caminho)
         self._alterado = False
 
@@ -98,11 +101,12 @@ def varrer(
     cache: Cache | None = None,
     progresso: Callable[[int, int], None] | None = None,
     mover_canceladas: bool = True,
+    regras: Regras = PADRAO,
 ) -> Varredura:
     pasta = Path(pasta)
     if not pasta.is_dir():
         raise FileNotFoundError(f"A pasta não existe: {pasta}")
-    cache = cache or Cache(None)
+    cache = cache or Cache(None, regras)
 
     arquivos = sorted(p for p in pasta.iterdir() if p.is_file() and p.suffix.lower() == ".pdf")
     total = len(arquivos)
@@ -114,7 +118,7 @@ def varrer(
         nota = cache.obter(arquivo)
         if nota is None:
             try:
-                nota = ler_nota(arquivo)
+                nota = ler_nota(arquivo, regras)
             except NotaIlegivel as e:
                 resultado.avisos.append({"arquivo": arquivo.name, "mensagem": f"Nota ignorada: {e}."})
                 nota = None

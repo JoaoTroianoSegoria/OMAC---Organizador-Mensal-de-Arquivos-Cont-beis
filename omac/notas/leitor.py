@@ -11,6 +11,10 @@ valor na linha de baixo, por exemplo:
 O nome do paciente vem do nome do arquivo, salvo quando a descrição do
 serviço indica um dependente ("... referente ao dependente FULANO"): nesse
 caso o nome do dependente tem prioridade.
+
+O jeito de nomear os arquivos e o serviço que a descrição deve ter são da
+pessoa (Configurações → Notas fiscais): chegam aqui como `Regras`. Do nome do
+arquivo só saem o número e o nome; as datas e o valor vêm sempre do PDF.
 """
 
 from __future__ import annotations
@@ -25,11 +29,36 @@ from pathlib import Path
 from ..pdf import PdfIlegivel, extrair_paginas
 
 # Mude quando a forma de ler as notas mudar: invalida o cache antigo.
-VERSAO_LEITOR = 1
+VERSAO_LEITOR = 3  # 2: nome e CPF do tomador; 3: quem recebe a nota guardado na leitura
 
 
 class NotaIlegivel(Exception):
     """O PDF não pôde ser aberto ou não tem os campos de uma NFS-e."""
+
+
+class FormatoInvalido(ValueError):
+    """O formato do nome do arquivo não tem o número e o nome, ou tem uma variável que não existe."""
+
+
+FORMATO_PADRAO = "NFS-e Nº [numero-da-nota] - [nome-do-paciente] - [data-de-emissao]"
+SERVICO_PADRAO = "tratamento odontológico"
+NUMERO, NOME, EMISSAO, COMPETENCIA = "numero-da-nota", "nome-do-paciente", "data-de-emissao", "data-competencia"
+VARIAVEIS_DO_ARQUIVO = (NUMERO, NOME, EMISSAO, COMPETENCIA)
+
+
+@dataclass(frozen=True)
+class Regras:
+    """Como ler: o formato do nome dos arquivos e o serviço que a descrição deve ter ("" = não avisa)."""
+
+    formato: str = FORMATO_PADRAO
+    servico: str = SERVICO_PADRAO
+
+    def assinatura(self) -> str:
+        """Muda quando a leitura muda: o cache guardado com outras regras não vale."""
+        return f"{' '.join(self.formato.split())}|{' '.join(self.servico.split())}"
+
+
+PADRAO = Regras()
 
 
 @dataclass
@@ -43,6 +72,9 @@ class Nota:
     dependente: bool = False
     cancelada: bool = False
     avisos: list[str] = field(default_factory=list)
+    responsavel: str = ""  # quem recebe a nota: o nome do arquivo (ou o tomador, se o arquivo estiver fora do formato)
+    tomador: str = ""  # nome de quem recebeu a nota, como está no PDF
+    cpf_tomador: str = ""  # só os 11 números; vazio se for CNPJ ou não estiver lá
 
     def para_dict(self) -> dict:
         return {
@@ -55,6 +87,9 @@ class Nota:
             "dependente": self.dependente,
             "cancelada": self.cancelada,
             "avisos": list(self.avisos),
+            "responsavel": self.responsavel,
+            "tomador": self.tomador,
+            "cpf_tomador": self.cpf_tomador,
         }
 
     @classmethod
@@ -69,6 +104,9 @@ class Nota:
             dependente=d.get("dependente", False),
             cancelada=d.get("cancelada", False),
             avisos=list(d.get("avisos", [])),
+            responsavel=d.get("responsavel", ""),
+            tomador=d.get("tomador", ""),
+            cpf_tomador=d.get("cpf_tomador", ""),
         )
 
 
@@ -81,9 +119,73 @@ _RE_ARQUIVO = re.compile(
 )
 
 
-def ler_nome_arquivo(nome: str) -> tuple[int, str] | None:
-    """Devolve (número, paciente) do nome do arquivo, ou None fora do padrão."""
-    m = _RE_ARQUIVO.match(Path(nome).stem.strip())
+_RE_VARIAVEL = re.compile(r"\[([^\[\]]*)\]")
+_DATA = r"\d{1,2}[-./]\d{1,2}(?:[-./]\d{2,4})?"
+
+
+def _literal(texto: str) -> str:
+    """O texto fixo do formato, sem ser exigente com espaço, traço e o "º" de "Nº"."""
+    partes = []
+    for c in texto:
+        if c.isspace():
+            partes.append(r"\s*")
+        elif c in "-–—":
+            partes.append(r"\s*[-–—]\s*")
+        elif c in "º°ª":
+            partes.append(r"[º°ªo]?")
+        else:
+            partes.append(re.escape(c))
+    return "".join(partes)
+
+
+def compilar_formato(formato: str) -> re.Pattern:
+    """O formato ("NFS-e Nº [numero-da-nota] - [nome-do-paciente] - ...") vira a regra que lê o nome.
+
+    Precisa ter o número e o nome, uma vez cada. O texto que vier depois da última variável
+    pode faltar no arquivo (" -", " COMP - 02-10 -"...), e o que vier depois do formato é ignorado.
+    """
+    formato = " ".join(str(formato or "").split())
+    if formato == FORMATO_PADRAO:
+        return _RE_ARQUIVO  # o de sempre, exatamente como nas versões anteriores
+    partes = _RE_VARIAVEL.split(formato)  # texto, variável, texto, variável, ..., texto
+    variaveis = [v.strip().lower() for v in partes[1::2]]
+    desconhecidas = [v for v in variaveis if v not in VARIAVEIS_DO_ARQUIVO]
+    if desconhecidas:
+        raise FormatoInvalido(f"Não conheço [{desconhecidas[0]}]. Use [numero-da-nota], [nome-do-paciente], "
+                              "[data-de-emissao] e [data-competencia].")
+    for obrigatoria in (NUMERO, NOME):
+        if variaveis.count(obrigatoria) != 1:
+            raise FormatoInvalido(f"O formato precisa ter [{obrigatoria}] uma vez.")
+    if any(variaveis.count(v) > 1 for v in (EMISSAO, COMPETENCIA)):
+        raise FormatoInvalido("Cada data pode aparecer uma vez só no formato.")
+    regex = [r"^\s*"]
+    for i, parte in enumerate(partes):
+        if i % 2 == 0:
+            if i == len(partes) - 1:
+                if parte.strip():
+                    regex.append(f"(?:{_literal(parte)})?")
+                continue
+            regex.append(_literal(parte))
+            continue
+        variavel = parte.strip().lower()
+        if variavel == NUMERO:
+            regex.append(r"0*(?P<numero>\d+)")
+        elif variavel == NOME:
+            # Nome no fim do formato: vai até o fim do nome do arquivo.
+            no_fim = i == len(partes) - 2
+            regex.append(r"(?P<nome>.+?)\s*[-–—_.]*\s*$" if no_fim else r"(?P<nome>.+?)")
+        else:
+            regex.append(_DATA)
+    return re.compile("".join(regex), re.IGNORECASE)
+
+
+def ler_nome_arquivo(nome: str, regras: Regras = PADRAO) -> tuple[int, str] | None:
+    """Devolve (número, nome) do nome do arquivo, ou None fora do formato."""
+    try:
+        padrao = compilar_formato(regras.formato)
+    except FormatoInvalido:
+        padrao = _RE_ARQUIVO
+    m = padrao.match(Path(nome).stem.strip())
     if not m:
         return None
     paciente = _limpar_nome(m.group("nome"))
@@ -92,9 +194,10 @@ def ler_nome_arquivo(nome: str) -> tuple[int, str] | None:
     return int(m.group("numero")), paciente
 
 
-
 def responsavel(nota: Nota) -> str:
     """Quem recebe a nota. O nome do arquivo é o do responsável, mesmo com dependente."""
+    if nota.responsavel:
+        return nota.responsavel
     lido = ler_nome_arquivo(nota.arquivo)
     return lido[1] if lido else nota.paciente
 
@@ -123,6 +226,11 @@ _RE_TOMADOR = re.compile(
     r"TOMADOR\s*/\s*ADQUIRENTE.*?Nome\s*/\s*Nome Empresarial\s*\n\s*([^\n]+)",
     re.IGNORECASE | re.DOTALL,
 )
+# O bloco do tomador vai até o intermediário ou o serviço; o CPF vem logo depois do rótulo.
+_RE_BLOCO_TOMADOR = re.compile(
+    r"TOMADOR\s*/\s*ADQUIRENTE(.*?)(?:INTERMEDI|SERVI[ÇC]O PRESTADO|$)", re.IGNORECASE | re.DOTALL
+)
+_RE_CPF = re.compile(r"(?<![\d./-])(\d{3}\.?\d{3}\.?\d{3}-?\d{2})(?![\d./-])")
 _RE_DEPENDENTE = re.compile(r"\bdependente\b\s*[:\-]?\s*(.+)", re.IGNORECASE | re.DOTALL)
 _RE_CANCELADA = re.compile(r"\bcancelad[ao]\b", re.IGNORECASE)
 # A marca de cancelamento fica sozinha na linha: "CANCELADA", "NFS-e cancelada".
@@ -139,7 +247,7 @@ def extrair_texto(caminho: Path) -> str:
         raise NotaIlegivel(str(e)) from e
 
 
-def interpretar_texto(texto: str, nome_arquivo: str) -> Nota:
+def interpretar_texto(texto: str, nome_arquivo: str, regras: Regras = PADRAO) -> Nota:
     """Monta a Nota a partir do texto do PDF e do nome do arquivo."""
     avisos: list[str] = []
 
@@ -170,10 +278,12 @@ def interpretar_texto(texto: str, nome_arquivo: str) -> Nota:
         avisos.append("A palavra “cancelada” aparece no texto da nota. Ela continua no relatório: confira se vale mesmo.")
 
     descricao = " ".join((_buscar(_RE_DESCRICAO, texto) or "").split())
-    if "tratamento odontol" not in _sem_acentos(descricao).lower():
-        avisos.append("A descrição do serviço não contém “tratamento odontológico”.")
+    servico = " ".join(regras.servico.split())
+    if servico and " ".join(_sem_acentos(servico).lower().split()) not in _sem_acentos(descricao).lower():
+        avisos.append(f"A descrição do serviço não contém “{servico}”.")
 
-    do_arquivo = ler_nome_arquivo(nome_arquivo)
+    do_arquivo = ler_nome_arquivo(nome_arquivo, regras)
+    tomador = _limpar_nome(_buscar(_RE_TOMADOR, texto) or "")
     dependente = _nome_dependente(descricao)
 
     if dependente:
@@ -181,9 +291,9 @@ def interpretar_texto(texto: str, nome_arquivo: str) -> Nota:
     elif do_arquivo:
         paciente = do_arquivo[1]
     else:
-        paciente = _limpar_nome(_buscar(_RE_TOMADOR, texto) or "")
+        paciente = tomador
         avisos.append(
-            "O nome do arquivo está fora do padrão; usei o nome do tomador que está na nota."
+            "O nome do arquivo está fora do formato; usei o nome do tomador que está na nota."
         )
         if not paciente:
             paciente = "(sem nome)"
@@ -204,12 +314,15 @@ def interpretar_texto(texto: str, nome_arquivo: str) -> Nota:
         dependente=bool(dependente),
         cancelada=cancelada,
         avisos=avisos,
+        responsavel=do_arquivo[1] if do_arquivo else paciente,
+        tomador=tomador,
+        cpf_tomador=_cpf_do_tomador(texto),
     )
 
 
-def ler_nota(caminho: Path) -> Nota:
+def ler_nota(caminho: Path, regras: Regras = PADRAO) -> Nota:
     caminho = Path(caminho)
-    return interpretar_texto(extrair_texto(caminho), caminho.name)
+    return interpretar_texto(extrair_texto(caminho), caminho.name, regras)
 
 
 # --- Auxiliares ------------------------------------------------------------
@@ -218,6 +331,13 @@ def ler_nota(caminho: Path) -> Nota:
 def _buscar(regex: re.Pattern, texto: str) -> str | None:
     m = regex.search(texto)
     return m.group(1).strip() if m else None
+
+
+def _cpf_do_tomador(texto: str) -> str:
+    """Só os números do CPF do tomador. CNPJ (14 números) não casa com o padrão."""
+    bloco = _buscar(_RE_BLOCO_TOMADOR, texto) or ""
+    m = _RE_CPF.search(bloco)
+    return re.sub(r"\D", "", m.group(1)) if m else ""
 
 
 def _nome_dependente(descricao: str) -> str | None:

@@ -154,12 +154,11 @@ function desenharNotas() {
   $("#painel-notas").hidden = false;
 
   const nomeMes = `${MESES[estado.mes - 1]} de ${estado.ano}`;
-  const total = real.format(notasEstado.total / 100);
   $("#res-qtd").textContent = String(notas.length);
   $("#res-qtd").previousElementSibling.textContent = pesquisando() ? "Notas encontradas" : "Notas no mês";
-  $("#res-total").textContent = total;
+  $("#res-total").replaceChildren(dinheiro(notasEstado.total));
   $("#rod-qtd").textContent = `Total (${plural(notas.length, "nota", "notas")})`;
-  $("#rod-total").textContent = total;
+  $("#rod-total").replaceChildren(dinheiro(notasEstado.total));
   $("#tabela-legenda").textContent = pesquisando()
     ? "Notas fiscais encontradas na pesquisa"
     : `Notas fiscais com competência em ${nomeMes}`;
@@ -233,7 +232,7 @@ function linhaDaNota(n) {
 
   const tdValor = document.createElement("td");
   tdValor.className = "c-valor";
-  tdValor.textContent = real.format(n.valor_centavos / 100);
+  tdValor.append(dinheiro(n.valor_centavos));
 
   const tdEm = document.createElement("td");
   tdEm.className = "c-data";

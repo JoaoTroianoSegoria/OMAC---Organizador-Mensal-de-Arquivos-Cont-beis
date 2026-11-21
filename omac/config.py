@@ -31,6 +31,13 @@ PADRAO = {
     "avisos_recolhidos": [],  # faixas minimizadas: "notas", "extrato"
     "atualizacao_automatica": True,  # procura versão nova ao abrir (instalar é sempre opcional)
     "atualizacao_adiada_em": "",  # dia em que a pessoa clicou em "Agora não"
+    "site_nota": "",  # site onde a nota é emitida (botão na janela "Emitir nota")
+    # Como os arquivos das notas são nomeados; do nome só saem o número e quem recebe a nota.
+    "formato_arquivo": "NFS-e Nº [numero-da-nota] - [nome-do-paciente] - [data-de-emissao]",
+    "servico_esperado": "tratamento odontológico",  # a descrição da nota deve ter isso; "" = não avisa
+    "mensagem_nota": "",  # modelo da mensagem de uma nota, com [variáveis]; "" = o padrão
+    "mensagem_notas": "",  # modelo para várias notas juntas; "" = o padrão
+    "ocultar_valores_minutos": 5,  # esconde os valores de novo depois de X minutos parado; 0 = não
     "abrir_em": "inicio",  # tela ao abrir: "inicio" | "notas"
     "inicio_cartoes": [],  # ordem e escolhas dos widgets do Início (vazio = padrão)
     # Backup
@@ -101,13 +108,17 @@ def normalizar(cfg: dict) -> dict:
                   "backup_automatico", "backup_arquivos", "colar_sozinho"):
         limpo[chave] = bool(limpo[chave])
     for chave in ("pasta_notas", "pasta_extratos", "pasta_saida",
-                  "assistente_nome", "chave_pix", "atualizacao_adiada_em",
+                  "assistente_nome", "chave_pix", "atualizacao_adiada_em", "site_nota",
+                  "formato_arquivo", "servico_esperado", "mensagem_nota", "mensagem_notas",
                   "backup_pasta", "backup_ultimo", "backup_erro"):
         limpo[chave] = str(limpo[chave] or "")
     try:
         limpo["lembrete_fechamento_dia"] = min(28, max(0, int(limpo["lembrete_fechamento_dia"])))
     except (TypeError, ValueError):
         limpo["lembrete_fechamento_dia"] = PADRAO["lembrete_fechamento_dia"]
+    if not limpo["formato_arquivo"].strip():
+        limpo["formato_arquivo"] = PADRAO["formato_arquivo"]
+    limpo["ocultar_valores_minutos"] = _inteiro(limpo["ocultar_valores_minutos"], 0, 60, 5)
     limpo["backup_dia_semana"] = _inteiro(limpo["backup_dia_semana"], 0, 6, 0)
     limpo["backup_dia_mes"] = _inteiro(limpo["backup_dia_mes"], 1, 28, 1)
     limpo["tratamentos"] = _lista_de_nomes(limpo["tratamentos"], PADRAO["tratamentos"])

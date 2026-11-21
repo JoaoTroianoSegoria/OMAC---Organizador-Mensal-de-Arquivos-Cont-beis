@@ -12,6 +12,7 @@
   <link rel="stylesheet" href="tratamentos.css">
   <link rel="stylesheet" href="atendimentos.css">
   <link rel="stylesheet" href="contatos.css">
+  <link rel="stylesheet" href="configuracoes.css">
   <link rel="stylesheet" href="inicio.css">
   <script>
     /* Antes de tudo: se um script não carregar ou quebrar, a tela diz qual, em vez de ficar muda. */
@@ -42,7 +43,8 @@
      * no .exe de 32 bits o servidor interno às vezes recusa os primeiros pedidos quando chegam
      * muitos juntos. Quem precisa de todos carregados usa omacQuandoPronto(fn). */
     const OMAC_SCRIPTS = ["nucleo.js", "relatorio.js", "notas.js", "extrato.js", "lembretes.js", "modelos.js",
-      "contatos.js", "tratamentos.js", "atendimentos.js", "backup.js", "resumo.js", "inicio.js", "atualizacao.js"];
+      "contatos.js", "tratamentos.js", "atendimentos.js", "backup.js", "resumo.js", "inicio.js", "atualizacao.js",
+      "configuracoes.js"];
     const OMAC_TENTATIVAS = 4;
     window.omacScriptsProntos = false;
     function omacQuandoPronto(fn) {
@@ -180,6 +182,7 @@
             <p class="sub" id="ini-data"></p>
           </div>
           <div class="topo-acoes">
+            <button class="btn olho" type="button" data-acao="olho" aria-pressed="false" aria-label="Mostrar os valores" title="Mostrar os valores"><svg class="ic"><use href="#i-olho-fechado"/></svg><span>Valores</span></button>
             <button class="btn" data-acao="ini-atualizar"><svg class="ic"><use href="#i-atualizar"/></svg><span>Atualizar</span></button>
             <button class="btn" data-acao="ini-personalizar" id="ini-personalizar" aria-pressed="false"><svg class="ic"><use href="#i-ajustes"/></svg><span>Personalizar</span></button>
           </div>
@@ -203,6 +206,7 @@
             <p class="sub" id="rel-sub">Notas e extrato do mês, pela <strong>data de competência</strong></p>
           </div>
           <div class="topo-acoes">
+            <button class="btn olho" type="button" data-acao="olho" aria-pressed="false" aria-label="Mostrar os valores" title="Mostrar os valores"><svg class="ic"><use href="#i-olho-fechado"/></svg><span>Valores</span></button>
             <button class="btn" id="rel-atualizar" data-acao="rel-atualizar" title="Ler a pasta de novo">
               <svg class="ic"><use href="#i-atualizar"/></svg><span>Atualizar</span>
             </button>
@@ -305,7 +309,7 @@
               </div>
               <div class="cartao vidro">
                 <span class="cartao-rotulo">Valor total</span>
-                <strong class="cartao-valor" id="res-total">R$ 0,00</strong>
+                <strong class="cartao-valor" id="res-total"></strong>
               </div>
               <button class="cartao vidro cartao-avisos" id="res-avisos-cartao" data-acao="ver-avisos">
                 <span class="cartao-rotulo">Avisos</span>
@@ -390,15 +394,15 @@
             <div class="resumo" id="ext-resumo">
               <div class="cartao vidro">
                 <span class="cartao-rotulo">Entradas</span>
-                <strong class="cartao-valor" id="ext-entradas">R$ 0,00</strong>
+                <strong class="cartao-valor" id="ext-entradas"></strong>
               </div>
               <div class="cartao vidro">
                 <span class="cartao-rotulo">Saídas</span>
-                <strong class="cartao-valor" id="ext-saidas">R$ 0,00</strong>
+                <strong class="cartao-valor" id="ext-saidas"></strong>
               </div>
               <div class="cartao vidro">
                 <span class="cartao-rotulo">Saldo no fim do mês</span>
-                <strong class="cartao-valor" id="ext-saldo">R$ 0,00</strong>
+                <strong class="cartao-valor" id="ext-saldo"></strong>
               </div>
               <button class="cartao vidro cartao-avisos" id="ext-preencher-cartao" data-acao="ext-filtro" data-filtro="preencher">
                 <span class="cartao-rotulo">A preencher</span>
@@ -522,6 +526,9 @@
             <h1 id="t-whats">Lembretes</h1>
             <p class="sub">Notas a enviar, contas, lembretes e textos prontos. No WhatsApp, quem aperta enviar é <strong>você</strong></p>
           </div>
+          <div class="topo-acoes">
+            <button class="btn olho" type="button" data-acao="olho" aria-pressed="false" aria-label="Mostrar os valores" title="Mostrar os valores"><svg class="ic"><use href="#i-olho-fechado"/></svg><span>Valores</span></button>
+          </div>
         </header>
 
         <div class="escolhas abas" id="whats-abas">
@@ -613,6 +620,40 @@
               <label class="rotulo-campo" for="livre-obs">Observação (opcional)</label>
               <textarea id="livre-obs" rows="2" placeholder="Detalhes, telefone, o que for preciso"></textarea>
             </div>
+            <fieldset class="opcao">
+              <legend>Repetir</legend>
+              <div class="escolhas lb-repetir" id="lb-repetir">
+                <button class="escolha" type="button" data-acao="lb-repetir" data-repetir="nao" aria-pressed="true">Não repete</button>
+                <button class="escolha" type="button" data-acao="lb-repetir" data-repetir="dia" aria-pressed="false">Todo dia</button>
+                <button class="escolha" type="button" data-acao="lb-repetir" data-repetir="semana" aria-pressed="false">Toda semana</button>
+                <button class="escolha" type="button" data-acao="lb-repetir" data-repetir="mes" aria-pressed="false">Todo mês</button>
+                <button class="escolha" type="button" data-acao="lb-repetir" data-repetir="data" aria-pressed="false">Num dia</button>
+              </div>
+            </fieldset>
+            <div class="form-conta-campos">
+              <div class="campo" id="livre-dia-semana-campo" hidden>
+                <label class="rotulo-campo" for="livre-dia-semana">Dia da semana</label>
+                <span class="select"><select id="livre-dia-semana">
+                  <option value="0">Segunda</option><option value="1">Terça</option><option value="2">Quarta</option>
+                  <option value="3">Quinta</option><option value="4">Sexta</option><option value="5">Sábado</option>
+                  <option value="6">Domingo</option>
+                </select></span>
+              </div>
+              <div class="campo" id="livre-dia-mes-campo" hidden>
+                <label class="rotulo-campo" for="livre-dia-mes">Dia do mês</label>
+                <span class="select"><select id="livre-dia-mes"></select></span>
+              </div>
+              <div class="campo campo-texto" id="livre-data-campo" hidden>
+                <label class="rotulo-campo" for="livre-data">Data</label>
+                <input id="livre-data" type="date">
+              </div>
+              <div class="campo campo-texto lb-livre-para" id="livre-para-campo">
+                <label class="rotulo-campo" for="livre-para">Enviar pelo WhatsApp para</label>
+                <input id="livre-para" type="text" autocomplete="off" list="livre-para-nomes">
+                <datalist id="livre-para-nomes"></datalist>
+              </div>
+            </div>
+            <p class="dica" id="livre-repetir-dica" hidden>Aparece toda vez que o OMAC abre, até você marcar como feito. Depois, só na próxima vez.</p>
             <div class="form-acoes">
               <button class="btn btn-primario" type="submit"><svg class="ic"><use href="#i-mais"/></svg><span id="form-livre-salvar">Adicionar lembrete</span></button>
               <button class="btn" type="button" id="form-livre-cancelar" data-acao="lb-livre-cancelar" hidden>Cancelar</button>
@@ -624,6 +665,10 @@
             <h2>Nada para lembrar</h2>
             <p>Os lembretes em aberto aparecem aqui e no Início. Marque como feito quando terminar.</p>
           </div>
+          <section class="lb-programados" id="lb-programados" aria-labelledby="lb-programados-titulo" hidden>
+            <h2 class="lb-programados-titulo" id="lb-programados-titulo">Próximos</h2>
+            <ul class="lb-livres" id="lb-programados-lista"></ul>
+          </section>
           <details class="grupo vidro lb-feitos" id="lb-feitos" hidden>
             <summary><span id="lb-feitos-titulo">Feitos</span></summary>
             <ul class="lb-livres lb-livres-feitos" id="lb-feitos-lista" aria-label="Lembretes feitos"></ul>
@@ -663,6 +708,7 @@
             <p class="sub">Manutenção dos pacientes de ortodontia em <strong id="ag-mes"></strong></p>
           </div>
           <div class="topo-acoes">
+            <button class="btn olho" type="button" data-acao="olho" aria-pressed="false" aria-label="Mostrar os valores" title="Mostrar os valores"><svg class="ic"><use href="#i-olho-fechado"/></svg><span>Valores</span></button>
             <button class="btn btn-primario" data-acao="ag-novo"><svg class="ic"><use href="#i-mais"/></svg><span>Novo paciente</span></button>
           </div>
         </header>
@@ -815,6 +861,7 @@
             <p class="sub">A ficha de <strong id="pg-mes-nome"></strong>: pagamentos e notas</p>
           </div>
           <div class="topo-acoes">
+            <button class="btn olho" type="button" data-acao="olho" aria-pressed="false" aria-label="Mostrar os valores" title="Mostrar os valores"><svg class="ic"><use href="#i-olho-fechado"/></svg><span>Valores</span></button>
             <button class="btn" data-acao="pg-exportar" id="pg-exportar"><svg class="ic"><use href="#i-baixar"/></svg><span>Exportar Excel</span></button>
             <button class="btn btn-primario" data-acao="pg-novo"><svg class="ic"><use href="#i-mais"/></svg><span>Novo atendimento</span></button>
           </div>
@@ -955,6 +1002,7 @@
             <p class="sub">Notas fiscais, extrato e ficha de atendimentos, mês a mês</p>
           </div>
           <div class="topo-acoes">
+            <button class="btn olho" type="button" data-acao="olho" aria-pressed="false" aria-label="Mostrar os valores" title="Mostrar os valores"><svg class="ic"><use href="#i-olho-fechado"/></svg><span>Valores</span></button>
             <div class="campo rs-campo-ano">
               <label class="rotulo-campo" for="rs-ano">Ano</label>
               <span class="select"><select id="rs-ano"></select></span>
@@ -1118,6 +1166,35 @@
               </div>
               <p class="dica">Notas canceladas vão para a subpasta <strong>Canceladas</strong> e ficam fora do relatório.</p>
             </div>
+            <div class="campo campo-texto">
+              <label class="rotulo-campo" for="cfg-site-nota">Site onde a nota é emitida</label>
+              <input id="cfg-site-nota" type="url" autocomplete="off" data-config-campo="site_nota" placeholder="Ex.: www.nfse.gov.br/EmissorNacional">
+              <p class="dica">Aparece como botão na janela <strong>Emitir</strong>, em Atendimentos.</p>
+            </div>
+            <form class="cfg-leitura" id="form-cfg-leitura">
+              <div class="campo campo-texto">
+                <label class="rotulo-campo" for="cfg-formato">Como os arquivos das notas são nomeados</label>
+                <input id="cfg-formato" type="text" autocomplete="off" spellcheck="false">
+                <div class="cfg-variaveis" data-alvo="cfg-formato">
+                  <button class="btn btn-peq" type="button" data-acao="cfg-variavel" data-variavel="numero-da-nota">Número da nota</button>
+                  <button class="btn btn-peq" type="button" data-acao="cfg-variavel" data-variavel="nome-do-paciente">Nome</button>
+                  <button class="btn btn-peq" type="button" data-acao="cfg-variavel" data-variavel="data-de-emissao">Data de emissão</button>
+                  <button class="btn btn-peq" type="button" data-acao="cfg-variavel" data-variavel="data-competencia">Data de competência</button>
+                </div>
+                <p class="dica">Escreva o nome de um arquivo trocando as partes que mudam pelos botões. Do nome o OMAC só tira o <strong>número</strong> e o <strong>nome</strong> de quem recebe a nota; datas e valor vêm do PDF. O que vier depois (como “COMP - 02-10 -”) é ignorado.</p>
+                <div class="cfg-teste" id="cfg-formato-teste" role="status" aria-live="polite"></div>
+              </div>
+              <div class="campo campo-texto">
+                <label class="rotulo-campo" for="cfg-servico">Descrição esperada do serviço</label>
+                <input id="cfg-servico" type="text" autocomplete="off" placeholder="Em branco: não avisa">
+                <p class="dica">Avisa quando a descrição da nota não tem esse texto. Em branco, não avisa nada.</p>
+              </div>
+              <p class="modal-erro" id="cfg-leitura-erro" role="alert" hidden></p>
+              <div class="form-acoes">
+                <button class="btn btn-primario" type="submit" id="cfg-leitura-salvar">Salvar</button>
+                <button class="btn" type="button" data-acao="cfg-leitura-padrao">Voltar ao padrão</button>
+              </div>
+            </form>
             <fieldset class="opcao">
               <legend>Formato padrão da planilha</legend>
               <div class="escolhas" data-config="formato">
@@ -1165,9 +1242,58 @@
               <datalist id="cfg-destinatario-nomes"></datalist>
               <p class="dica" id="cfg-destinatario-dica">Escolha da lista de contatos. Um nome novo vira contato.</p>
             </form>
+            <form class="cfg-mensagem" data-tipo="nota" id="form-cfg-msg-nota">
+              <div class="campo campo-texto">
+                <label class="rotulo-campo" for="cfg-msg-nota">Mensagem ao enviar uma nota</label>
+                <div class="cfg-variaveis" id="cfg-msg-nota-variaveis" data-alvo="cfg-msg-nota"></div>
+                <textarea id="cfg-msg-nota" rows="4" spellcheck="true"></textarea>
+              </div>
+              <div class="cfg-previa">
+                <span class="cfg-previa-rotulo">Como fica (com um exemplo inventado)</span>
+                <p class="cfg-previa-texto" id="cfg-msg-nota-previa"></p>
+              </div>
+              <p class="modal-erro" id="cfg-msg-nota-erro" role="alert" hidden></p>
+              <div class="form-acoes">
+                <button class="btn btn-primario" type="submit">Salvar mensagem</button>
+                <button class="btn" type="button" data-acao="cfg-msg-padrao" data-tipo="nota">Voltar ao padrão</button>
+              </div>
+            </form>
+            <form class="cfg-mensagem" data-tipo="notas" id="form-cfg-msg-notas">
+              <div class="campo campo-texto">
+                <label class="rotulo-campo" for="cfg-msg-notas">Mensagem ao enviar várias notas juntas</label>
+                <div class="cfg-variaveis" id="cfg-msg-notas-variaveis" data-alvo="cfg-msg-notas"></div>
+                <textarea id="cfg-msg-notas" rows="5" spellcheck="true"></textarea>
+              </div>
+              <div class="cfg-previa">
+                <span class="cfg-previa-rotulo">Como fica (com um exemplo inventado)</span>
+                <p class="cfg-previa-texto" id="cfg-msg-notas-previa"></p>
+              </div>
+              <p class="modal-erro" id="cfg-msg-notas-erro" role="alert" hidden></p>
+              <div class="form-acoes">
+                <button class="btn btn-primario" type="submit">Salvar mensagem</button>
+                <button class="btn" type="button" data-acao="cfg-msg-padrao" data-tipo="notas">Voltar ao padrão</button>
+              </div>
+            </form>
             <div class="campo">
               <label class="rotulo-campo" for="cfg-fechamento">Lembrar de gerar o fechamento</label>
               <span class="select"><select id="cfg-fechamento" data-config-campo="lembrete_fechamento_dia" data-tipo="numero"></select></span>
+            </div>
+          </section>
+
+          <section class="grupo vidro" aria-labelledby="g-privacidade">
+            <h2 id="g-privacidade">Privacidade</h2>
+            <div class="campo">
+              <label class="rotulo-campo" for="cfg-ocultar">Esconder os valores de novo depois de</label>
+              <span class="select"><select id="cfg-ocultar" data-config-campo="ocultar_valores_minutos" data-tipo="numero">
+                <option value="0">Não esconder sozinho</option>
+                <option value="1">1 minuto sem mexer</option>
+                <option value="2">2 minutos sem mexer</option>
+                <option value="5">5 minutos sem mexer</option>
+                <option value="10">10 minutos sem mexer</option>
+                <option value="15">15 minutos sem mexer</option>
+                <option value="30">30 minutos sem mexer</option>
+              </select></span>
+              <p class="dica">O OMAC sempre abre com os valores escondidos (R$ ----). O olho ao lado dos totais mostra ou esconde.</p>
             </div>
           </section>
 
@@ -1269,6 +1395,15 @@
             </div>
             <div><button class="btn btn-peq" id="atualizacao-procurar" data-acao="atualizacao-procurar"><svg class="ic"><use href="#i-atualizar"/></svg><span>Procurar agora</span></button></div>
             <p class="dica" id="atualizacao-indisponivel" hidden>Disponível só no .exe, dentro do Windows.</p>
+            <div class="cfg-link">
+              <span class="rotulo-campo">Página das versões no GitHub</span>
+              <code class="cfg-link-texto" id="atualizacao-link"></code>
+              <div class="cfg-link-botoes">
+                <button class="btn btn-peq" type="button" data-acao="atualizacao-github"><svg class="ic"><use href="#i-abrir"/></svg><span>Abrir no navegador</span></button>
+                <button class="btn btn-peq" type="button" data-acao="atualizacao-copiar-link"><svg class="ic"><use href="#i-copiar"/></svg><span>Copiar link</span></button>
+              </div>
+              <p class="dica">Lá fica sempre a versão mais nova, com o que mudou. Baixe o <strong>OMAC-64bits.zip</strong>, extraia a pasta inteira e abra o OMAC.exe: os dados continuam os mesmos.</p>
+            </div>
             <p class="dica">Para procurar, o OMAC só consulta o GitHub. Nenhum dado seu vai junto.</p>
           </section>
 
@@ -1372,6 +1507,7 @@
   <dialog class="modal vidro" id="lembretes" aria-labelledby="lembretes-titulo">
     <div class="modal-corpo">
       <h2 id="lembretes-titulo">Lembretes de hoje</h2>
+      <ul class="lb-livres lembretes-livres" id="lembretes-livres" aria-label="Lembretes" hidden></ul>
       <ul class="lista-simples lembretes-lista" id="lembretes-contas"></ul>
       <div class="faixa faixa-info" id="lembretes-fechamento" hidden>
         <svg class="ic"><use href="#i-banco"/></svg>
@@ -1486,6 +1622,59 @@
   </dialog>
 
   <!-- Contato (novo, alterar, e a ortodontia dele) -->
+
+  <!-- Emitir nota: nome e CPF de quem recebe a nota, para copiar -->
+  <dialog class="modal vidro" id="emitir" aria-labelledby="emitir-titulo">
+    <div class="modal-corpo">
+      <div>
+        <h2 id="emitir-titulo">Emitir nota</h2>
+        <p class="sub emitir-atendimento" id="emitir-atendimento"></p>
+      </div>
+      <fieldset class="opcao" id="emitir-quem-campo">
+        <legend>A nota sai no nome de</legend>
+        <div class="escolhas emitir-quem" id="emitir-quem"></div>
+      </fieldset>
+      <dl class="emitir-dados">
+        <div class="emitir-linha">
+          <dt>Nome</dt>
+          <dd id="emitir-nome"></dd>
+          <button class="btn btn-peq" type="button" data-acao="emitir-copiar" data-campo="nome"><svg class="ic"><use href="#i-copiar"/></svg><span>Copiar</span></button>
+        </div>
+        <div class="emitir-linha">
+          <dt>CPF</dt>
+          <dd id="emitir-cpf"></dd>
+          <span class="emitir-botoes">
+            <button class="btn btn-peq" type="button" id="emitir-copiar-cpf" data-acao="emitir-copiar" data-campo="cpf"><svg class="ic"><use href="#i-copiar"/></svg><span>Copiar</span></button>
+            <button class="btn-linha" type="button" id="emitir-alterar-cpf" data-acao="emitir-alterar-cpf" title="Alterar o CPF" aria-label="Alterar o CPF"><svg class="ic"><use href="#i-lapis"/></svg></button>
+          </span>
+        </div>
+      </dl>
+      <div class="faixa faixa-info" id="emitir-sugestao" hidden>
+        <svg class="ic"><use href="#i-notas"/></svg>
+        <div class="ag-sem-pix-corpo">
+          <span id="emitir-sugestao-texto"></span>
+          <button class="btn btn-peq" type="button" data-acao="emitir-usar-sugestao">Usar este CPF</button>
+        </div>
+      </div>
+      <form class="emitir-form" id="form-emitir-cpf" hidden>
+        <div class="campo campo-texto">
+          <label class="rotulo-campo" for="emitir-cpf-campo" id="emitir-cpf-rotulo">CPF</label>
+          <input id="emitir-cpf-campo" class="campo-cpf" type="text" inputmode="numeric" autocomplete="off" placeholder="000.000.000-00">
+        </div>
+        <div class="emitir-form-botoes">
+          <button class="btn btn-primario" type="submit">Salvar CPF</button>
+          <button class="btn" type="button" id="emitir-cancelar-cpf" data-acao="emitir-cancelar-cpf">Cancelar</button>
+        </div>
+      </form>
+      <p class="modal-erro" id="emitir-erro" role="alert" hidden></p>
+      <p class="dica">O CPF fica guardado só neste computador, no cadastro do contato.</p>
+      <div class="modal-acoes">
+        <button class="btn" type="button" data-acao="emitir-fechar">Fechar</button>
+        <button class="btn btn-primario" type="button" id="emitir-site" data-acao="emitir-site"><svg class="ic"><use href="#i-abrir"/></svg><span>Abrir o site da nota</span></button>
+      </div>
+    </div>
+  </dialog>
+
   <dialog class="modal vidro modal-largo" id="ct-contato" aria-labelledby="ct-contato-titulo">
     <form id="form-contato" class="modal-corpo">
       <h2 id="ct-contato-titulo"></h2>
@@ -1499,7 +1688,12 @@
           <label class="rotulo-campo" for="ct-telefone">Telefone com DDD</label>
           <input id="ct-telefone" type="tel" autocomplete="off" placeholder="(61) 90000-0000">
         </div>
+        <div class="campo campo-texto">
+          <label class="rotulo-campo" for="ct-cpf">CPF</label>
+          <input id="ct-cpf" class="campo-cpf" type="text" inputmode="numeric" autocomplete="off" placeholder="000.000.000-00">
+        </div>
       </div>
+      <p class="faixa faixa-info ct-cpf-sugestao" id="ct-cpf-sugestao" hidden><svg class="ic"><use href="#i-notas"/></svg><span id="ct-cpf-sugestao-texto"></span><button class="btn btn-peq" type="button" data-acao="ct-usar-cpf">Usar este CPF</button></p>
       <datalist id="ct-nomes"></datalist>
 
       <label class="ag-caixa">

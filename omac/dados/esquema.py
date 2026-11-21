@@ -24,7 +24,8 @@ REGRAS = "regras-extrato.json"
 CACHE_NOTAS = "cache-notas.json"
 
 ARQUIVOS: dict[str, dict] = {
-    # {"id", "nome", "telefone", "responsaveis": [{"contato_id", "papel"}], "envia_para", "criado_em"}
+    # {"id", "nome", "telefone", "cpf", "responsaveis": [{"contato_id", "papel"}], "envia_para", "nota_para",
+    #  "criado_em"}. O CPF fica só com os 11 números; "nota_para" é de quem foi o último CPF usado na nota.
     # "a_conferir": nomes parecidos ou telefones diferentes que a migração não juntou sozinha.
     CONTATOS: {"versao": 1, "conteudo": "Os contatos", "padrao": {"contatos": [], "a_conferir": []}},
     # Ortodontia: {"id", "contato_id", "valor_centavos", situação, altas, atendidos, "criado_em"...}
@@ -42,7 +43,8 @@ ARQUIVOS: dict[str, dict] = {
 # Campos de cada item das listas, com o valor padrão: {arquivo: {lista: campos}}. Quem foi
 # gravado antes de um campo existir ganha o padrão ao ler (armazem.py), sem migração.
 ITENS: dict[str, dict[str, dict]] = {
-    CONTATOS: {"contatos": {"telefone": "", "responsaveis": [], "envia_para": "", "criado_em": ""}},
+    CONTATOS: {"contatos": {"telefone": "", "cpf": "", "responsaveis": [], "envia_para": "", "nota_para": "",
+                            "criado_em": ""}},
     TRATAMENTOS: {"tratamentos": {
         "valor_centavos": None, "agendado_em": "", "finalizado_em": "", "alta_inicio": "", "alta_fim": "",
         "atendidos": {},  # "AAAA-MM" → dia em que foi marcado como atendido
@@ -52,8 +54,12 @@ ITENS: dict[str, dict[str, dict]] = {
     ATENDIMENTOS: {"atendimentos": {"tratamento": "", "valor_centavos": None, "forma": "", "parcelas": 1,
                                     "pago_em": "", "nota": ""}},
     # Contas: {"nome", "dia", "pagas": {"AAAA-MM": dia}, "criada_em"} (criada_em é preenchida em contas.py).
-    # Livres: {"id", "titulo", "observacao", "criado_em", "feito_em"} ("" = em aberto).
-    LEMBRETES: {"contas": {"pagas": {}}, "livres": {"observacao": "", "criado_em": "", "feito_em": ""}},
+    # Livres: {"id", "titulo", "observacao", "criado_em", "feito_em"} ("" = em aberto) e a repetição:
+    # "repetir" (nao | dia | semana | mes | data), "dia_semana" (0 = segunda), "dia_mes", "data",
+    # "desde" (de quando contam as vezes) e "destinatario" (contato_id; "" = quem recebe os das contas).
+    LEMBRETES: {"contas": {"pagas": {}}, "livres": {
+        "observacao": "", "criado_em": "", "feito_em": "", "repetir": "nao", "dia_semana": 0, "dia_mes": 1,
+        "data": "", "desde": "", "destinatario": ""}},
     # Categorias: {"id", "nome", "comandos": [{"id", "nome", "texto"}]}.
     COMANDOS: {"categorias": {"comandos": []}},
     # Modelos: {"id", "titulo", "arquivo", "nome_original", "criado_em"}.

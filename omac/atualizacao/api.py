@@ -36,6 +36,11 @@ class AtualizacaoApi(ApiBase):
         return {}
 
     @seguro
+    def atualizacao_link(self):
+        """A página das versões no GitHub (Configurações → Atualizações)."""
+        return {"link": gh.PAGINA_RELEASES}
+
+    @seguro
     def atualizacao_abrir_pagina(self):
         sistema.abrir_link(gh.PAGINA_RELEASES)
         return {}

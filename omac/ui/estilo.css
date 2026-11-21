@@ -389,6 +389,17 @@ button { cursor: pointer; }
 .cartao-avisos.tem .cartao-valor { color: var(--aviso-texto); }
 .cartao-avisos:not(.tem) .cartao-valor { color: var(--acento); }
 
+/* ---------- Valores escondidos (o olho) ----------
+ * Sem <html data-valores="visiveis">, todo valor aparece como "R$ ----" (o app abre assim). */
+.dinheiro .d-real { display: none; }
+[data-valores="visiveis"] .dinheiro .d-real { display: inline; }
+[data-valores="visiveis"] .dinheiro .d-oculto { display: none; }
+.dinheiro .d-oculto { letter-spacing: .04em; }
+.olho[aria-pressed="true"] .ic { color: var(--acento); }
+
+/* ---------- Mural (ligarMural em nucleo.js): o bloco sobe até encostar no de cima ---------- */
+.ini-grade.mural, .grade-config.mural { grid-auto-rows: 2px; row-gap: 0; align-items: start; }
+
 /* ---------- Faixas (avisos / canceladas) ---------- */
 .faixa {
   display: flex; gap: .85rem; align-items: flex-start;

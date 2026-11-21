@@ -41,7 +41,7 @@ const api = () => window.pywebview.api;
 
 /* Um script vazio ou cortado não gera erro nenhum: sem esta conferência, a tela fica muda. */
 const MODULOS_ESPERADOS = ["inicio", "relatorio", "notas", "extrato", "lembretes", "modelos", "contatos", "tratamentos", "atendimentos",
-  "backup", "resumo", "atualizacao"];
+  "backup", "resumo", "atualizacao", "configuracoes"];
 
 async function conferirModulos() {
   for (const nome of MODULOS_ESPERADOS.filter((m) => !modulos[m])) {
@@ -74,6 +74,9 @@ async function iniciar() {
 
   aplicarConfig();
   ligarEventos();
+  ligarOlho();
+  ligarMural($("#ini-grade"));
+  ligarMural($(".grade-config"));
   // "notas" é o valor antigo de quem abria nas Notas fiscais: hoje é o Relatório mensal.
   if (estado.cfg.abrir_em === "notas") irPara("relatorio", "notas");
   else mostrarView("inicio");
@@ -283,8 +286,109 @@ function botaoIcone(acao, icone, rotulo, dados) {
   return b;
 }
 
-function celula(texto, classe = "") {
-  return Object.assign(document.createElement("td"), { className: classe, textContent: texto });
+/* `conteudo` pode ser texto ou um elemento (ex.: dinheiro(...)). */
+function celula(conteudo, classe = "") {
+  const td = Object.assign(document.createElement("td"), { className: classe });
+  td.append(conteudo ?? "");
+  return td;
+}
+
+/* ---------- Valores escondidos (o olho) ----------
+ *
+ * Todo valor em reais da tela passa por dinheiro(): o valor de verdade e "R$ ----" ficam
+ * os dois no elemento, e o CSS mostra um ou outro conforme <html data-valores>. Assim o
+ * olho troca tudo na hora, em todas as telas, sem desenhar nada de novo. O app sempre
+ * abre com os valores escondidos; depois de alguns minutos parado, eles se escondem de novo.
+ */
+const OCULTO = "R$ ----";
+const valores = { visiveis: false, ultimoUso: Date.now() };
+
+function dinheiro(centavos, formatar = (v) => real.format(v)) {
+  const span = Object.assign(document.createElement("span"), { className: "dinheiro" });
+  const oculto = Object.assign(document.createElement("span"), { className: "d-oculto", textContent: OCULTO });
+  oculto.setAttribute("aria-label", "valor escondido");
+  span.append(Object.assign(document.createElement("span"), { className: "d-real", textContent: formatar(centavos / 100) }), oculto);
+  return span;
+}
+
+/* Para textos fora da tela (a dica ao passar o mouse): já sai escondido ou não. */
+function dinheiroTexto(centavos) {
+  return valores.visiveis ? real.format(centavos / 100) : OCULTO;
+}
+
+function mostrarValores(visiveis) {
+  valores.visiveis = visiveis;
+  valores.ultimoUso = Date.now();
+  document.documentElement.dataset.valores = visiveis ? "visiveis" : "ocultos";
+  const rotulo = visiveis ? "Esconder os valores" : "Mostrar os valores";
+  $$(".olho").forEach((b) => {
+    b.setAttribute("aria-pressed", String(visiveis));
+    b.title = rotulo;
+    b.setAttribute("aria-label", rotulo);
+    b.querySelector("use").setAttribute("href", visiveis ? "#i-olho" : "#i-olho-fechado");
+  });
+  Object.values(modulos).forEach((m) => m.aoMudarValores?.(visiveis));
+}
+
+/* ---------- Mural (Início e Configurações) ----------
+ *
+ * Numa grade comum, cada linha tem a altura do bloco mais alto dela, e um bloco baixo ao lado
+ * de um alto deixa um buraco embaixo. No mural, a grade tem linhas de 2px e cada bloco ocupa
+ * as linhas da sua altura: o de baixo sobe até encostar no de cima, na mesma coluna. A ordem
+ * continua da esquerda para a direita, e o bloco largo continua ocupando a linha toda.
+ * Quando um bloco muda de altura (abriu uma lista, mudou a janela ou o tamanho do texto),
+ * o ResizeObserver acerta só ele. Sem JS, fica a grade comum (que funciona, com os buracos).
+ */
+function ligarMural(grade) {
+  grade.classList.add("mural");
+  const ajustar = (item) => {
+    const estilo = getComputedStyle(grade);
+    const linha = parseFloat(estilo.gridAutoRows) || 2;
+    const espaco = parseFloat(estilo.columnGap) || 16;
+    const altura = item.getBoundingClientRect().height;
+    item.style.gridRowEnd = `span ${Math.max(1, Math.ceil((altura + espaco) / linha))}`;
+  };
+  // O ajuste fica para o próximo quadro: mudar o tamanho na hora do aviso faz o navegador
+  // reclamar ("ResizeObserver loop") quando a barra de rolagem aparece e muda as larguras.
+  const pendentes = new Set();
+  let quadro = 0;
+  const observador = new ResizeObserver((itens) => {
+    itens.forEach((i) => pendentes.add(i.target));
+    if (quadro) return;
+    quadro = requestAnimationFrame(() => {
+      quadro = 0;
+      pendentes.forEach(ajustar);
+      pendentes.clear();
+    });
+  });
+  const vigiar = (mudancas = []) => {
+    for (const m of mudancas) m.removedNodes.forEach((n) => { if (n.nodeType === 1) observador.unobserve(n); });
+    // Blocos novos já saem com a altura certa, antes de a tela ser pintada (sem o "pulo").
+    for (const item of grade.children) {
+      if (!item.style.gridRowEnd) ajustar(item);
+      observador.observe(item); // observar de novo não repete
+    }
+  };
+  new MutationObserver(vigiar).observe(grade, { childList: true });
+  vigiar();
+}
+
+function ligarOlho() {
+  acoes.olho = () => mostrarValores(!valores.visiveis);
+  for (const evento of ["pointermove", "pointerdown", "keydown", "wheel"]) {
+    document.addEventListener(evento, () => { valores.ultimoUso = Date.now(); }, { passive: true });
+  }
+  setInterval(() => {
+    const minutos = estado.cfg ? estado.cfg.ocultar_valores_minutos : 5;
+    if (valores.visiveis && minutos > 0 && Date.now() - valores.ultimoUso > minutos * 60000) mostrarValores(false);
+  }, 15000);
+  mostrarValores(false);
+}
+
+/* 000.000.000-00 (o Python guarda só os números). Outra coisa volta como veio. */
+function cpfBR(texto) {
+  const n = String(texto || "").replace(/\D/g, "");
+  return n.length === 11 ? `${n.slice(0, 3)}.${n.slice(3, 6)}.${n.slice(6, 9)}-${n.slice(9)}` : String(texto || "");
 }
 
 function telefoneBR(digitos) {
@@ -307,7 +411,9 @@ const plural = (n, um, varios) => `${n} ${n === 1 ? um : varios}`;
 /* ---------- Peças dos widgets do Início ---------- */
 
 function texto(tag, conteudo, classe = "") {
-  return Object.assign(document.createElement(tag), { className: classe, textContent: conteudo });
+  const el = Object.assign(document.createElement(tag), { className: classe });
+  el.append(conteudo ?? "");
+  return el;
 }
 
 function botaoIr(rotulo, view, aba = "") {
@@ -454,6 +560,10 @@ function ligarEventos() {
     });
   });
   $("#escala").addEventListener("input", (e) => mudarConfig({ escala_fonte: Number(e.target.value) }));
+  // Campo de CPF: ao sair dele, 11 números (de qualquer jeito escritos) ficam 000.000.000-00.
+  document.addEventListener("change", (e) => {
+    if (e.target.classList?.contains("campo-cpf")) e.target.value = cpfBR(e.target.value.trim());
+  });
 
   $$("[data-sel-mes]").forEach((s) => s.addEventListener("change", (e) => mudarMes(estado.ano, Number(e.target.value))));
   $$("[data-sel-ano]").forEach((s) => s.addEventListener("change", (e) => mudarMes(Number(e.target.value), estado.mes)));

@@ -83,11 +83,12 @@ Notas fiscais, extrato bancário e as regras do extrato em abas de uma tela só,
   <img src="docs/capturas/lembretes-livres.png" alt="Lembretes livres" width="49%">
 </p>
 
+- **Mensagem do seu jeito:** em Configurações → WhatsApp, o texto da nota (e o de várias notas juntas) é escrito com variáveis como `[primeiro-nome-do-responsavel]`, `[data-competencia]`, `[mes-competencia]`, `[numero-da-nota]`, `[valor]` e `[lista-das-notas]`, com prévia na hora e o botão **Voltar ao padrão**.
 - **Notas a enviar:** a mensagem sai pronta e assinada, o PDF é copiado e a conversa abre no aplicativo ou no WhatsApp Web. A pessoa cola o PDF e aperta enviar. As notas novas ficam na lista, em qualquer mês, até serem enviadas, e dá para seguir direto para a próxima.
 - **Contas:** na primeira abertura do dia, uma janela mostra o que vence amanhã ou hoje, e um clique deixa a mensagem pronta para quem cuida dos pagamentos (um contato escolhido nas Configurações).
 - **Enviar lembrete a qualquer momento:** cada conta em aberto (ou que ficou sem pagar no mês passado) tem o botão de WhatsApp, e no topo há **Enviar lembrete das contas em aberto**. A mensagem já diz "venceu dia X" quando o vencimento passou. O aviso automático continua igual.
 - **Conta paga:** um botão **Paga** no próprio lembrete faz a conta parar de avisar naquele mês. Na lista de contas aparece o mês atual e o anterior; o que não foi marcado até o fim do mês fica como **não paga**.
-- **Lembretes livres:** um título e uma observação, sem data. **Feito** risca e guarda numa lista de feitos (dá para desfazer). Os em aberto aparecem no Início.
+- **Lembretes livres:** um título, uma observação e, se quiser, quando **repetir**: todo dia, toda semana (num dia da semana), todo mês (num dia do mês) ou num dia específico. Os que repetem aparecem **toda vez que o OMAC abre** até serem marcados como **Feito**, e voltam na próxima vez; o de um dia específico, depois de feito, não volta. Cada um tem o botão **Enviar**, que deixa a mensagem pronta no WhatsApp de quem recebe os lembretes (ou de outra pessoa escolhida no lembrete). Os sem repetição continuam como antes: **Feito** risca e guarda numa lista de feitos.
 - **Comandos:** textos que se mandam sempre (endereço, horário, cuidados depois do atendimento), separados por categoria. O botão **Copiar** copia exatamente o texto, sem espaço ou linha a mais.
 - **Sem automação no WhatsApp:** o OMAC usa o link oficial e nunca envia nada sozinho, para não colocar o número em risco. O máximo é o "colar sozinho" das notas, que a pessoa liga se quiser; o Enter continua sendo dela.
 
@@ -114,6 +115,7 @@ Notas fiscais, extrato bancário e as regras do extrato em abas de uma tela só,
 - **Nome e telefone num lugar só:** pacientes, responsáveis e quem recebe os lembretes. Tratamentos, Atendimentos e WhatsApp usam o mesmo cadastro, então trocar um telefone vale para todo o app.
 - **Pesquisa** por nome ou telefone, com filtros (em ortodontia, sem telefone), e **apagar com desfazer**. Quem tem atendimento na ficha não pode ser apagado, para não perder o histórico de pagamentos.
 - **Responsáveis:** qualquer contato pode ter responsáveis (mãe, pai, cônjuge ou outro), que também são contatos: escolhe da lista ou cria na hora.
+- **CPF:** aceita de qualquer jeito (com ou sem pontos e traço, desde que tenha 11 números), confere os dígitos e mostra sempre como 000.000.000-00. Para quem ainda não tem, o OMAC sugere o CPF que está numa nota já emitida, e só guarda quando a pessoa clica em **Usar este CPF**.
 - **Em tratamento de orto:** uma chave na janela de contato põe a pessoa em Tratamentos, com o valor da manutenção e a situação.
 - **Conferir contatos:** na passagem para a 1.6.0, nomes iguais se juntam sozinhos; nomes só parecidos (um sobrenome a mais) ou com dois telefones aparecem aqui para decidir com um clique.
 
@@ -146,6 +148,7 @@ Notas fiscais, extrato bancário e as regras do extrato em abas de uma tela só,
 - **A ficha de papel, dentro do app:** paciente, tratamento, data, valor, forma de pagamento (Pix PJ, Pix PF, dinheiro, débito ou crédito), em quantas vezes no crédito, pago e nota.
 - **Pago sem esforço:** fica em branco enquanto espera; se o mês acabar sem marcar, aparece como **não pago**. Pagou depois, é só marcar.
 - **Nota em três situações:** **ok** (achada sozinha na pasta, ou marcada como emitida), **falta emitir** e **não precisa**. Dinheiro e Pix PF já sugerem "não precisa", e dá para trocar.
+- **Emitir:** onde falta a nota e o atendimento já foi pago aparece o botão **Emitir** (antes de pagar ele não aparece, para não emitir sem querer), que abre uma janela com o nome e o CPF de quem recebe a nota (o paciente ou um responsável, e a última escolha fica guardada), cada um com o botão **Copiar**, e o botão para abrir o site onde a nota é emitida (configurável).
 - **O paciente é um contato:** o campo completa com a lista de contatos; um nome novo vira contato ao salvar. Paciente de ortodontia já vem com a manutenção e o valor.
 - **Resumo do mês:** recebido, a receber, não pago e quantos estão sem nota, com filtros. **Exportar Excel:** a ficha do mês em uma folha deitada, pronta para imprimir.
 
@@ -166,6 +169,7 @@ Notas fiscais, extrato bancário e as regras do extrato em abas de uma tela só,
 - **Visual "Bonito"**, com efeito de vidro líquido, cantos arredondados e temas claro/escuro (ou automático, seguindo o Windows).
 - **Visual "Otimizado"**, sem transparências nem animações, para computador fraco. Ele já vem ligado sozinho na primeira vez em PCs com pouca memória.
 - **Acessibilidade:** texto de 100% a 200% (também com <kbd>Ctrl</kbd> + <kbd>+</kbd> / <kbd>−</kbd> / <kbd>0</kbd>), alto contraste, opção de reduzir animações, navegação por teclado e leitores de tela.
+- **Valores escondidos:** o OMAC sempre abre com os valores como **R$ ----**, para quem passa perto do computador não ver. O botão **Valores**, com o olho, fica no canto de cima de cada tela com dinheiro (Início, Relatório mensal, Resumo, Atendimentos, Tratamentos e Lembretes) e mostra ou esconde todos de uma vez, e depois de alguns minutos sem mexer eles se escondem de novo (o tempo fica nas Configurações).
 - **Avisos que minimizam:** a faixa de avisos fica só com a quantidade, sem sumir, e abre de novo com um clique.
 - **Aviso de versão nova:** o OMAC avisa e abre o download no navegador. Trocar a pasta do programa não mexe nos dados.
 - **Menu lateral preparado para novos módulos.**
@@ -193,6 +197,8 @@ NFS-e Nº 000000836 - NOME DO PACIENTE - 03-11 - 31-10.pdf   ← competência di
 
 Número, valor e datas são lidos **de dentro do PDF**. Do nome do arquivo sai só o nome do paciente.
 
+Esse é o padrão, mas cada empresa nomeia de um jeito: em **Configurações → Notas fiscais** dá para escrever o formato com variáveis (`[numero-da-nota]`, `[nome-do-paciente]`, `[data-de-emissao]`, `[data-competencia]`), por exemplo `Nota [numero-da-nota] - [nome-do-paciente]`. O OMAC testa o formato nos arquivos da pasta antes de salvar e mostra quantos entendeu. Ali também fica a **descrição esperada do serviço** (o padrão é "tratamento odontológico"; em branco, não avisa).
+
 ## Privacidade (LGPD)
 
 Dados de saúde são dados sensíveis. O OMAC:
@@ -200,7 +206,7 @@ Dados de saúde são dados sensíveis. O OMAC:
 - não envia nenhum dado seu para a internet: a única saída é a conversa do WhatsApp que a própria pessoa abre e envia;
 - guarda configurações e cache só no computador (`%APPDATA%\OMAC`), em uma pasta separada do programa, que as atualizações não alteram;
 - para procurar versão nova, só consulta o GitHub, sem enviar nenhum dado seu, e dá para desligar nas Configurações;
-- guarda os contatos, os tratamentos, a ficha de atendimentos e os modelos só no computador, e o backup só na pasta que a própria pessoa escolhe;
+- guarda os contatos (inclusive o CPF), os tratamentos, a ficha de atendimentos e os modelos só no computador, e o backup só na pasta que a própria pessoa escolhe;
 - deixa o nome de quem mandou Pix fora da planilha do fechamento;
 - guarda as regras do extrato (com nomes de fornecedores) só no computador, nunca no código;
 - tem um `.gitignore` que bloqueia PDF, planilhas e extratos, para nenhum dado real ir parar no GitHub.
@@ -290,3 +296,5 @@ Para criar um módulo: uma pasta em `omac/` com a classe da API (herdando de `Ap
 - [x] **Contatos únicos**, **base de dados nova** e **backup** (1.6.0).
 - [x] **Lembretes e Comandos** (1.7.0).
 - [x] **Relatório mensal**, pesquisa de notas, envio de várias notas de uma vez e **Modelos** para imprimir (1.8.0).
+- [x] **CPF nos contatos** com a janela **Emitir**, **valores escondidos** e **lembretes que repetem** (1.9.0).
+- [x] **Formato do nome das notas** e **mensagem com variáveis** configuráveis, olho no topo das telas e blocos encaixados no Início e nas Configurações (1.10.0).

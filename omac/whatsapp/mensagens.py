@@ -83,6 +83,14 @@ def mensagem_das_notas(assistente: str, nome: str, notas: list[tuple[str, date]]
     return "\n".join([f"{inicio}Seguem as {len(notas)} notas fiscais referentes ao {servico}:", *linhas])
 
 
+def mensagem_de_lembrete_livre(assistente: str, destinatario: str, titulo: str, observacao: str = "") -> str:
+    saudacao = f"Olá, {destinatario.strip()}." if destinatario.strip() else "Olá."
+    linhas = [f"{assinatura(assistente)}{saudacao}", f"Lembrete: {titulo.strip()}"]
+    if observacao.strip():
+        linhas.append(observacao.strip())
+    return "\n".join(linhas)
+
+
 def mensagem_de_lembrete(assistente: str, destinatario: str, contas: list[dict]) -> str:
     saudacao = f"Olá, {destinatario.strip()}." if destinatario.strip() else "Olá."
     linhas = [f"• {c['nome']}: {c['situacao']}" for c in contas]

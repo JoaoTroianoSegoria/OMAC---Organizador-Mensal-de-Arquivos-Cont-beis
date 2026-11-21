@@ -9,6 +9,7 @@ from pathlib import Path
 
 from . import APP_NOME, APP_NOME_COMPLETO, __version__, config, sistema
 from .dados import Armazem, migracoes
+from .notas.leitor import Regras
 from .notas.servico import ServicoNotas
 
 CHAVES_DE_PASTA = {"pasta_notas", "pasta_extratos"}
@@ -50,7 +51,11 @@ class ApiBase:
         self._armazem.bloqueio = erro
         self._cfg = config.carregar()
         self._trava = threading.Lock()
-        self._servico_notas = ServicoNotas(lambda: self._cfg["pasta_notas"], self._progresso)
+        self._servico_notas = ServicoNotas(lambda: self._cfg["pasta_notas"], self._progresso, self._regras_notas)
+
+    def _regras_notas(self) -> Regras:
+        """Como ler as notas, das Configurações (formato do nome do arquivo e serviço esperado)."""
+        return Regras(self._cfg["formato_arquivo"], self._cfg["servico_esperado"])
 
     @seguro
     def estado(self):

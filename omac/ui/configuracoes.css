@@ -1,0 +1,33 @@
+/* OMAC — Configurações: formato do nome das notas, mensagens com variáveis e o link do GitHub. */
+
+.cfg-leitura, .cfg-mensagem { display: flex; flex-direction: column; gap: .85rem; }
+.cfg-mensagem { padding-top: .25rem; }
+.cfg-leitura .campo-texto, .cfg-mensagem .campo-texto { flex: none; }
+.cfg-mensagem + .cfg-mensagem { border-top: 1px solid var(--linha); padding-top: 1rem; }
+.cfg-variaveis { display: flex; flex-wrap: wrap; gap: .4rem; }
+.cfg-variaveis .btn-peq { font-size: .78rem; min-height: 1.9rem; padding: .15rem .6rem; }
+.cfg-mensagem textarea { resize: vertical; min-height: 5.5rem; }
+
+.cfg-teste {
+  font-size: .88rem; padding: .6rem .8rem; border-radius: var(--raio-p);
+  background: var(--vidro-forte); display: flex; flex-direction: column; gap: .3rem;
+}
+.cfg-teste:empty { display: none; }
+.cfg-teste-ok { background: var(--info-fundo); color: var(--info-texto); }
+.cfg-teste-aviso { background: var(--aviso-fundo); color: var(--aviso-texto); }
+.cfg-teste-erro { color: var(--erro); }
+.cfg-teste-lista { margin: 0; padding-left: 1.1rem; overflow-wrap: anywhere; }
+
+.cfg-previa {
+  display: flex; flex-direction: column; gap: .3rem;
+  padding: .7rem .9rem; border-radius: var(--raio-p); background: var(--vidro-forte);
+}
+.cfg-previa-rotulo { font-size: .78rem; font-weight: 600; color: var(--texto-3); }
+.cfg-previa-texto { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; }
+
+.cfg-link { display: flex; flex-direction: column; gap: .45rem; }
+.cfg-link-texto {
+  font-size: .82rem; padding: .45rem .6rem; border-radius: var(--raio-p);
+  background: var(--vidro-forte); overflow-wrap: anywhere; user-select: all;
+}
+.cfg-link-botoes { display: flex; flex-wrap: wrap; gap: .5rem; }

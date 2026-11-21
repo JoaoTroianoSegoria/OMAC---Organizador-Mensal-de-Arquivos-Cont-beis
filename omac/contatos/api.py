@@ -4,12 +4,14 @@ from __future__ import annotations
 
 from datetime import date
 
+from .. import sistema
 from ..dados import esquema
 from ..inicio.registro import widget
 from ..nucleo import ApiBase, seguro
 from ..texto import normalizar
 from ..tratamentos import orto
 from . import contatos as ct
+from . import cpf as cpfs
 
 
 class ContatosApi(ApiBase):
@@ -41,6 +43,7 @@ class ContatosApi(ApiBase):
                 **c,
                 "responsaveis": [{**r, "nome": nomes.get(r["contato_id"], "?"),
                                   "telefone": por_id.get(r["contato_id"], {}).get("telefone", ""),
+                                  "cpf": por_id.get(r["contato_id"], {}).get("cpf", ""),
                                   "papel_texto": ct.PAPEIS.get(r["papel"], "responsável")}
                                  for r in c["responsaveis"] if r["contato_id"] in nomes],
                 "dependentes": [d["nome"] for d in ct.dependentes(contatos, c["id"])],
@@ -165,6 +168,9 @@ class ContatosApi(ApiBase):
                     a["contato_id"] = manter_id
             if lb["destinatario"] == tirar_id:
                 lb["destinatario"] = manter_id
+            for x in lb["livres"]:
+                if x.get("destinatario") == tirar_id:
+                    x["destinatario"] = manter_id
             d["a_conferir"] = ct.a_conferir_validos(d["a_conferir"], contatos)
         return {**self._vista_contatos(), "juntados": [manter["nome"], tirar["nome"]]}
 
@@ -183,6 +189,80 @@ class ContatosApi(ApiBase):
             d["a_conferir"] = [i for i in d["a_conferir"]
                                if not (i.get("tipo") == ct.TELEFONE and i.get("id") == contato_id)]
         return self._vista_contatos()
+
+    # --- CPF e a janela "Emitir nota" -------------------------------------------------------
+
+    def _notas_lidas(self) -> list:
+        """As notas da pasta (do cache), para sugerir o CPF. Sem pasta, nenhuma."""
+        v = self._servico_notas.ou_nada()
+        return v.notas if v is not None else []
+
+    def _sugestao_cpf(self, pessoa: dict, notas: list) -> dict | None:
+        s = cpfs.sugestao(pessoa["nome"], notas)
+        if s is None or s["cpf"] == pessoa["cpf"]:
+            return None
+        return {"cpf": cpfs.formatar(s["cpf"]), "numero": s["numero"]}
+
+    def _vista_cpf(self, contato_id: str) -> dict:
+        contatos = self._lista_de_contatos()
+        contato = ct.buscar(contatos, contato_id)
+        notas = self._notas_lidas()
+        pessoas = []
+        for d in ct.destinos(contatos, contato):
+            pessoa = ct.buscar(contatos, d["contato_id"])
+            pessoas.append({"contato_id": pessoa["id"], "nome": pessoa["nome"], "papel": d["papel"],
+                            "cpf": cpfs.formatar(pessoa["cpf"]) if pessoa["cpf"] else "",
+                            "sugestao": self._sugestao_cpf(pessoa, notas)})
+        tem = {p["contato_id"] for p in pessoas if p["cpf"] or p["sugestao"]}
+        return {"id": contato["id"], "nome": contato["nome"], "pessoas": pessoas,
+                "escolhido": ct.escolha_da_nota(contatos, contato, lambda i: i in tem),
+                "site": self._cfg.get("site_nota", "")}
+
+    @seguro
+    def contatos_cpf(self, contato_id: str):
+        """Para a janela "Emitir nota": o paciente, os responsáveis e o CPF de cada um."""
+        return self._vista_cpf(contato_id)
+
+    @seguro
+    def contatos_salvar_cpf(self, contato_id: str, pessoa_id: str, cpf: str):
+        """Guarda o CPF de uma pessoa (o paciente ou um responsável). Vazio apaga."""
+        with self._armazem.editar(esquema.CONTATOS) as d:
+            contatos = d["contatos"]
+            contato = ct.buscar(contatos, contato_id)
+            pessoa = ct.buscar(contatos, pessoa_id)
+            pessoa["cpf"] = ct.cpf(cpf)
+            if pessoa["cpf"]:
+                contato["nota_para"] = pessoa_id
+        return self._vista_cpf(contato_id)
+
+    @seguro
+    def contatos_nota_para(self, contato_id: str, pessoa_id: str):
+        """Lembra de quem é o CPF da nota desse paciente, para a próxima vez já vir escolhido."""
+        with self._armazem.editar(esquema.CONTATOS) as d:
+            contatos = d["contatos"]
+            contato = ct.buscar(contatos, contato_id)
+            if pessoa_id in {x["contato_id"] for x in ct.destinos(contatos, contato)}:
+                contato["nota_para"] = pessoa_id
+        return {}
+
+    @seguro
+    def abrir_site_nota(self):
+        site = self._cfg.get("site_nota", "").strip()
+        if not site:
+            return {"erro": "Coloque o endereço do site da nota em Configurações → Notas fiscais."}
+        if not site.lower().startswith(("http://", "https://")):
+            site = "https://" + site
+        try:
+            sistema.abrir_link(site)
+        except OSError:
+            return {"erro": "Não consegui abrir o site. Confira o endereço em Configurações → Notas fiscais."}
+        return {}
+
+    @seguro
+    def contatos_sugestao_cpf(self, nome: str):
+        """O CPF achado nas notas para esse nome (a janela de contato oferece usar)."""
+        s = cpfs.sugestao(nome, self._notas_lidas()) if nome.strip() else None
+        return {"sugestao": {"cpf": cpfs.formatar(s["cpf"]), "numero": s["numero"]} if s else None}
 
     # --- Widget do Início --------------------------------------------------------------------
 

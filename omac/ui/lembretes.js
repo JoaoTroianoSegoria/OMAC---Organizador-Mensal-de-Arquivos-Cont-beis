@@ -10,8 +10,11 @@ const whats = {
   contas: [],
   destinatario: null, // contato que recebe os lembretes
   envioContas: null, // dados da janela "Enviar lembrete" das contas
-  livres: { em_aberto: [], feitos: [] },
+  livres: { em_aberto: [], programados: [], feitos: [], padrao: "", nomes: [] },
   livreEditando: null,
+  repetir: "nao", // repetição escolhida no formulário de lembrete
+  envioPara: "", // contato da janela de envio ("" = quem recebe os lembretes de contas)
+  diaVisto: new Date().toDateString(), // para mostrar os lembretes de novo quando o dia vira com o app aberto
   categorias: [],
   categoria: "", // id da categoria aberta em Comandos
   comandoEditando: null,
@@ -39,7 +42,17 @@ modulos.lembretes = {
     $("#conta-dia").replaceChildren(...diasDoMes().map((d) => new Option(`Dia ${d}`, String(d))));
     $("#cfg-fechamento").replaceChildren(new Option("Desligado", "0"),
       ...diasDoMes(28).map((d) => new Option(`Todo dia ${d}`, String(d))));
+    $("#livre-dia-mes").replaceChildren(...diasDoMes().map((d) => new Option(`Dia ${d}`, String(d))));
+    limparFormularioLivre();
     aplicarConfig();
+    // O OMAC costuma ficar aberto o dia todo: na virada do dia, os lembretes aparecem sozinhos.
+    setInterval(() => {
+      const hoje = new Date().toDateString();
+      if (hoje === whats.diaVisto) return;
+      whats.diaVisto = hoje;
+      verLembretesDoDia();
+      if (estado.view === "lembretes") carregarLivres();
+    }, 5 * 60000);
   },
   aoIniciar() {
     verLembretesDoDia();
@@ -74,6 +87,9 @@ Object.assign(acoes, {
   "lb-livre-editar": (alvo) => editarLivre(alvo.dataset.id),
   "lb-livre-apagar": (alvo) => apagarLivre(alvo.dataset.id),
   "lb-livre-cancelar": limparFormularioLivre,
+  "lb-repetir": (alvo) => escolherRepeticao(alvo.dataset.repetir),
+  "lb-livre-enviar": (alvo) => abrirEnvioDeLivre(alvo.dataset.id),
+  "lb-pop-feito": marcarLivreNoLembrete,
   "lb-categoria": (alvo) => { whats.categoria = alvo.dataset.id; desenharComandos(); },
   "lb-categoria-nova": () => abrirCategoria(null),
   "lb-categoria-renomear": () => abrirCategoria(categoriaAtual()),
@@ -144,9 +160,7 @@ function desenharAEnviar(r) {
     }
     tdNome.append(caixa);
 
-    const tdValor = Object.assign(document.createElement("td"), {
-      className: "c-valor", textContent: real.format(n.valor_centavos / 100),
-    });
+    const tdValor = celula(dinheiro(n.valor_centavos), "c-valor");
     const tdData = Object.assign(document.createElement("td"), { className: "c-data", textContent: dataBR(n.competencia) });
 
     const tdAcoes = document.createElement("td");
@@ -391,7 +405,12 @@ async function verLembretesDoDia(pedidoNaTela = false) {
     return;
   }
   whats.lembrete = r;
+  if ($("#lembretes").open) $("#lembretes").close();
 
+  const livres = r.livres || [];
+  $("#lembretes-livres").hidden = livres.length === 0;
+  $("#lembretes-livres").replaceChildren(...livres.map(itemDoLembreteAoAbrir));
+  $("#lembretes-contas").hidden = r.contas.length === 0;
   $("#lembretes-contas").replaceChildren(...r.contas.map((c, i) => {
     const li = document.createElement("li");
     li.className = "lembrete-conta";
@@ -412,6 +431,45 @@ async function verLembretesDoDia(pedidoNaTela = false) {
   desenharBotaoDoLembrete();
   $("#lembretes-enviar-texto").textContent = r.destinatario ? `Enviar para ${r.destinatario}` : "Enviar";
   $("#lembretes").showModal();
+}
+
+function botaoEnviarLivre(l) {
+  const b = Object.assign(document.createElement("button"), { type: "button", className: "btn btn-peq" });
+  b.dataset.acao = "lb-livre-enviar";
+  b.dataset.id = l.id;
+  b.title = "Mandar este lembrete pelo WhatsApp";
+  b.setAttribute("aria-label", `Enviar “${l.titulo}” pelo WhatsApp`);
+  b.innerHTML = '<svg class="ic"><use href="#i-whats"/></svg><span>Enviar</span>';
+  return b;
+}
+
+function itemDoLembreteAoAbrir(l) {
+  const li = Object.assign(document.createElement("li"), { className: "lb-livre vidro" });
+  const corpo = Object.assign(document.createElement("div"), { className: "lb-livre-corpo" });
+  corpo.append(texto("strong", l.titulo));
+  if (l.observacao) corpo.append(texto("p", l.observacao, "lb-livre-obs"));
+  if (l.quando) corpo.append(texto("small", l.quando, "dica"));
+  const botoes = Object.assign(document.createElement("div"), { className: "lb-livre-botoes" });
+  const feito = Object.assign(document.createElement("button"), { type: "button", className: "btn btn-peq" });
+  feito.dataset.acao = "lb-pop-feito";
+  feito.dataset.id = l.id;
+  feito.setAttribute("aria-pressed", "false");
+  feito.setAttribute("aria-label", `“${l.titulo}”: feito`);
+  feito.innerHTML = '<svg class="ic"><use href="#i-ok"/></svg><span>Feito</span>';
+  botoes.append(feito, botaoEnviarLivre(l));
+  li.append(corpo, botoes);
+  return li;
+}
+
+/* Feito na janela: some até a próxima vez. Clicar de novo desfaz. */
+async function marcarLivreNoLembrete(botao) {
+  const feito = botao.getAttribute("aria-pressed") !== "true";
+  const r = await api().lembretes_marcar_feito(botao.dataset.id, feito);
+  if (r.erro) return mostrarToast(r.erro, { erro: true });
+  botao.setAttribute("aria-pressed", String(feito));
+  botao.closest("li").classList.toggle("lb-feito", feito);
+  aplicarLivres(r);
+  atualizarInicioSeAberto();
 }
 
 /* Conta marcada como paga sai da mensagem e para de avisar neste mês. */
@@ -516,6 +574,7 @@ registrarWidget("lembretes", {
       for (const l of c.livres.slice(0, 5)) {
         const li = Object.assign(document.createElement("li"), { className: "ini-conta" });
         const t = Object.assign(document.createElement("span"), { textContent: l.titulo, title: l.observacao });
+        if (l.quando) t.append(" ", texto("small", `(${l.quando})`, "dica"));
         const b = Object.assign(document.createElement("button"), { type: "button", className: "btn btn-peq" });
         b.dataset.acao = "ini-livre-feito";
         b.dataset.id = l.id;
@@ -540,6 +599,7 @@ async function abrirEnvioDeContas(nome) {
   if (r.erro) return mostrarToast(r.erro, { erro: true });
   if (!r.contas.length) return mostrarToast("Nenhuma conta em aberto para lembrar.");
   whats.envioContas = r;
+  whats.envioPara = "";
   $("#lb-envio-titulo").textContent = r.destinatario ? `Lembrete para ${r.destinatario}` : "Lembrete de pagamento";
   $("#lb-envio-lista").replaceChildren(...r.contas.map((c) => {
     const li = document.createElement("li");
@@ -560,13 +620,34 @@ async function abrirEnvioDeContas(nome) {
 
 function irParaOndeFaltaContato() {
   $("#lb-envio-contas").close();
+  if ($("#lembretes").open) $("#lembretes").close();
   if (whats.envioContas && whats.envioContas.destinatario) mostrarView("contatos");
   else irPara("config", "whats");
 }
 
+/* Um lembrete livre pelo WhatsApp: a mesma janela das contas, com a mensagem do lembrete. */
+async function abrirEnvioDeLivre(id) {
+  const r = await api().lembretes_preparar_livre(id);
+  if (r.erro) return mostrarToast(r.erro, { erro: true });
+  whats.envioContas = r;
+  whats.envioPara = r.contato_id;
+  $("#lb-envio-titulo").textContent = r.destinatario ? `Lembrete para ${r.destinatario}` : "Enviar lembrete";
+  $("#lb-envio-lista").replaceChildren(texto("li", r.titulo));
+  $("#lb-envio-texto").value = r.mensagem;
+  const semContato = !r.destinatario || !r.telefone;
+  $("#lb-envio-sem-contato").hidden = !semContato;
+  $("#lb-envio-sem-contato-texto").textContent = !r.destinatario
+    ? "Falta escolher quem recebe os lembretes."
+    : `${r.destinatario} está sem telefone.`;
+  $("#lb-envio-ir").textContent = !r.destinatario ? "Abrir Configurações" : "Abrir Contatos";
+  $("#lb-envio-abrir").disabled = semContato;
+  $("#lb-envio-contas").showModal();
+  $("#lb-envio-texto").focus();
+}
+
 async function enviarLembreteDeContas(e) {
   e.preventDefault();
-  const r = await api().lembretes_enviar($("#lb-envio-texto").value);
+  const r = await api().lembretes_enviar($("#lb-envio-texto").value, whats.envioPara || "");
   if (r.erro) return mostrarToast(r.erro, { erro: true });
   $("#lb-envio-contas").close();
   if (r.sem_contato) return mostrarToast("Falta o telefone de quem recebe os lembretes.", { erro: true });
@@ -581,15 +662,29 @@ async function carregarLivres() {
 
 function aplicarLivres(r) {
   if (r.erro) return mostrarToast(r.erro, { erro: true });
-  whats.livres = { em_aberto: r.em_aberto, feitos: r.feitos };
+  whats.livres = { em_aberto: r.em_aberto, programados: r.programados || [], feitos: r.feitos,
+    padrao: r.padrao || "", nomes: r.nomes || [] };
+  $("#livre-para-nomes").replaceChildren(...whats.livres.nomes.map((n) => new Option(n, n)));
+  $("#livre-para").placeholder = whats.livres.padrao ? `${whats.livres.padrao} (quem recebe os lembretes)` : "Escolha um contato";
   desenharLivres();
 }
 
-function itemDeLivre(l, feito) {
+/* "toda segunda · próximo: 24/11 · para Fulana" */
+function quandoDoLivre(l, programado) {
+  const partes = [];
+  if (l.quando) partes.push(l.quando);
+  if (programado && l.proxima && l.repetir !== "data") partes.push(`próximo: ${dataBR(l.proxima).slice(0, 5)}`);
+  if (l.destinatario_nome) partes.push(`para ${l.destinatario_nome}`);
+  return partes.join(" · ");
+}
+
+function itemDeLivre(l, feito, programado = false) {
   const li = Object.assign(document.createElement("li"), { className: `lb-livre vidro${feito ? " lb-feito" : ""}` });
   const corpo = Object.assign(document.createElement("div"), { className: "lb-livre-corpo" });
   corpo.append(Object.assign(document.createElement("strong"), { textContent: l.titulo }));
   if (l.observacao) corpo.append(Object.assign(document.createElement("p"), { className: "lb-livre-obs", textContent: l.observacao }));
+  const quando = quandoDoLivre(l, programado);
+  if (quando && !feito) corpo.append(texto("small", quando, "dica lb-livre-quando"));
   if (feito) corpo.append(Object.assign(document.createElement("small"), { className: "dica", textContent: `feito em ${dataBR(l.feito_em)}` }));
   const botoes = Object.assign(document.createElement("div"), { className: "lb-livre-botoes" });
   if (feito) {
@@ -600,12 +695,16 @@ function itemDeLivre(l, feito) {
     volta.setAttribute("aria-label", `Voltar “${l.titulo}” para em aberto`);
     botoes.append(volta);
   } else {
-    const ok = Object.assign(document.createElement("button"), { type: "button", className: "btn btn-peq" });
-    ok.dataset.acao = "lb-livre-feito";
-    ok.dataset.id = l.id;
-    ok.innerHTML = '<svg class="ic"><use href="#i-ok"/></svg><span>Feito</span>';
-    ok.setAttribute("aria-label", `“${l.titulo}”: feito`);
-    botoes.append(ok, botaoIcone("lb-livre-editar", "i-lapis", `Alterar “${l.titulo}”`, { id: l.id }));
+    if (!programado) {
+      const ok = Object.assign(document.createElement("button"), { type: "button", className: "btn btn-peq" });
+      ok.dataset.acao = "lb-livre-feito";
+      ok.dataset.id = l.id;
+      ok.innerHTML = '<svg class="ic"><use href="#i-ok"/></svg><span>Feito</span>';
+      ok.setAttribute("aria-label", `“${l.titulo}”: feito`);
+      botoes.append(ok);
+    }
+    botoes.append(botaoEnviarLivre(l),
+      botaoIcone("lb-livre-editar", "i-lapis", `Alterar “${l.titulo}”`, { id: l.id }));
   }
   botoes.append(botaoIcone("lb-livre-apagar", "i-lixeira", `Apagar “${l.titulo}”`, { id: l.id }));
   li.append(corpo, botoes);
@@ -613,22 +712,45 @@ function itemDeLivre(l, feito) {
 }
 
 function desenharLivres() {
-  const { em_aberto: abertos, feitos } = whats.livres;
+  const { em_aberto: abertos, programados, feitos } = whats.livres;
   $("#lb-qtd-livres").textContent = abertos.length ? `(${abertos.length})` : "";
   $("#lb-livres").replaceChildren(...abertos.map((l) => itemDeLivre(l, false)));
   $("#lb-livres").hidden = abertos.length === 0;
   $("#lb-livres-vazio").hidden = abertos.length > 0;
+  $("#lb-programados").hidden = programados.length === 0;
+  $("#lb-programados-lista").replaceChildren(...programados.map((l) => itemDeLivre(l, false, true)));
   $("#lb-feitos").hidden = feitos.length === 0;
   $("#lb-feitos-titulo").textContent = `Feitos (${feitos.length})`;
   $("#lb-feitos-lista").replaceChildren(...feitos.map((l) => itemDeLivre(l, true)));
 }
 
-const livrePorId = (id) => [...whats.livres.em_aberto, ...whats.livres.feitos].find((l) => l.id === id);
+const livrePorId = (id) => [...whats.livres.em_aberto, ...whats.livres.programados, ...whats.livres.feitos]
+  .find((l) => l.id === id);
+
+function escolherRepeticao(repetir) {
+  whats.repetir = repetir;
+  $$("#lb-repetir .escolha").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.repetir === repetir)));
+  $("#livre-dia-semana-campo").hidden = repetir !== "semana";
+  $("#livre-dia-mes-campo").hidden = repetir !== "mes";
+  $("#livre-data-campo").hidden = repetir !== "data";
+  $("#livre-repetir-dica").hidden = repetir === "nao";
+  if (repetir === "data" && !$("#livre-data").value) $("#livre-data").value = hojeISO();
+}
+
+function hojeISO() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
 
 function limparFormularioLivre() {
   whats.livreEditando = null;
   $("#livre-titulo").value = "";
   $("#livre-obs").value = "";
+  $("#livre-dia-semana").value = String((new Date().getDay() + 6) % 7);
+  $("#livre-dia-mes").value = String(new Date().getDate());
+  $("#livre-data").value = "";
+  $("#livre-para").value = "";
+  escolherRepeticao("nao");
   $("#form-livre-titulo").textContent = "Novo lembrete";
   $("#form-livre-salvar").textContent = "Adicionar lembrete";
   $("#form-livre-cancelar").hidden = true;
@@ -639,6 +761,11 @@ function editarLivre(id) {
   whats.livreEditando = l;
   $("#livre-titulo").value = l.titulo;
   $("#livre-obs").value = l.observacao;
+  $("#livre-dia-semana").value = String(l.dia_semana ?? 0);
+  $("#livre-dia-mes").value = String(l.dia_mes ?? 1);
+  $("#livre-data").value = l.data || "";
+  $("#livre-para").value = l.destinatario_nome || "";
+  escolherRepeticao(l.repetir || "nao");
   $("#form-livre-titulo").textContent = "Alterar lembrete";
   $("#form-livre-salvar").textContent = "Salvar alteração";
   $("#form-livre-cancelar").hidden = false;
@@ -648,8 +775,15 @@ function editarLivre(id) {
 
 async function salvarLivre(e) {
   e.preventDefault();
-  const r = await api().lembretes_salvar_livre({ titulo: $("#livre-titulo").value, observacao: $("#livre-obs").value },
-    whats.livreEditando ? whats.livreEditando.id : null);
+  const r = await api().lembretes_salvar_livre({
+    titulo: $("#livre-titulo").value,
+    observacao: $("#livre-obs").value,
+    repetir: whats.repetir,
+    dia_semana: Number($("#livre-dia-semana").value),
+    dia_mes: Number($("#livre-dia-mes").value),
+    data: $("#livre-data").value,
+    destinatario: $("#livre-para").value,
+  }, whats.livreEditando ? whats.livreEditando.id : null);
   if (r.erro) return mostrarToast(r.erro, { erro: true });
   limparFormularioLivre();
   aplicarLivres(r);

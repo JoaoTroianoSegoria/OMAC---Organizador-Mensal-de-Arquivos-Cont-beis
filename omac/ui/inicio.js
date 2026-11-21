@@ -7,11 +7,13 @@
  */
 "use strict";
 
-const inicio = { painel: null, editando: false, arrastando: null };
+const inicio = { painel: null, json: "", editando: false, arrastando: null };
 
 modulos.inicio = {
   aoMostrar: carregarInicio,
   carregar: carregarInicio,
+  // O gráfico do resumo tem a dica em texto: desenha de novo para ela esconder ou mostrar o valor.
+  aoMudarValores: () => { if (inicio.painel) desenharInicio(); },
   ligar() {
     const grade = $("#ini-grade");
     grade.addEventListener("dragstart", (e) => {
@@ -52,6 +54,10 @@ Object.assign(acoes, {
 async function carregarInicio() {
   const r = await api().inicio_painel();
   if (r.erro) return mostrarToast(r.erro, { erro: true });
+  // Voltar ao Início quase sempre traz os mesmos dados: aí não desenha de novo (era o "pisca").
+  const json = JSON.stringify(r);
+  if (inicio.painel && json === inicio.json && $("#ini-grade").children.length) return;
+  inicio.json = json;
   inicio.painel = r;
   desenharInicio();
 }

@@ -18,6 +18,7 @@ from ..dados import esquema
 from ..nucleo import ApiBase, seguro
 from ..texto import normalizar
 from ..whatsapp import mensagens as msg
+from ..whatsapp import variaveis as vr
 from .leitor import Nota, responsavel
 
 
@@ -70,7 +71,7 @@ class EnvioNotasApi(ApiBase):
             "numero": nota.numero,
             "nome": nome,
             "telefone": contato.get("telefone", ""),
-            "mensagem": msg.mensagem_da_nota(self._cfg["assistente_nome"], nome, nota.competencia),
+            "mensagem": vr.mensagem(self._cfg, nome, [nota]),
         }
 
     @seguro
@@ -123,16 +124,14 @@ class EnvioNotasApi(ApiBase):
         else:
             contato = ct.por_nome(contatos, nome_unico) if nome_unico else None
 
-        pares = [(n.paciente, n.competencia) for n in notas]
-        assistente = self._cfg["assistente_nome"]
         if contato:
-            destinos = [{**d, "mensagem": msg.mensagem_das_notas(assistente, d["nome"], pares)}
+            destinos = [{**d, "mensagem": vr.mensagem(self._cfg, d["nome"], notas)}
                         for d in ct.destinos(contatos, contato)]
             escolhido = ct.destino_escolhido(contatos, contato)["contato_id"]
         elif nome_unico:
             # Ainda não é contato: vira contato quando a mensagem for enviada.
             destinos = [{"contato_id": "", "nome": nome_unico, "telefone": "", "papel": "",
-                         "mensagem": msg.mensagem_das_notas(assistente, nome_unico, pares)}]
+                         "mensagem": vr.mensagem(self._cfg, nome_unico, notas)}]
             escolhido = ""
         else:
             destinos, escolhido = [], ""
@@ -195,6 +194,39 @@ class EnvioNotasApi(ApiBase):
         if colando:
             threading.Thread(target=self._colar_e_avisar, daemon=True).start()
         return {"pdf_copiado": copiado, "colando": colando, "qtd": len(notas)}
+
+    # --- Os modelos da mensagem (Configurações → WhatsApp) -------------------------------
+
+    def _vista_mensagens(self) -> dict:
+        return {tipo: {"modelo": vr.modelo(self._cfg, tipo), "padrao": vr.PADROES[tipo],
+                       "variaveis": [{"nome": k, "descricao": v} for k, v in vr.variaveis_do(tipo).items()]}
+                for tipo in (vr.NOTA, vr.NOTAS)}
+
+    @seguro
+    def mensagens_modelos(self):
+        return self._vista_mensagens()
+
+    @seguro
+    def mensagens_previa(self, tipo: str, texto: str):
+        """Como a mensagem fica com uma nota de exemplo (inventada), e as variáveis que não existem."""
+        tipo = vr.NOTAS if tipo == vr.NOTAS else vr.NOTA
+        return vr.previa(texto, tipo, self._cfg["assistente_nome"])
+
+    @seguro
+    def mensagens_salvar(self, tipo: str, texto: str):
+        """Guarda o modelo. Igual ao padrão (ou "voltar ao padrão") guarda vazio: segue o padrão."""
+        tipo = vr.NOTAS if tipo == vr.NOTAS else vr.NOTA
+        texto = vr.validar(texto, tipo)
+        chave = "mensagem_notas" if tipo == vr.NOTAS else "mensagem_nota"
+        self._cfg = config.salvar({**self._cfg, chave: "" if texto == vr.PADROES[tipo] else texto})
+        return {**self._vista_mensagens(), "config": self._cfg}
+
+    @seguro
+    def mensagens_padrao(self, tipo: str):
+        tipo = vr.NOTAS if tipo == vr.NOTAS else vr.NOTA
+        chave = "mensagem_notas" if tipo == vr.NOTAS else "mensagem_nota"
+        self._cfg = config.salvar({**self._cfg, chave: ""})
+        return {**self._vista_mensagens(), "config": self._cfg}
 
     def _colar_e_avisar(self) -> None:
         colou = sistema.colar_quando_abrir()

@@ -7,6 +7,8 @@ dia pela metade. Os dias que nenhum extrato cobre são conferidos pelo saldo.
 
 from __future__ import annotations
 
+import copy
+
 from collections import Counter
 from dataclasses import dataclass, field
 from datetime import date, datetime, timedelta
@@ -104,6 +106,23 @@ def consolidar(extratos: list[Extrato]) -> Consolidado:
     return c
 
 
+# Leitura de cada PDF guardada na memória enquanto o app está aberto: o Início e o Relatório
+# pedem os extratos a cada visita, e ler os PDFs de novo era o que fazia o Início demorar.
+# Muda o tamanho ou a data do arquivo: lê de novo. Quem usa recebe uma cópia (nada vaza entre leituras).
+_MEMORIA: dict[str, tuple[tuple[int, int], object]] = {}
+
+
+def _ler_guardado(arquivo: Path):
+    st = arquivo.stat()
+    marca = (st.st_size, st.st_mtime_ns)
+    chave = str(arquivo.resolve())
+    guardado = _MEMORIA.get(chave)
+    if guardado is None or guardado[0] != marca:
+        guardado = (marca, ler_extrato(arquivo))
+        _MEMORIA[chave] = guardado
+    return copy.deepcopy(guardado[1])
+
+
 def varrer(pasta: Path) -> Consolidado:
     """Lê os PDFs que estão direto na pasta. Arquivo que não é extrato vira aviso."""
     extratos, avisos = [], []
@@ -111,7 +130,7 @@ def varrer(pasta: Path) -> Consolidado:
         if arquivo.suffix.lower() != ".pdf" or not arquivo.is_file():
             continue
         try:
-            extratos.append(ler_extrato(arquivo))
+            extratos.append(_ler_guardado(arquivo))
         except ExtratoIlegivel as e:
             avisos.append({"arquivo": arquivo.name, "mensagem": f"Ficou de fora: {e}."})
         except (ValueError, ArithmeticError, OSError) as e:
