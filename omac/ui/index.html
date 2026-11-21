@@ -1902,16 +1902,17 @@
           <input type="checkbox" class="confere" id="pg-pago">
           <span>Já foi pago</span>
         </label>
-        <p class="pg-nota-achada" id="pg-nota-achada" hidden><svg class="ic"><use href="#i-ok"/></svg><span id="pg-nota-achada-texto"></span></p>
         <fieldset class="opcao" id="pg-nota-campo">
           <legend>Nota fiscal</legend>
           <div class="escolhas pg-notas">
-            <button class="escolha" type="button" data-acao="pg-nota" data-nota="">Falta emitir</button>
+            <button class="escolha" type="button" data-acao="pg-nota" data-nota="">Automático</button>
             <button class="escolha" type="button" data-acao="pg-nota" data-nota="ok">Emitida</button>
+            <button class="escolha" type="button" data-acao="pg-nota" data-nota="falta">Falta</button>
             <button class="escolha" type="button" data-acao="pg-nota" data-nota="nao_precisa">Não precisa</button>
           </div>
         </fieldset>
-        <p class="dica" id="pg-nota-dica">O OMAC marca sozinho quando acha a nota do paciente na pasta. Marque <strong>Emitida</strong> se ela saiu em outro nome. Dinheiro e Pix PF já sugerem <strong>Não precisa</strong>.</p>
+        <p class="pg-nota-achada" id="pg-nota-achada" hidden><svg class="ic"><use href="#i-ok"/></svg><span id="pg-nota-achada-texto"></span></p>
+        <p class="dica" id="pg-nota-dica"><strong>Automático:</strong> o OMAC liga a nota da pasta ao atendimento do mesmo paciente, mês e valor (cada nota vale para um atendimento). <strong>Emitida</strong>, <strong>Falta</strong> e <strong>Não precisa</strong> passam por cima do automático. Dinheiro e Pix PF já sugerem <strong>Não precisa</strong>.</p>
       </div>
       <p class="modal-erro" id="pg-atendimento-erro" role="alert" hidden></p>
       <div class="modal-acoes">
