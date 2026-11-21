@@ -210,3 +210,30 @@ def test_site_da_nota(api):
     assert api.abertos == ["https://www.nfse.gov.br/EmissorNacional"]
     ana = _por_nome(_salvar(api, nome="Ana"))["Ana"]
     assert api.contatos_cpf(ana["id"])["site"] == "www.nfse.gov.br/EmissorNacional"
+
+
+# --- 1.10.1: nascimento e comandos na janela Emitir ------------------------------------------
+
+
+def test_nascimento_no_contato(api):
+    ana = _por_nome(_salvar(api, nome="Ana", nascimento="2015-03-14"))["Ana"]
+    assert ana["nascimento"] == "2015-03-14"
+    assert _por_nome(_salvar(api, ana["id"], nome="Ana"))["Ana"]["nascimento"] == "2015-03-14"  # sem o campo: fica
+    assert "depois de hoje" in api.contatos_salvar({"nome": "Bia", "nascimento": "2999-01-01"})["erro"]
+    assert "Confira" in api.contatos_salvar({"nome": "Bia", "nascimento": "14/03/2015"})["erro"]
+
+
+def test_dependente_pela_janela_emitir(api):
+    r = _salvar(api, nome="LUCAS", responsaveis=[{"nome": "FERNANDA", "papel": "mae"}])
+    lucas = _por_nome(r)["LUCAS"]
+    v = api.contatos_salvar_nascimento(lucas["id"], lucas["id"], "2015-03-14")
+    assert v["pessoas"][0]["nascimento"] == "2015-03-14"
+    assert "erro" in api.contatos_salvar_nascimento(lucas["id"], lucas["id"], "amanhã")
+    assert api.contatos_salvar_nascimento(lucas["id"], lucas["id"], "")["pessoas"][0]["nascimento"] == ""
+
+
+def test_categoria_da_emissao_fica_guardada(api):
+    ana = _por_nome(_salvar(api, nome="Ana"))["Ana"]
+    assert api.contatos_cpf(ana["id"])["categoria"] == ""
+    assert api.contatos_categoria_emissao("abc123") == {}
+    assert api.contatos_cpf(ana["id"])["categoria"] == "abc123"
