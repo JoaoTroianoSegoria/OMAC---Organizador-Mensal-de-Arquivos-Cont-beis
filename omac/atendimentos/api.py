@@ -22,16 +22,21 @@ class AtendimentosApi(ApiBase):
     def _vista_ficha(self, atendimentos: list[dict], ano: int, mes: int, notas: list | None) -> list[dict]:
         hoje = date.today()
         nomes = ct.nomes(self._armazem.ler(esquema.CONTATOS)["contatos"])
+        do_mes = fc.do_mes(atendimentos, ano, mes)
+        ligadas = fc.ligar_notas(do_mes, {a["id"]: nomes.get(a["contato_id"], "") for a in do_mes},
+                                 notas) if notas else {}
+        valores = {n.numero: int(round(n.valor * 100)) for n in notas or []}
         lista = []
-        for a in fc.do_mes(atendimentos, ano, mes):
+        for a in do_mes:
             nome = nomes.get(a["contato_id"], "(contato apagado)")
-            numero = fc.nota_do_atendimento(a, nome, notas) if notas else None
+            numero = ligadas.get(a["id"])
             lista.append({
                 **a,
                 "nome": nome,
                 "situacao": fc.situacao(a, hoje),
                 "forma_texto": fc.forma_por_extenso(a),
                 "nota_numero": numero,
+                "nota_valor_centavos": valores.get(numero),
                 "nota_situacao": fc.situacao_da_nota(a, numero),
             })
         lista.sort(key=lambda a: (a["data"], normalizar(a["nome"])))
