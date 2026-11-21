@@ -13,6 +13,7 @@ from datetime import date
 from ..dados import esquema
 from ..texto import mesma_pessoa, nome_limpo, normalizar
 from ..whatsapp.mensagens import TelefoneInvalido, normalizar_telefone
+from . import cpf as cpfs
 
 PAPEIS = {"mae": "mãe", "pai": "pai", "conjuge": "cônjuge", "outro": "responsável"}
 
@@ -36,6 +37,14 @@ def telefone(texto, de_quem: str = "") -> str:
         return normalizar_telefone(texto)
     except TelefoneInvalido as e:
         raise ContatoInvalido(f"Telefone {de_quem}: {e}" if de_quem else str(e)) from e
+
+
+def cpf(texto, de_quem: str = "") -> str:
+    """Os 11 números do CPF (de qualquer jeito que vier escrito), ou vazio."""
+    try:
+        return cpfs.limpar(texto, de_quem)
+    except cpfs.CpfInvalido as e:
+        raise ContatoInvalido(str(e)) from e
 
 
 def novo(nome: str, telefone_: str = "", hoje: date | None = None) -> dict:
@@ -85,7 +94,7 @@ def obter(contatos: list[dict], nome: str, telefone_: str = "", hoje: date | Non
 
 def _responsaveis(contatos: list[dict], linhas: list[dict] | None, proprio_id: str | None,
                   nome_proprio: str, hoje: date) -> list[dict]:
-    """Cada linha é {"contato_id"?, "nome", "telefone", "papel"}: escolhido da lista ou criado na hora."""
+    """Cada linha é {"contato_id"?, "nome", "telefone", "cpf"?, "papel"}: escolhido da lista ou criado na hora."""
     escolhidos, vistos = [], set()
     for linha in linhas or []:
         nome = nome_limpo(linha.get("nome"))
@@ -95,6 +104,7 @@ def _responsaveis(contatos: list[dict], linhas: list[dict] | None, proprio_id: s
         if papel not in PAPEIS:
             raise ContatoInvalido(f"Escolha quem é {nome or 'o responsável'}: mãe, pai, cônjuge ou outro.")
         fone = telefone(linha.get("telefone"), f"de {nome}" if nome else "do responsável")
+        numeros = cpf(linha.get("cpf"), f"de {nome}" if nome else "do responsável")
         if linha.get("contato_id"):
             pessoa = buscar(contatos, linha["contato_id"])
         elif normalizar(nome) == normalizar(nome_proprio):
@@ -105,6 +115,8 @@ def _responsaveis(contatos: list[dict], linhas: list[dict] | None, proprio_id: s
             raise ContatoInvalido("O responsável precisa ser outra pessoa.")
         if fone:
             pessoa["telefone"] = fone  # o telefone digitado ali é o do responsável
+        if numeros:
+            pessoa["cpf"] = numeros
         if pessoa["id"] not in vistos:
             vistos.add(pessoa["id"])
             escolhidos.append({"contato_id": pessoa["id"], "papel": papel})
@@ -118,6 +130,7 @@ def salvar(contatos: list[dict], dados: dict, contato_id: str | None, hoje: date
         raise ContatoInvalido("Diga o nome do contato.")
     conferir_nome(contatos, nome, ignorar=contato_id)
     fone = telefone(dados.get("telefone"))
+    numeros = cpf(dados.get("cpf"))
     atual = buscar(contatos, contato_id) if contato_id else None
     # Os responsáveis podem criar contatos: trabalha numa cópia e só troca no fim.
     copia = [dict(c) for c in contatos]
@@ -128,9 +141,14 @@ def salvar(contatos: list[dict], dados: dict, contato_id: str | None, hoje: date
         contatos.append(atual)
     else:
         atual = buscar(contatos, contato_id)
-    atual.update(nome=nome, telefone=fone, responsaveis=responsaveis)
-    if atual["envia_para"] and atual["envia_para"] not in {r["contato_id"] for r in responsaveis}:
+    # Quem abre a janela sem o campo do CPF (uma versão antiga da tela) não apaga o que existe.
+    atual.update(nome=nome, telefone=fone, responsaveis=responsaveis,
+                 cpf=numeros if "cpf" in dados else atual.get("cpf", ""))
+    ids = {r["contato_id"] for r in responsaveis}
+    if atual["envia_para"] and atual["envia_para"] not in ids:
         atual["envia_para"] = ""
+    if atual["nota_para"] and atual["nota_para"] not in ids | {atual["id"]}:
+        atual["nota_para"] = ""
     return atual
 
 
@@ -162,6 +180,16 @@ def destino_escolhido(contatos: list[dict], contato: dict) -> dict:
     return lista[0]
 
 
+def escolha_da_nota(contatos: list[dict], contato: dict, tem_cpf) -> str:
+    """De quem é o CPF da nota: a última escolha; sem ela, o próprio contato se tiver CPF
+    (ou sugestão), senão o primeiro responsável que tenha. `tem_cpf(pessoa)` diz se tem."""
+    lista = destinos(contatos, contato)
+    ids = [d["contato_id"] for d in lista]
+    if contato.get("nota_para") in ids:
+        return contato["nota_para"]
+    return next((i for i in ids if tem_cpf(i)), ids[0])
+
+
 # --- Apagar e desfazer ----------------------------------------------------------------------
 
 
@@ -175,10 +203,13 @@ def tirar_vinculos(contatos: list[dict], contato_id: str) -> list[dict]:
     for c in contatos:
         for r in c["responsaveis"]:
             if r["contato_id"] == contato_id:
-                tirados.append({"dependente_id": c["id"], **r, "envia_para": c["envia_para"] == contato_id})
+                tirados.append({"dependente_id": c["id"], **r, "envia_para": c["envia_para"] == contato_id,
+                                "nota_para": c.get("nota_para") == contato_id})
         c["responsaveis"] = [r for r in c["responsaveis"] if r["contato_id"] != contato_id]
         if c["envia_para"] == contato_id:
             c["envia_para"] = ""
+        if c.get("nota_para") == contato_id:
+            c["nota_para"] = ""
     return tirados
 
 
@@ -191,6 +222,8 @@ def devolver_vinculos(contatos: list[dict], tirados: list[dict]) -> None:
             c["responsaveis"].append({"contato_id": t["contato_id"], "papel": t["papel"]})
         if t["envia_para"]:
             c["envia_para"] = t["contato_id"]
+        if t.get("nota_para"):
+            c["nota_para"] = t["contato_id"]
 
 
 # --- Conferir contatos (o que a migração não juntou sozinha) ------------------------------
@@ -227,6 +260,10 @@ def juntar(manter: dict, tirar: dict) -> None:
     manter["responsaveis"] += [r for r in tirar["responsaveis"] if r["contato_id"] not in ids | {manter["id"]}]
     if not manter["envia_para"]:
         manter["envia_para"] = tirar["envia_para"]
+    if not manter.get("cpf"):
+        manter["cpf"] = tirar.get("cpf", "")
+    if not manter.get("nota_para"):
+        manter["nota_para"] = tirar.get("nota_para", "")
     manter["criado_em"] = min(x for x in (manter["criado_em"], tirar["criado_em"]) if x) \
         if manter["criado_em"] or tirar["criado_em"] else ""
 
@@ -243,3 +280,5 @@ def trocar_id(contatos: list[dict], de: str, para: str) -> None:
         c["responsaveis"] = novos
         if c["envia_para"] == de:
             c["envia_para"] = para
+        if c.get("nota_para") == de:
+            c["nota_para"] = para
