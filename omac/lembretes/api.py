@@ -36,6 +36,15 @@ class LembretesApi(ApiBase):
         destino = self._destinatario()
         return destino["nome"] if destino else ""
 
+    def _destinatario_de(self, contato_id: str = "") -> dict | None:
+        """Quem recebe: o contato escolhido (se ainda existir) ou quem recebe os lembretes de contas."""
+        if contato_id:
+            contatos = self._armazem.ler(esquema.CONTATOS)["contatos"]
+            escolhido = next((c for c in contatos if c["id"] == contato_id), None)
+            if escolhido:
+                return escolhido
+        return self._destinatario()
+
     # --- Contas ------------------------------------------------------------------------------
 
     def _vista_contas(self, contas: list[dict]) -> dict:
@@ -114,30 +123,33 @@ class LembretesApi(ApiBase):
 
     @seguro
     def lembretes_do_dia(self, forcar: bool = False):
-        """Lembretes da primeira abertura do dia. `forcar` mostra os de hoje de novo."""
+        """O que mostrar ao abrir o app. Contas e fechamento: só na primeira abertura do dia
+        (`forcar` mostra os de hoje de novo). Lembretes que repetem: toda vez, até serem feitos."""
         hoje = date.today()
         with self._contas() as d:
             ultima = date.fromisoformat(d["ultima_abertura"]) if d["ultima_abertura"] else None
-            if not forcar:
-                if ultima == hoje:
-                    return {"mostrar": False}
+            primeira = forcar or ultima != hoje
+            if not forcar and primeira:
                 d["ultima_abertura"] = hoje.isoformat()
             desde = None if forcar else ultima
-            contas = lb.contas_a_avisar(d["contas"], hoje, desde)
+            contas = lb.contas_a_avisar(d["contas"], hoje, desde) if primeira else []
+            livres = [self._livre_para_tela(x, hoje) for x in lv.a_lembrar_ao_abrir(d["livres"], hoje)]
 
-        fechamento = lb.aviso_de_fechamento(self._cfg["lembrete_fechamento_dia"], hoje, desde)
+        fechamento = lb.aviso_de_fechamento(self._cfg["lembrete_fechamento_dia"], hoje, desde) if primeira else ""
         destinatario = self._nome_do_destinatario()
         return {
-            "mostrar": bool(contas or fechamento),
+            "mostrar": bool(contas or fechamento or livres),
             "contas": contas,
+            "livres": livres,
             "fechamento": fechamento,
             "destinatario": destinatario,
             "mensagem": msg.mensagem_de_lembrete(self._cfg["assistente_nome"], destinatario, contas),
         }
 
     @seguro
-    def lembretes_enviar(self, mensagem: str):
-        destino = self._destinatario()
+    def lembretes_enviar(self, mensagem: str, contato_id: str = ""):
+        """Abre a conversa com quem recebe os lembretes (ou com `contato_id`, o de um lembrete)."""
+        destino = self._destinatario_de(contato_id)
         if not destino or not destino["telefone"]:
             return {"sem_contato": True, "nome": destino["nome"] if destino else ""}
         msg.abrir_conversa(destino["telefone"], mensagem, self._cfg["whatsapp_destino"])
@@ -164,8 +176,19 @@ class LembretesApi(ApiBase):
 
     # --- Lembretes livres ------------------------------------------------------------------------
 
+    def _livre_para_tela(self, item: dict, hoje: date) -> dict:
+        proxima = lv.proxima(item, hoje)
+        escolhido = self._destinatario_de(item["destinatario"]) if item["destinatario"] else None
+        return {**item, "quando": lv.quando(item), "proxima": proxima.isoformat() if proxima else "",
+                "destinatario_nome": escolhido["nome"] if escolhido else ""}
+
     def _vista_livres(self, livres: list[dict]) -> dict:
-        return {"em_aberto": lv.em_aberto(livres), "feitos": lv.feitos(livres)}
+        hoje = date.today()
+        return {"em_aberto": [self._livre_para_tela(x, hoje) for x in lv.em_aberto(livres, hoje)],
+                "programados": [self._livre_para_tela(x, hoje) for x in lv.programados(livres, hoje)],
+                "feitos": [self._livre_para_tela(x, hoje) for x in lv.feitos(livres)],
+                "padrao": self._nome_do_destinatario(),
+                "nomes": sorted(self._nomes_dos_contatos().values(), key=normalizar)}
 
     def _mudar_livres(self, mudar) -> dict:
         with self._armazem.editar(esquema.LEMBRETES) as d:
@@ -178,7 +201,35 @@ class LembretesApi(ApiBase):
 
     @seguro
     def lembretes_salvar_livre(self, dados: dict, lembrete_id: str | None = None):
-        return self._mudar_livres(lambda livres: {"salvo": lv.salvar(livres, dados, lembrete_id, date.today())})
+        """`dados["destinatario"]`: o nome de quem recebe este lembrete ("" = quem recebe os das contas).
+        Um nome que não existe vira contato novo, como em Configurações."""
+        hoje = date.today()
+        lv.salvar([], dados, None, hoje)  # valida antes de criar um contato à toa
+        destinatario = None
+        if "destinatario" in dados:
+            destinatario = ""
+            nome = " ".join(str(dados.get("destinatario") or "").split())
+            padrao = self._destinatario()
+            if nome and not (padrao and normalizar(padrao["nome"]) == normalizar(nome)):
+                with self._armazem.editar(esquema.CONTATOS) as d:
+                    destinatario = ct.obter(d["contatos"], nome, "", hoje)["id"]
+        return self._mudar_livres(
+            lambda livres: {"salvo": lv.salvar(livres, dados, lembrete_id, hoje, destinatario)})
+
+    @seguro
+    def lembretes_preparar_livre(self, lembrete_id: str):
+        """A mensagem de um lembrete para mandar pelo WhatsApp (com o botão, como nas contas)."""
+        item = lv.buscar(self._armazem.ler(esquema.LEMBRETES)["livres"], lembrete_id)
+        destino = self._destinatario_de(item["destinatario"])
+        nome = destino["nome"] if destino else ""
+        return {
+            "titulo": item["titulo"],
+            "contato_id": destino["id"] if destino else "",
+            "destinatario": nome,
+            "telefone": destino["telefone"] if destino else "",
+            "mensagem": msg.mensagem_de_lembrete_livre(self._cfg["assistente_nome"], nome, item["titulo"],
+                                                       item["observacao"]),
+        }
 
     @seguro
     def lembretes_marcar_feito(self, lembrete_id: str, feito: bool = True):
@@ -263,7 +314,7 @@ class LembretesApi(ApiBase):
     def _widget_lembretes(self, hoje: date) -> dict:
         with self._contas() as d:
             contas = d["contas"]
-            livres = lv.em_aberto(d["livres"])
+            livres = lv.em_aberto(d["livres"], hoje)
         anterior = hoje.replace(day=1) - timedelta(days=1)
         abertas = []
         for c in contas:
@@ -281,5 +332,6 @@ class LembretesApi(ApiBase):
                                       if lb.situacao_no_mes(c, anterior.year, anterior.month, hoje) == lb.NAO_PAGA],
             "notas_enviar": {"sem_pasta": True} if notas.get("sem_pasta") else (
                 {"erro": notas["erro"]} if "erro" in notas else {"qtd": len(notas["notas"])}),
-            "livres": [{"id": x["id"], "titulo": x["titulo"], "observacao": x["observacao"]} for x in livres],
+            "livres": [{"id": x["id"], "titulo": x["titulo"], "observacao": x["observacao"], "quando": lv.quando(x)}
+                       for x in livres],
         }
