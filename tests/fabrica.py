@@ -50,6 +50,7 @@ def criar_nota(
     tomador: str = "FULANO DE TAL",
     situacao: str = "NFS-e gerada",
     marca_dagua: str | None = None,
+    cpf_tomador: str = "000.000.000-00",
 ) -> Path:
     valor = Decimal(str(valor))
     caminho = Path(caminho)
@@ -81,7 +82,7 @@ def criar_nota(
     ])
     linha_de_celulas(150, [("PRESTADOR / FORNECEDOR", ""), ("CNPJ / CPF / NIF", "00.000.000/0001-00")])
     linha_de_celulas(175, [("Nome / Nome Empresarial", "CLINICA EXEMPLO LTDA")])
-    linha_de_celulas(210, [("TOMADOR / ADQUIRENTE", ""), ("CNPJ / CPF / NIF", "000.000.000-00")])
+    linha_de_celulas(210, [("TOMADOR / ADQUIRENTE", ""), ("CNPJ / CPF / NIF", cpf_tomador)])
     linha_de_celulas(235, [("Nome / Nome Empresarial", tomador)])
 
     c.setFont(f, 7)
@@ -138,6 +139,15 @@ EXEMPLOS = [
 ]
 
 
+def cpf_ficticio(base: int) -> str:
+    """Um CPF inventado, mas com os dígitos verificadores certos (para testar a conferência)."""
+    n = [int(c) for c in f"{base:09d}"[-9:]]
+    for tamanho in (9, 10):
+        n.append(sum(d * (tamanho + 1 - i) for i, d in enumerate(n[:tamanho])) * 10 % 11 % 10)
+    t = "".join(map(str, n))
+    return f"{t[:3]}.{t[3:6]}.{t[6:9]}-{t[9:]}"
+
+
 def criar_pasta_exemplo(pasta: Path) -> Path:
     pasta = Path(pasta)
     pasta.mkdir(parents=True, exist_ok=True)
@@ -147,6 +157,7 @@ def criar_pasta_exemplo(pasta: Path) -> Path:
             numero, comp, emissao, valor,
             descricao=desc or "TRATAMENTO ODONTOLÓGICO",
             tomador=paciente,
+            cpf_tomador=cpf_ficticio(123456000 + numero),
         )
     # Uma cancelada, para testar a mudança de pasta
     criar_nota(
