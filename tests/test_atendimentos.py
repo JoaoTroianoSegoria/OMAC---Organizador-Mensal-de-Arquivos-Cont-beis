@@ -108,7 +108,8 @@ def test_nota_precisa_ser_do_mes_do_atendimento():
 
 @pytest.mark.parametrize("marcada, achada, situacao", [
     ("", 12, fc.NOTA_OK), ("", None, fc.FALTA), ("ok", None, fc.NOTA_OK),
-    ("nao_precisa", None, fc.NOTA_NAO_PRECISA), ("nao_precisa", 12, fc.NOTA_OK),
+    ("nao_precisa", None, fc.NOTA_NAO_PRECISA), ("nao_precisa", 12, fc.NOTA_NAO_PRECISA),
+    ("falta", 12, fc.FALTA), ("falta", None, fc.FALTA),  # 1.10.1: a marcação à mão vale mais
 ])
 def test_tres_situacoes_da_nota(marcada, achada, situacao):
     assert fc.situacao_da_nota(_atendimento(nota=marcada), achada) == situacao
@@ -315,3 +316,52 @@ def test_modulos_nao_tem_metodos_com_o_mesmo_nome():
             if not nome.startswith("__"):
                 donos.setdefault(nome, []).append(cls.__name__)
     assert {n: c for n, c in donos.items() if len(c) > 1} == {}
+
+
+# --- 1.10.1: cada nota vale para um atendimento só -------------------------------------------
+
+
+def _nv(numero, valor, paciente="ANA SOUZA", dia=date(2026, 11, 3)):
+    return Nota(numero, paciente, Decimal(valor), dia, dia, f"{numero}.pdf")
+
+
+def _at(id_, valor, pago=False, dia="2026-11-03", nota=""):
+    return fc.completar({"id": id_, "contato_id": "c", "data": dia, "valor_centavos": valor,
+                         "pago_em": dia if pago else "", "nota": nota})
+
+
+NOMES = lambda *ids: {i: "Ana Souza" for i in ids}
+
+
+def test_nota_vai_para_o_atendimento_do_mesmo_valor():
+    # Pagou 170, falta pagar 1700: a nota de 170 é só do atendimento de 170.
+    ats = [_at("a", 170000, dia="2026-11-03"), _at("b", 17000, pago=True, dia="2026-11-03")]
+    assert fc.ligar_notas(ats, NOMES("a", "b"), [_nv(845, "170.00")]) == {"b": 845}
+
+
+def test_nota_do_valor_total_marca_os_dois():
+    ats = [_at("a", 17000), _at("b", 170000), _at("c", 5000)]
+    assert fc.ligar_notas(ats, NOMES("a", "b", "c"), [_nv(900, "1870.00")]) == {"a": 900, "b": 900}
+
+
+def test_valor_diferente_vai_para_o_pago_primeiro():
+    # O terceiro procedimento foi pago e o segundo não: a nota (com desconto) vai para o pago.
+    ats = [_at("seg", 30000, dia="2026-11-05"), _at("ter", 20000, pago=True, dia="2026-11-20")]
+    assert fc.ligar_notas(ats, NOMES("seg", "ter"), [_nv(901, "180.00")]) == {"ter": 901}
+
+
+def test_valor_exato_nao_e_roubado_pela_reserva():
+    ats = [_at("a", 10000, pago=True), _at("b", 25000)]
+    notas = [_nv(1, "90.00"), _nv(2, "100.00")]  # a 1 não bate com ninguém; a 2 é do "a"
+    assert fc.ligar_notas(ats, NOMES("a", "b"), notas) == {"a": 2, "b": 1}
+
+
+def test_marcado_a_mao_nao_recebe_nota():
+    ats = [_at("a", 17000, nota="falta"), _at("b", 17000, nota="nao_precisa")]
+    assert fc.ligar_notas(ats, NOMES("a", "b"), [_nv(1, "170.00")]) == {}
+
+
+def test_outro_paciente_ou_outro_mes_nao_liga():
+    ats = [_at("a", 17000)]
+    assert fc.ligar_notas(ats, NOMES("a"), [_nv(1, "170.00", "BIA LIMA")]) == {}
+    assert fc.ligar_notas(ats, NOMES("a"), [_nv(1, "170.00", dia=date(2026, 10, 3))]) == {}
