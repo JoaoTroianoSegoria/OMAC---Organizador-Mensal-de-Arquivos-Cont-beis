@@ -25,7 +25,8 @@ CACHE_NOTAS = "cache-notas.json"
 
 ARQUIVOS: dict[str, dict] = {
     # {"id", "nome", "telefone", "cpf", "responsaveis": [{"contato_id", "papel"}], "envia_para", "nota_para",
-    #  "criado_em"}. O CPF fica só com os 11 números; "nota_para" é de quem foi o último CPF usado na nota.
+    #  "criado_em", "nascimento"}. O CPF fica só com os 11 números; "nota_para" é de quem foi o último CPF
+    #  usado na nota; "nascimento" é AAAA-MM-DD ("" = não informado).
     # "a_conferir": nomes parecidos ou telefones diferentes que a migração não juntou sozinha.
     CONTATOS: {"versao": 1, "conteudo": "Os contatos", "padrao": {"contatos": [], "a_conferir": []}},
     # Ortodontia: {"id", "contato_id", "valor_centavos", situação, altas, atendidos, "criado_em"...}
@@ -44,7 +45,7 @@ ARQUIVOS: dict[str, dict] = {
 # gravado antes de um campo existir ganha o padrão ao ler (armazem.py), sem migração.
 ITENS: dict[str, dict[str, dict]] = {
     CONTATOS: {"contatos": {"telefone": "", "cpf": "", "responsaveis": [], "envia_para": "", "nota_para": "",
-                            "criado_em": ""}},
+                            "criado_em": "", "nascimento": ""}},
     TRATAMENTOS: {"tratamentos": {
         "valor_centavos": None, "agendado_em": "", "finalizado_em": "", "alta_inicio": "", "alta_fim": "",
         "atendidos": {},  # "AAAA-MM" → dia em que foi marcado como atendido
