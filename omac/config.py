@@ -31,6 +31,8 @@ PADRAO = {
     "avisos_recolhidos": [],  # faixas minimizadas: "notas", "extrato"
     "atualizacao_automatica": True,  # procura versão nova ao abrir (instalar é sempre opcional)
     "atualizacao_adiada_em": "",  # dia em que a pessoa clicou em "Agora não"
+    "site_nota": "",  # site onde a nota é emitida (botão na janela "Emitir nota")
+    "ocultar_valores_minutos": 5,  # esconde os valores de novo depois de X minutos parado; 0 = não
     "abrir_em": "inicio",  # tela ao abrir: "inicio" | "notas"
     "inicio_cartoes": [],  # ordem e escolhas dos widgets do Início (vazio = padrão)
     # Backup
@@ -101,13 +103,14 @@ def normalizar(cfg: dict) -> dict:
                   "backup_automatico", "backup_arquivos", "colar_sozinho"):
         limpo[chave] = bool(limpo[chave])
     for chave in ("pasta_notas", "pasta_extratos", "pasta_saida",
-                  "assistente_nome", "chave_pix", "atualizacao_adiada_em",
+                  "assistente_nome", "chave_pix", "atualizacao_adiada_em", "site_nota",
                   "backup_pasta", "backup_ultimo", "backup_erro"):
         limpo[chave] = str(limpo[chave] or "")
     try:
         limpo["lembrete_fechamento_dia"] = min(28, max(0, int(limpo["lembrete_fechamento_dia"])))
     except (TypeError, ValueError):
         limpo["lembrete_fechamento_dia"] = PADRAO["lembrete_fechamento_dia"]
+    limpo["ocultar_valores_minutos"] = _inteiro(limpo["ocultar_valores_minutos"], 0, 60, 5)
     limpo["backup_dia_semana"] = _inteiro(limpo["backup_dia_semana"], 0, 6, 0)
     limpo["backup_dia_mes"] = _inteiro(limpo["backup_dia_mes"], 1, 28, 1)
     limpo["tratamentos"] = _lista_de_nomes(limpo["tratamentos"], PADRAO["tratamentos"])
