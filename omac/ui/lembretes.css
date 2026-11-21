@@ -12,6 +12,12 @@
 .grupo > .campo-texto { flex: none; }
 .form-conta { gap: .85rem; }
 .form-conta-campos { display: flex; flex-wrap: wrap; gap: 1rem; }
+.lb-repetir .escolha { flex: 1 1 auto; }
+.lb-livre-para { flex: 1 1 14rem; }
+.lb-livre-quando { display: inline-flex; align-items: center; gap: .3rem; margin-top: .15rem; }
+.lb-programados { display: flex; flex-direction: column; gap: .6rem; }
+.lb-programados-titulo { font-size: 1rem; margin: .25rem 0 0; color: var(--texto-2); }
+.lembretes-livres { margin: 0; }
 .form-conta-campos .campo { min-width: 8.5rem; }
 
 /* Janelas por cima do app */

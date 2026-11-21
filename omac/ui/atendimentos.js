@@ -48,6 +48,7 @@ const atendimentoDa = (alvo) => ficha.atendimentos.find((a) => a.id === alvo.dat
 Object.assign(acoes, {
   "pg-novo": () => abrirAtendimento(null),
   "pg-editar": (alvo) => abrirAtendimento(atendimentoDa(alvo)),
+  "pg-emitir": (alvo) => { const a = atendimentoDa(alvo); if (a) abrirEmissao(a.contato_id, a); },
   "pg-fechar": () => $("#pg-atendimento").close(),
   "pg-forma": (alvo) => escolherForma(ficha.forma === alvo.dataset.forma ? "" : alvo.dataset.forma, true),
   "pg-nota": (alvo) => { ficha.notaSugerida = false; escolherNota(alvo.dataset.nota); },
@@ -104,9 +105,9 @@ function desenharFicha() {
   const vazio = ficha.atendimentos.length === 0;
   seletoresDaFicha();
   $("#pg-mes-nome").textContent = `${MESES[ficha.mes - 1]} de ${ficha.ano}`;
-  $("#pg-recebido").textContent = real.format(t.recebido_centavos / 100);
-  $("#pg-a-receber").textContent = real.format(t.a_receber_centavos / 100);
-  $("#pg-nao-pago").textContent = real.format(t.nao_pago_centavos / 100);
+  $("#pg-recebido").replaceChildren(dinheiro(t.recebido_centavos));
+  $("#pg-a-receber").replaceChildren(dinheiro(t.a_receber_centavos));
+  $("#pg-nao-pago").replaceChildren(dinheiro(t.nao_pago_centavos));
   $("#pg-sem-nota").textContent = String(t.sem_nota);
   $("#pg-resumo").hidden = vazio;
   $("#pg-filtros").hidden = vazio;
@@ -151,6 +152,14 @@ function linhaDoAtendimento(a) {
   } else if (a.nota_situacao === "nao_precisa") {
     tdNota.textContent = "não precisa";
     tdNota.classList.add("pg-nao-precisa");
+  } else if (a.contato_id && a.nome !== "(contato apagado)") {
+    // Falta a nota: o botão abre a janela com o nome e o CPF para copiar.
+    const emitir = Object.assign(document.createElement("button"), { type: "button", className: "btn btn-peq pg-emitir", textContent: "Emitir" });
+    emitir.dataset.acao = "pg-emitir";
+    emitir.dataset.id = a.id;
+    emitir.title = "Falta emitir: ver o nome e o CPF para a nota";
+    emitir.setAttribute("aria-label", `Emitir a nota de ${a.nome}`);
+    tdNota.append(emitir);
   } else {
     tdNota.textContent = "—";
     tdNota.title = "Falta emitir";
@@ -166,7 +175,7 @@ function linhaDoAtendimento(a) {
     celula(a.nome),
     a.tratamento ? celula(a.tratamento, "pg-c-tratamento") : celula("—", "pg-c-tratamento ag-sem-dado"),
     celula(dataBR(a.data).slice(0, 5), "c-data"),
-    a.valor_centavos == null ? celula("Sem valor", "c-valor ag-sem-dado") : celula(real.format(a.valor_centavos / 100), "c-valor"),
+    a.valor_centavos == null ? celula("Sem valor", "c-valor ag-sem-dado") : celula(dinheiro(a.valor_centavos), "c-valor"),
     a.forma_texto ? celula(a.forma_texto, "pg-c-forma") : celula("—", "pg-c-forma ag-sem-dado"),
     tdNota,
     tdAcao,
@@ -348,8 +357,8 @@ registrarWidget("atendimentos", {
       return;
     }
     corpo.append(numeros([
-      ["Recebido", real.format(f.recebido_centavos / 100)],
-      ["A receber", real.format(f.a_receber_centavos / 100)],
+      ["Recebido", dinheiro(f.recebido_centavos)],
+      ["A receber", dinheiro(f.a_receber_centavos)],
       ["Sem nota", String(f.sem_nota), f.sem_nota ? "ini-alerta" : ""],
     ]));
     corpo.append(rodape(botaoIr("Abrir atendimentos", "atendimentos")));

@@ -12,6 +12,8 @@ const inicio = { painel: null, editando: false, arrastando: null };
 modulos.inicio = {
   aoMostrar: carregarInicio,
   carregar: carregarInicio,
+  // O gráfico do resumo tem a dica em texto: desenha de novo para ela esconder ou mostrar o valor.
+  aoMudarValores: () => { if (inicio.painel) desenharInicio(); },
   ligar() {
     const grade = $("#ini-grade");
     grade.addEventListener("dragstart", (e) => {

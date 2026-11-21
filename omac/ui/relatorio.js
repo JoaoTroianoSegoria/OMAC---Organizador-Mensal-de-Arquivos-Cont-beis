@@ -67,12 +67,11 @@ function desenharIlha() {
   if (!escolhidas.length) return;
   const total = escolhidas.reduce((soma, n) => soma + n.valor_centavos, 0);
   $("#rel-ilha-titulo").textContent = escolhidas.length === 1 ? "1 nota escolhida" : `${escolhidas.length} notas escolhidas`;
-  $("#rel-ilha-total").textContent = real.format(total / 100);
+  $("#rel-ilha-total").replaceChildren(dinheiro(total));
   $("#rel-ilha-lista").replaceChildren(...escolhidas.map((n) => {
     const li = Object.assign(document.createElement("li"), { className: "rel-chip" });
-    li.append(Object.assign(document.createElement("span"), {
-      textContent: `Nº ${n.numero} · ${n.paciente} · ${real.format(n.valor_centavos / 100)}`,
-    }));
+    li.append(texto("span", `Nº ${n.numero} · ${n.paciente} · `));
+    li.lastChild.append(dinheiro(n.valor_centavos));
     const x = Object.assign(document.createElement("button"), { type: "button", className: "rel-chip-tirar" });
     x.dataset.acao = "rel-tirar";
     x.dataset.numero = n.numero;
@@ -105,12 +104,12 @@ async function abrirLote() {
   $("#rel-lote-titulo").textContent = numeros.length === 1 ? "Enviar 1 nota" : `Enviar ${numeros.length} notas juntas`;
   const linhas = r.notas.map((n) => {
     const li = document.createElement("li");
-    li.textContent = `Nº ${n.numero} · ${n.paciente} · ${dataBR(n.competencia)} · ${real.format(n.valor_centavos / 100)}`;
+    li.append(`Nº ${n.numero} · ${n.paciente} · ${dataBR(n.competencia)} · `, dinheiro(n.valor_centavos));
     return li;
   });
-  linhas.push(Object.assign(document.createElement("li"), {
-    className: "rel-lote-total", textContent: `Total: ${real.format(r.total_centavos / 100)}`,
-  }));
+  const total = texto("li", "Total: ", "rel-lote-total");
+  total.append(dinheiro(r.total_centavos));
+  linhas.push(total);
   $("#rel-lote-notas").replaceChildren(...linhas);
   $("#rel-lote-contatos").replaceChildren(...r.contatos.map((c) => new Option(c.nome)));
   $("#rel-lote-contato").value = r.nome;

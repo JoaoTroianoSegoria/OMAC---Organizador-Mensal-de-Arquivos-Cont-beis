@@ -174,7 +174,7 @@ function desenharAtivos() {
     atendido.setAttribute("aria-label", `${p.nome} já foi atendido neste mês`);
     tdAtendido.append(atendido);
     tr.append(tdConfere, tdAtendido, celulaPaciente(p), celulaTelefone(p),
-      p.valor_centavos == null ? celula("Sem valor", "c-valor ag-sem-dado") : celula(real.format(p.valor_centavos / 100), "c-valor"),
+      p.valor_centavos == null ? celula("Sem valor", "c-valor ag-sem-dado") : celula(dinheiro(p.valor_centavos), "c-valor"),
       celulaAcoes(p));
     return tr;
   }));

@@ -69,9 +69,9 @@ function desenharExtrato() {
   $("#ext-sem-pasta").hidden = true;
   $("#ext-painel").hidden = false;
 
-  $("#ext-entradas").textContent = real.format(d.entradas_centavos / 100);
-  $("#ext-saidas").textContent = real.format(d.saidas_centavos / 100);
-  $("#ext-saldo").textContent = d.saldo_final_centavos === null ? "—" : real.format(d.saldo_final_centavos / 100);
+  $("#ext-entradas").replaceChildren(dinheiro(d.entradas_centavos));
+  $("#ext-saidas").replaceChildren(dinheiro(d.saidas_centavos));
+  $("#ext-saldo").replaceChildren(d.saldo_final_centavos === null ? "—" : dinheiro(d.saldo_final_centavos));
   $("#ext-preencher").textContent = String(d.a_preencher);
   $("#ext-preencher-cartao").classList.toggle("tem", d.a_preencher > 0);
   $("#ext-legenda").textContent = `Lançamentos de ${nomeMes}`;
@@ -139,13 +139,8 @@ function desenharLancamentos() {
     tdDesc.className = "c-desc";
     tdDesc.textContent = l.descricao ? `${l.tipo}: ${l.descricao}` : l.tipo;
 
-    const tdValor = Object.assign(document.createElement("td"), {
-      className: `c-valor ${l.sentido === "saida" ? "valor-saida" : "valor-entrada"}`,
-      textContent: real.format(l.valor_centavos / 100),
-    });
-    const tdSaldo = Object.assign(document.createElement("td"), {
-      className: "c-valor c-saldo", textContent: real.format(l.saldo_centavos / 100),
-    });
+    const tdValor = celula(dinheiro(l.valor_centavos), `c-valor ${l.sentido === "saida" ? "valor-saida" : "valor-entrada"}`);
+    const tdSaldo = celula(dinheiro(l.saldo_centavos), "c-valor c-saldo");
 
     tr.append(tdData, tdOp, tdDesc, tdValor, tdSaldo);
     corpo.append(tr);

@@ -74,6 +74,7 @@ async function iniciar() {
 
   aplicarConfig();
   ligarEventos();
+  ligarOlho();
   // "notas" é o valor antigo de quem abria nas Notas fiscais: hoje é o Relatório mensal.
   if (estado.cfg.abrir_em === "notas") irPara("relatorio", "notas");
   else mostrarView("inicio");
@@ -283,8 +284,79 @@ function botaoIcone(acao, icone, rotulo, dados) {
   return b;
 }
 
-function celula(texto, classe = "") {
-  return Object.assign(document.createElement("td"), { className: classe, textContent: texto });
+/* `conteudo` pode ser texto ou um elemento (ex.: dinheiro(...)). */
+function celula(conteudo, classe = "") {
+  const td = Object.assign(document.createElement("td"), { className: classe });
+  td.append(conteudo ?? "");
+  return td;
+}
+
+/* ---------- Valores escondidos (o olho) ----------
+ *
+ * Todo valor em reais da tela passa por dinheiro(): o valor de verdade e "R$ ----" ficam
+ * os dois no elemento, e o CSS mostra um ou outro conforme <html data-valores>. Assim o
+ * olho troca tudo na hora, em todas as telas, sem desenhar nada de novo. O app sempre
+ * abre com os valores escondidos; depois de alguns minutos parado, eles se escondem de novo.
+ */
+const OCULTO = "R$ ----";
+const valores = { visiveis: false, ultimoUso: Date.now() };
+
+function dinheiro(centavos, formatar = (v) => real.format(v)) {
+  const span = Object.assign(document.createElement("span"), { className: "dinheiro" });
+  const oculto = Object.assign(document.createElement("span"), { className: "d-oculto", textContent: OCULTO });
+  oculto.setAttribute("aria-label", "valor escondido");
+  span.append(Object.assign(document.createElement("span"), { className: "d-real", textContent: formatar(centavos / 100) }), oculto);
+  return span;
+}
+
+/* Para textos fora da tela (a dica ao passar o mouse): já sai escondido ou não. */
+function dinheiroTexto(centavos) {
+  return valores.visiveis ? real.format(centavos / 100) : OCULTO;
+}
+
+function mostrarValores(visiveis) {
+  valores.visiveis = visiveis;
+  valores.ultimoUso = Date.now();
+  document.documentElement.dataset.valores = visiveis ? "visiveis" : "ocultos";
+  const rotulo = visiveis ? "Esconder os valores" : "Mostrar os valores";
+  $$(".olho").forEach((b) => {
+    b.setAttribute("aria-pressed", String(visiveis));
+    b.title = rotulo;
+    b.setAttribute("aria-label", rotulo);
+    b.querySelector("use").setAttribute("href", visiveis ? "#i-olho" : "#i-olho-fechado");
+  });
+  Object.values(modulos).forEach((m) => m.aoMudarValores?.(visiveis));
+}
+
+/* O botão do olho, para quem desenha a tela pelo JS (os do HTML já vêm prontos). */
+function botaoOlho() {
+  const b = Object.assign(document.createElement("button"), { type: "button", className: "olho" });
+  b.dataset.acao = "olho";
+  b.innerHTML = '<svg class="ic"><use href="#i-olho-fechado"/></svg>';
+  const rotulo = valores.visiveis ? "Esconder os valores" : "Mostrar os valores";
+  b.title = rotulo;
+  b.setAttribute("aria-label", rotulo);
+  b.setAttribute("aria-pressed", String(valores.visiveis));
+  b.querySelector("use").setAttribute("href", valores.visiveis ? "#i-olho" : "#i-olho-fechado");
+  return b;
+}
+
+function ligarOlho() {
+  acoes.olho = () => mostrarValores(!valores.visiveis);
+  for (const evento of ["pointermove", "pointerdown", "keydown", "wheel"]) {
+    document.addEventListener(evento, () => { valores.ultimoUso = Date.now(); }, { passive: true });
+  }
+  setInterval(() => {
+    const minutos = estado.cfg ? estado.cfg.ocultar_valores_minutos : 5;
+    if (valores.visiveis && minutos > 0 && Date.now() - valores.ultimoUso > minutos * 60000) mostrarValores(false);
+  }, 15000);
+  mostrarValores(false);
+}
+
+/* 000.000.000-00 (o Python guarda só os números). Outra coisa volta como veio. */
+function cpfBR(texto) {
+  const n = String(texto || "").replace(/\D/g, "");
+  return n.length === 11 ? `${n.slice(0, 3)}.${n.slice(3, 6)}.${n.slice(6, 9)}-${n.slice(9)}` : String(texto || "");
 }
 
 function telefoneBR(digitos) {
@@ -307,7 +379,9 @@ const plural = (n, um, varios) => `${n} ${n === 1 ? um : varios}`;
 /* ---------- Peças dos widgets do Início ---------- */
 
 function texto(tag, conteudo, classe = "") {
-  return Object.assign(document.createElement(tag), { className: classe, textContent: conteudo });
+  const el = Object.assign(document.createElement(tag), { className: classe });
+  el.append(conteudo ?? "");
+  return el;
 }
 
 function botaoIr(rotulo, view, aba = "") {
@@ -454,6 +528,10 @@ function ligarEventos() {
     });
   });
   $("#escala").addEventListener("input", (e) => mudarConfig({ escala_fonte: Number(e.target.value) }));
+  // Campo de CPF: ao sair dele, 11 números (de qualquer jeito escritos) ficam 000.000.000-00.
+  document.addEventListener("change", (e) => {
+    if (e.target.classList?.contains("campo-cpf")) e.target.value = cpfBR(e.target.value.trim());
+  });
 
   $$("[data-sel-mes]").forEach((s) => s.addEventListener("change", (e) => mudarMes(estado.ano, Number(e.target.value))));
   $$("[data-sel-ano]").forEach((s) => s.addEventListener("change", (e) => mudarMes(Number(e.target.value), estado.mes)));

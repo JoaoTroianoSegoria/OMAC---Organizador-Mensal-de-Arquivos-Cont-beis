@@ -29,15 +29,41 @@
 .ct-resp-lista { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: .75rem; }
 .ct-resp {
   display: grid; gap: .6rem; align-items: end;
-  grid-template-columns: minmax(10rem, 2fr) minmax(7rem, 1fr) minmax(9rem, 1.4fr) auto;
+  grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr) auto;
+  grid-template-areas: "nome papel tirar" "tel cpf .";
+  padding-bottom: .75rem; border-bottom: 1px solid var(--linha);
 }
+.ct-resp:last-child { border-bottom: 0; padding-bottom: 0; }
+.ct-resp-campo-nome { grid-area: nome; }
+.ct-resp-campo-papel { grid-area: papel; }
+.ct-resp-campo-tel { grid-area: tel; }
+.ct-resp-campo-cpf { grid-area: cpf; }
+.ct-resp > .btn-linha { grid-area: tirar; }
+.ct-cpf-sugestao { display: flex; align-items: center; flex-wrap: wrap; gap: .6rem; margin: 0; }
+.ct-cpf-sugestao > span { flex: 1 1 12rem; }
+
+/* ---------- Emitir nota (Atendimentos) ---------- */
+.emitir-atendimento { margin: .2rem 0 0; }
+.emitir-quem .escolha { flex: 1 1 auto; }
+.emitir-dados { display: flex; flex-direction: column; gap: .6rem; margin: 0; }
+.emitir-linha {
+  display: grid; grid-template-columns: 3.5rem minmax(0, 1fr) auto; align-items: center; gap: .75rem;
+  padding: .65rem .9rem; border-radius: var(--raio-p); background: var(--vidro-forte);
+}
+.emitir-linha dt { color: var(--texto-2); font-size: .85rem; font-weight: 500; }
+.emitir-linha dd { margin: 0; font-weight: 600; font-size: 1.1rem; overflow-wrap: anywhere; font-variant-numeric: tabular-nums; }
+.emitir-linha dd.emitir-falta { font-weight: 500; font-size: 1rem; color: var(--texto-2); }
+.emitir-botoes { display: inline-flex; align-items: center; gap: .3rem; }
+.emitir-form { display: flex; align-items: end; flex-wrap: wrap; gap: .75rem; }
+.emitir-form .campo { flex: 1 1 12rem; }
+.emitir-form-botoes { display: flex; gap: .5rem; }
+.pg-emitir { min-height: 1.9rem; padding: .15rem .7rem; }
 .ct-resp .campo { min-width: 0; }
 .ct-resp .btn-linha { margin-bottom: .35rem; }
 .ct-orto-chave { padding: .25rem 0; }
 .ct-orto-desligar { display: flex; align-items: center; gap: .6rem; margin: 0; }
 @media (max-width: 40rem) {
-  .ct-resp { grid-template-columns: 1fr 1fr; }
-  .ct-resp .campo:first-child { grid-column: 1 / -1; }
+  .ct-resp { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto; grid-template-areas: "nome nome tirar" "papel tel tel" "cpf cpf cpf"; }
 }
 
 /* ---------- Backup (Configurações) ---------- */

@@ -11,6 +11,8 @@ const resumoAno = { ano: new Date().getFullYear(), dados: null };
 modulos.resumo = {
   aoMostrar: carregarResumo,
   carregar: carregarResumo,
+  // A dica de cada mês do gráfico é texto: desenha de novo para ela esconder ou mostrar o valor.
+  aoMudarValores: () => { if (resumoAno.dados) desenharResumo(); },
   ligar() {
     $("#rs-ano").addEventListener("change", (e) => {
       resumoAno.ano = Number(e.target.value);
@@ -26,7 +28,7 @@ async function carregarResumo() {
   desenharResumo();
 }
 
-const emReais = (centavos) => (centavos == null ? "" : real.format(centavos / 100));
+const emReais = (centavos) => (centavos == null ? "" : dinheiro(centavos));
 
 function listaDeMeses(numeros) {
   const nomes = numeros.map((m) => MESES[m - 1].toLowerCase());
@@ -52,8 +54,8 @@ function desenharResumo() {
     faixa.hidden = true;
   }
 
-  $("#rs-total").textContent = emReais(r.faturamento_centavos) || "—";
-  $("#rs-media").textContent = emReais(r.media_centavos) || "—";
+  $("#rs-total").replaceChildren(emReais(r.faturamento_centavos) || "—");
+  $("#rs-media").replaceChildren(emReais(r.media_centavos) || "—");
   $("#rs-media-rotulo").textContent = r.meses_na_media
     ? `Média por mês (${r.meses_na_media} ${r.meses_na_media === 1 ? "mês" : "meses"})` : "Média por mês";
   $("#rs-melhor").textContent = r.melhor ? MESES[r.melhor - 1] : "—";
@@ -94,7 +96,7 @@ function desenharBarras(caixa, meses, { ano, destaque = null, compacto = false }
     const linha = Object.assign(document.createElement("div"), { className: "rs-grade" });
     // A base das barras fica acima do nome do mês (1.6rem), e o topo 1.6rem abaixo do alto da área.
     linha.style.bottom = `calc(1.6rem + (100% - 3.2rem) * ${valor / topo})`;
-    linha.append(Object.assign(document.createElement("span"), { textContent: real.format(valor / 100).replace(",00", "") }));
+    linha.append(texto("span", dinheiro(valor, (v) => real.format(v).replace(",00", ""))));
     area.append(linha);
   }
   for (const m of meses) {
@@ -102,9 +104,9 @@ function desenharBarras(caixa, meses, { ano, destaque = null, compacto = false }
     const col = Object.assign(document.createElement("div"), { className: "rs-coluna" });
     col.setAttribute("role", "listitem");
     const valor = m.faturamento_centavos;
-    const texto = valor == null
+    const descricao = valor == null
       ? `${m.nome}: sem notas lidas`
-      : `${m.nome}: ${real.format(valor / 100)}${emAndamento ? " (mês em andamento)" : ""}`;
+      : `${m.nome}: ${dinheiroTexto(valor)}${emAndamento ? " (mês em andamento)" : ""}`;
     const barra = Object.assign(document.createElement("div"), { className: "rs-barra" });
     if (valor == null) {
       barra.classList.add("rs-vazia");
@@ -113,12 +115,12 @@ function desenharBarras(caixa, meses, { ano, destaque = null, compacto = false }
       if (emAndamento) barra.classList.add("rs-andamento");
       // Rótulo direto só no mês de destaque, para não encher o gráfico de números.
       if (!compacto && m.mes === destaque) {
-        barra.append(Object.assign(document.createElement("span"), { className: "rs-rotulo", textContent: real.format(valor / 100) }));
+        barra.append(texto("span", dinheiro(valor), "rs-rotulo"));
       }
     }
     col.tabIndex = 0;
-    col.setAttribute("aria-label", texto);
-    col.dataset.dica = texto;
+    col.setAttribute("aria-label", descricao);
+    col.dataset.dica = descricao;
     col.append(Object.assign(document.createElement("div"), { className: "rs-trilho" }));
     col.firstChild.append(barra);
     col.append(Object.assign(document.createElement("span"), {
@@ -153,8 +155,8 @@ registrarWidget("resumo", {
       return;
     }
     corpo.append(numeros([
-      [`Faturamento em ${r.ano}`, r.faturamento_centavos == null ? "—" : real.format(r.faturamento_centavos / 100)],
-      ["Média por mês", r.media_centavos == null ? "—" : real.format(r.media_centavos / 100)],
+      [`Faturamento em ${r.ano}`, r.faturamento_centavos == null ? "—" : dinheiro(r.faturamento_centavos)],
+      ["Média por mês", r.media_centavos == null ? "—" : dinheiro(r.media_centavos)],
       ["Melhor mês", r.melhor ? MESES[r.melhor - 1] : "—"],
     ]));
     const grafico = Object.assign(document.createElement("div"), { className: "rs-grafico" });
