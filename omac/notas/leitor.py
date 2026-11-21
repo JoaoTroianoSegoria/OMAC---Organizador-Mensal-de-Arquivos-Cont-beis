@@ -25,7 +25,7 @@ from pathlib import Path
 from ..pdf import PdfIlegivel, extrair_paginas
 
 # Mude quando a forma de ler as notas mudar: invalida o cache antigo.
-VERSAO_LEITOR = 1
+VERSAO_LEITOR = 2  # 2: nome e CPF do tomador
 
 
 class NotaIlegivel(Exception):
@@ -43,6 +43,8 @@ class Nota:
     dependente: bool = False
     cancelada: bool = False
     avisos: list[str] = field(default_factory=list)
+    tomador: str = ""  # nome de quem recebeu a nota, como está no PDF
+    cpf_tomador: str = ""  # só os 11 números; vazio se for CNPJ ou não estiver lá
 
     def para_dict(self) -> dict:
         return {
@@ -55,6 +57,8 @@ class Nota:
             "dependente": self.dependente,
             "cancelada": self.cancelada,
             "avisos": list(self.avisos),
+            "tomador": self.tomador,
+            "cpf_tomador": self.cpf_tomador,
         }
 
     @classmethod
@@ -69,6 +73,8 @@ class Nota:
             dependente=d.get("dependente", False),
             cancelada=d.get("cancelada", False),
             avisos=list(d.get("avisos", [])),
+            tomador=d.get("tomador", ""),
+            cpf_tomador=d.get("cpf_tomador", ""),
         )
 
 
@@ -123,6 +129,11 @@ _RE_TOMADOR = re.compile(
     r"TOMADOR\s*/\s*ADQUIRENTE.*?Nome\s*/\s*Nome Empresarial\s*\n\s*([^\n]+)",
     re.IGNORECASE | re.DOTALL,
 )
+# O bloco do tomador vai até o intermediário ou o serviço; o CPF vem logo depois do rótulo.
+_RE_BLOCO_TOMADOR = re.compile(
+    r"TOMADOR\s*/\s*ADQUIRENTE(.*?)(?:INTERMEDI|SERVI[ÇC]O PRESTADO|$)", re.IGNORECASE | re.DOTALL
+)
+_RE_CPF = re.compile(r"(?<![\d./-])(\d{3}\.?\d{3}\.?\d{3}-?\d{2})(?![\d./-])")
 _RE_DEPENDENTE = re.compile(r"\bdependente\b\s*[:\-]?\s*(.+)", re.IGNORECASE | re.DOTALL)
 _RE_CANCELADA = re.compile(r"\bcancelad[ao]\b", re.IGNORECASE)
 # A marca de cancelamento fica sozinha na linha: "CANCELADA", "NFS-e cancelada".
@@ -174,6 +185,7 @@ def interpretar_texto(texto: str, nome_arquivo: str) -> Nota:
         avisos.append("A descrição do serviço não contém “tratamento odontológico”.")
 
     do_arquivo = ler_nome_arquivo(nome_arquivo)
+    tomador = _limpar_nome(_buscar(_RE_TOMADOR, texto) or "")
     dependente = _nome_dependente(descricao)
 
     if dependente:
@@ -181,7 +193,7 @@ def interpretar_texto(texto: str, nome_arquivo: str) -> Nota:
     elif do_arquivo:
         paciente = do_arquivo[1]
     else:
-        paciente = _limpar_nome(_buscar(_RE_TOMADOR, texto) or "")
+        paciente = tomador
         avisos.append(
             "O nome do arquivo está fora do padrão; usei o nome do tomador que está na nota."
         )
@@ -204,6 +216,8 @@ def interpretar_texto(texto: str, nome_arquivo: str) -> Nota:
         dependente=bool(dependente),
         cancelada=cancelada,
         avisos=avisos,
+        tomador=tomador,
+        cpf_tomador=_cpf_do_tomador(texto),
     )
 
 
@@ -218,6 +232,13 @@ def ler_nota(caminho: Path) -> Nota:
 def _buscar(regex: re.Pattern, texto: str) -> str | None:
     m = regex.search(texto)
     return m.group(1).strip() if m else None
+
+
+def _cpf_do_tomador(texto: str) -> str:
+    """Só os números do CPF do tomador. CNPJ (14 números) não casa com o padrão."""
+    bloco = _buscar(_RE_BLOCO_TOMADOR, texto) or ""
+    m = _RE_CPF.search(bloco)
+    return re.sub(r"\D", "", m.group(1)) if m else ""
 
 
 def _nome_dependente(descricao: str) -> str | None:
