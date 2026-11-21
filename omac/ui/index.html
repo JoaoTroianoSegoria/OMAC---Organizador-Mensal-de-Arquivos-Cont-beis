@@ -13,6 +13,7 @@
   <link rel="stylesheet" href="atendimentos.css">
   <link rel="stylesheet" href="contatos.css">
   <link rel="stylesheet" href="configuracoes.css">
+  <link rel="stylesheet" href="emitir.css">
   <link rel="stylesheet" href="inicio.css">
   <script>
     /* Antes de tudo: se um script não carregar ou quebrar, a tela diz qual, em vez de ficar muda. */
@@ -44,7 +45,7 @@
      * muitos juntos. Quem precisa de todos carregados usa omacQuandoPronto(fn). */
     const OMAC_SCRIPTS = ["nucleo.js", "relatorio.js", "notas.js", "extrato.js", "lembretes.js", "modelos.js",
       "contatos.js", "tratamentos.js", "atendimentos.js", "backup.js", "resumo.js", "inicio.js", "atualizacao.js",
-      "configuracoes.js"];
+      "configuracoes.js", "emitir.js"];
     const OMAC_TENTATIVAS = 4;
     window.omacScriptsProntos = false;
     function omacQuandoPronto(fn) {
@@ -1556,6 +1557,20 @@
         <label class="rotulo-campo" for="lb-comando-texto">Texto que vai ser copiado</label>
         <textarea id="lb-comando-texto" rows="8"></textarea>
         <p class="dica">Pode ter várias linhas. Espaço e linhas em branco no começo e no fim não são copiados.</p>
+        <details class="lb-comando-variaveis">
+          <summary>Variáveis para a janela Emitir</summary>
+          <p class="dica">Só são trocadas quando o comando é copiado na janela <strong>Emitir</strong>, em Atendimentos. Aqui e na aba Comandos, o texto é copiado como está.</p>
+          <div class="cfg-variaveis" data-alvo="lb-comando-texto">
+            <button class="btn btn-peq" type="button" data-acao="cfg-variavel" data-variavel="nome">[nome]</button>
+            <button class="btn btn-peq" type="button" data-acao="cfg-variavel" data-variavel="cpf">[cpf]</button>
+            <button class="btn btn-peq" type="button" data-acao="cfg-variavel" data-variavel="data-competencia">[data-competencia]</button>
+            <button class="btn btn-peq" type="button" data-acao="cfg-variavel" data-variavel="valor">[valor]</button>
+            <button class="btn btn-peq" type="button" data-acao="cfg-variavel" data-variavel="tratamento">[tratamento]</button>
+            <button class="btn btn-peq" type="button" data-acao="cfg-variavel" data-variavel="nome-do-dependente">[nome-do-dependente]</button>
+            <button class="btn btn-peq" type="button" data-acao="cfg-variavel" data-variavel="cpf-dependente">[cpf-dependente]</button>
+            <button class="btn btn-peq" type="button" data-acao="cfg-variavel" data-variavel="data-nascimento-dependente">[data-nascimento-dependente]</button>
+          </div>
+        </details>
       </div>
       <p class="modal-erro" id="lb-comando-erro" role="alert" hidden></p>
       <div class="modal-acoes">
@@ -1624,50 +1639,94 @@
   <!-- Contato (novo, alterar, e a ortodontia dele) -->
 
   <!-- Emitir nota: nome e CPF de quem recebe a nota, para copiar -->
-  <dialog class="modal vidro" id="emitir" aria-labelledby="emitir-titulo">
+  <dialog class="modal vidro modal-emitir" id="emitir" aria-labelledby="emitir-titulo">
     <div class="modal-corpo">
       <div>
         <h2 id="emitir-titulo">Emitir nota</h2>
         <p class="sub emitir-atendimento" id="emitir-atendimento"></p>
       </div>
-      <fieldset class="opcao" id="emitir-quem-campo">
-        <legend>A nota sai no nome de</legend>
-        <div class="escolhas emitir-quem" id="emitir-quem"></div>
-      </fieldset>
-      <dl class="emitir-dados">
-        <div class="emitir-linha">
-          <dt>Nome</dt>
-          <dd id="emitir-nome"></dd>
-          <button class="btn btn-peq" type="button" data-acao="emitir-copiar" data-campo="nome"><svg class="ic"><use href="#i-copiar"/></svg><span>Copiar</span></button>
+      <div class="emitir-colunas">
+        <div class="emitir-esq">
+          <fieldset class="opcao" id="emitir-quem-campo">
+            <legend>A nota sai no nome de</legend>
+            <div class="escolhas emitir-quem" id="emitir-quem"></div>
+          </fieldset>
+          <dl class="emitir-dados">
+            <div class="emitir-linha">
+              <dt>Nome</dt>
+              <dd id="emitir-nome"></dd>
+              <button class="btn btn-peq" type="button" data-acao="emitir-copiar" data-campo="nome"><svg class="ic"><use href="#i-copiar"/></svg><span>Copiar</span></button>
+            </div>
+            <div class="emitir-linha">
+              <dt>CPF</dt>
+              <dd id="emitir-cpf"></dd>
+              <span class="emitir-botoes">
+                <button class="btn btn-peq" type="button" id="emitir-copiar-cpf" data-acao="emitir-copiar" data-campo="cpf"><svg class="ic"><use href="#i-copiar"/></svg><span>Copiar</span></button>
+                <button class="btn-linha" type="button" id="emitir-alterar-cpf" data-acao="emitir-alterar-cpf" title="Alterar o CPF" aria-label="Alterar o CPF"><svg class="ic"><use href="#i-lapis"/></svg></button>
+              </span>
+            </div>
+            <div class="emitir-linha" id="emitir-linha-data">
+              <dt>Data</dt>
+              <dd id="emitir-data"></dd>
+              <button class="btn btn-peq" type="button" data-acao="emitir-copiar" data-campo="data"><svg class="ic"><use href="#i-copiar"/></svg><span>Copiar</span></button>
+            </div>
+            <div class="emitir-linha" id="emitir-linha-valor">
+              <dt>Valor</dt>
+              <dd id="emitir-valor"></dd>
+              <button class="btn btn-peq" type="button" data-acao="emitir-copiar" data-campo="valor"><svg class="ic"><use href="#i-copiar"/></svg><span>Copiar</span></button>
+            </div>
+          </dl>
+          <div class="faixa faixa-info" id="emitir-sugestao" hidden>
+            <svg class="ic"><use href="#i-notas"/></svg>
+            <div class="ag-sem-pix-corpo">
+              <span id="emitir-sugestao-texto"></span>
+              <button class="btn btn-peq" type="button" data-acao="emitir-usar-sugestao">Usar este CPF</button>
+            </div>
+          </div>
+          <form class="emitir-form" id="form-emitir-cpf" hidden>
+            <div class="campo campo-texto">
+              <label class="rotulo-campo" for="emitir-cpf-campo" id="emitir-cpf-rotulo">CPF</label>
+              <input id="emitir-cpf-campo" class="campo-cpf" type="text" inputmode="numeric" autocomplete="off" placeholder="000.000.000-00">
+            </div>
+            <div class="emitir-form-botoes">
+              <button class="btn btn-primario" type="submit">Salvar CPF</button>
+              <button class="btn" type="button" id="emitir-cancelar-cpf" data-acao="emitir-cancelar-cpf">Cancelar</button>
+            </div>
+          </form>
+          <div class="emitir-dependente" id="emitir-dependente" hidden>
+            <div class="emitir-dependente-cab">
+              <span><span class="emitir-dependente-rotulo">Dependente:</span> <strong id="emitir-dep-nome"></strong></span>
+              <button class="btn-linha" type="button" id="emitir-dep-lapis" data-acao="emitir-dep-alterar" title="Alterar CPF e nascimento do dependente" aria-label="Alterar CPF e nascimento do dependente"><svg class="ic"><use href="#i-lapis"/></svg></button>
+            </div>
+            <p class="emitir-dep-dados" id="emitir-dep-dados"></p>
+            <form class="emitir-form" id="form-emitir-dep" hidden>
+              <div class="campo campo-texto">
+                <label class="rotulo-campo" for="emitir-dep-cpf">CPF do dependente</label>
+                <input id="emitir-dep-cpf" class="campo-cpf" type="text" inputmode="numeric" autocomplete="off" placeholder="000.000.000-00">
+              </div>
+              <div class="campo campo-texto">
+                <label class="rotulo-campo" for="emitir-dep-nasc">Nascimento</label>
+                <input id="emitir-dep-nasc" type="date">
+              </div>
+              <div class="emitir-form-botoes">
+                <button class="btn btn-primario" type="submit">Salvar</button>
+                <button class="btn" type="button" data-acao="emitir-dep-cancelar">Cancelar</button>
+              </div>
+            </form>
+          </div>
+          <p class="modal-erro" id="emitir-erro" role="alert" hidden></p>
         </div>
-        <div class="emitir-linha">
-          <dt>CPF</dt>
-          <dd id="emitir-cpf"></dd>
-          <span class="emitir-botoes">
-            <button class="btn btn-peq" type="button" id="emitir-copiar-cpf" data-acao="emitir-copiar" data-campo="cpf"><svg class="ic"><use href="#i-copiar"/></svg><span>Copiar</span></button>
-            <button class="btn-linha" type="button" id="emitir-alterar-cpf" data-acao="emitir-alterar-cpf" title="Alterar o CPF" aria-label="Alterar o CPF"><svg class="ic"><use href="#i-lapis"/></svg></button>
-          </span>
-        </div>
-      </dl>
-      <div class="faixa faixa-info" id="emitir-sugestao" hidden>
-        <svg class="ic"><use href="#i-notas"/></svg>
-        <div class="ag-sem-pix-corpo">
-          <span id="emitir-sugestao-texto"></span>
-          <button class="btn btn-peq" type="button" data-acao="emitir-usar-sugestao">Usar este CPF</button>
-        </div>
+        <aside class="emitir-comandos" aria-labelledby="emitir-comandos-titulo">
+          <div class="emitir-comandos-cab">
+            <h3 id="emitir-comandos-titulo">Comandos</h3>
+            <span class="select"><select id="emitir-categoria" aria-label="Categoria de comandos"></select></span>
+          </div>
+          <ul class="emitir-comandos-lista" id="emitir-comandos-lista"></ul>
+          <p class="dica" id="emitir-comandos-vazio" hidden></p>
+          <p class="dica emitir-comandos-dica">✓ = já copiado nesta emissão. As [variáveis] dos comandos saem preenchidas.</p>
+        </aside>
       </div>
-      <form class="emitir-form" id="form-emitir-cpf" hidden>
-        <div class="campo campo-texto">
-          <label class="rotulo-campo" for="emitir-cpf-campo" id="emitir-cpf-rotulo">CPF</label>
-          <input id="emitir-cpf-campo" class="campo-cpf" type="text" inputmode="numeric" autocomplete="off" placeholder="000.000.000-00">
-        </div>
-        <div class="emitir-form-botoes">
-          <button class="btn btn-primario" type="submit">Salvar CPF</button>
-          <button class="btn" type="button" id="emitir-cancelar-cpf" data-acao="emitir-cancelar-cpf">Cancelar</button>
-        </div>
-      </form>
-      <p class="modal-erro" id="emitir-erro" role="alert" hidden></p>
-      <p class="dica">O CPF fica guardado só neste computador, no cadastro do contato.</p>
+      <p class="dica">O CPF e o nascimento ficam guardados só neste computador, no cadastro do contato.</p>
       <div class="modal-acoes">
         <button class="btn" type="button" data-acao="emitir-fechar">Fechar</button>
         <button class="btn btn-primario" type="button" id="emitir-site" data-acao="emitir-site"><svg class="ic"><use href="#i-abrir"/></svg><span>Abrir o site da nota</span></button>
@@ -1691,6 +1750,10 @@
         <div class="campo campo-texto">
           <label class="rotulo-campo" for="ct-cpf">CPF</label>
           <input id="ct-cpf" class="campo-cpf" type="text" inputmode="numeric" autocomplete="off" placeholder="000.000.000-00">
+        </div>
+        <div class="campo campo-texto">
+          <label class="rotulo-campo" for="ct-nascimento">Data de nascimento</label>
+          <input id="ct-nascimento" type="date">
         </div>
       </div>
       <p class="faixa faixa-info ct-cpf-sugestao" id="ct-cpf-sugestao" hidden><svg class="ic"><use href="#i-notas"/></svg><span id="ct-cpf-sugestao-texto"></span><button class="btn btn-peq" type="button" data-acao="ct-usar-cpf">Usar este CPF</button></p>
