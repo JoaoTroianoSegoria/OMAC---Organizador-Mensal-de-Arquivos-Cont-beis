@@ -10,7 +10,7 @@ from .. import config, sistema
 from ..nucleo import ApiBase, seguro
 from . import exportar as exp
 from . import pesquisa
-from .leitor import responsavel
+from .leitor import FORMATO_PADRAO, SERVICO_PADRAO, FormatoInvalido, Regras, compilar_formato, ler_nome_arquivo, responsavel
 
 
 class NotasApi(ApiBase):
@@ -76,6 +76,47 @@ class NotasApi(ApiBase):
             return {"erro": "Não consegui salvar: o arquivo está aberto no Excel? Feche e tente de novo."}
         self._cfg = config.salvar({**self._cfg, "pasta_saida": str(salvo.parent), "formato": formato})
         return {"caminho": str(salvo), "qtd": len(notas)}
+
+    # --- Como ler as notas (Configurações → Notas fiscais) --------------------------------
+
+    @seguro
+    def notas_testar_formato(self, formato: str):
+        """Confere o formato nos nomes dos PDFs da pasta, sem abrir nenhum: quantos entendeu e exemplos."""
+        try:
+            compilar_formato(formato)
+        except FormatoInvalido as e:
+            return {"erro": str(e)}
+        pasta = self._cfg["pasta_notas"]
+        if not pasta or not Path(pasta).is_dir():
+            return {"sem_pasta": True}
+        regras = Regras(formato, self._cfg["servico_esperado"])
+        nomes = sorted(p.name for p in Path(pasta).iterdir() if p.is_file() and p.suffix.lower() == ".pdf")
+        lidos = [(n, ler_nome_arquivo(n, regras)) for n in nomes]
+        entendidos = [(n, x) for n, x in lidos if x]
+        return {
+            "total": len(nomes),
+            "entendidos": len(entendidos),
+            # Os mais recentes primeiro (o número da nota é a melhor ordem).
+            "exemplos": [{"arquivo": n, "numero": x[0], "nome": x[1]}
+                         for n, x in sorted(entendidos, key=lambda e: -e[1][0])[:3]],
+            "fora": [n for n, x in lidos if not x][-5:],
+        }
+
+    @seguro
+    def notas_salvar_regras(self, formato: str, servico: str):
+        """Guarda o formato do nome e o serviço esperado. As notas são lidas de novo na próxima vez."""
+        formato = " ".join(str(formato or "").split()) or FORMATO_PADRAO
+        try:
+            compilar_formato(formato)
+        except FormatoInvalido as e:
+            return {"erro": str(e)}
+        self._cfg = config.salvar({**self._cfg, "formato_arquivo": formato,
+                                   "servico_esperado": " ".join(str(servico or "").split())})
+        return {"config": self._cfg}
+
+    @seguro
+    def notas_regras_padrao(self):
+        return {"formato": FORMATO_PADRAO, "servico": SERVICO_PADRAO}
 
     @seguro
     def abrir_nota(self, arquivo: str):

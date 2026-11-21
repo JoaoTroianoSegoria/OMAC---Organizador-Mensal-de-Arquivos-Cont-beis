@@ -12,6 +12,7 @@ from pathlib import Path
 from typing import Callable
 
 from .. import config
+from .leitor import PADRAO, Regras
 from .pasta import Cache, Varredura, varrer
 
 
@@ -20,12 +21,15 @@ class SemPasta(ValueError):
 
 
 class ServicoNotas:
-    def __init__(self, pasta: Callable[[], str], progresso: Callable[[int, int], None] | None = None):
+    def __init__(self, pasta: Callable[[], str], progresso: Callable[[int, int], None] | None = None,
+                 regras: Callable[[], Regras] = lambda: PADRAO):
         self._pasta = pasta
         self._progresso = progresso
+        self._regras = regras
         self._trava = threading.Lock()
         self._ultima: Varredura | None = None
         self._pasta_lida = ""
+        self._regras_lidas = ""
 
     def pasta(self) -> Path:
         pasta = self._pasta()
@@ -38,21 +42,25 @@ class ServicoNotas:
     def ler(self) -> Varredura:
         """Lê a pasta de novo (as notas já lidas vêm do cache)."""
         pasta = self.pasta()
+        regras = self._regras()
         with self._trava:
-            self._ultima = varrer(pasta, Cache(config.caminho_cache()), self._progresso)
+            self._ultima = varrer(pasta, Cache(config.caminho_cache(), regras), self._progresso, regras=regras)
             self._pasta_lida = str(pasta)
+            self._regras_lidas = regras.assinatura()
         return self._ultima
 
     def atual(self) -> Varredura:
         """A última leitura da pasta escolhida, ou uma nova."""
         pasta = str(self.pasta())
-        if self._ultima is not None and self._pasta_lida == pasta:
+        if self._ultima is not None and self._pasta_lida == pasta and self._regras_lidas == self._regras().assinatura():
             return self._ultima
         return self.ler()
 
     def ja_lida(self) -> Varredura | None:
         """Só a leitura já feita da pasta atual, sem ler nada (para exportar o que está na tela)."""
-        return self._ultima if self._ultima is not None and self._pasta_lida == self._pasta() else None
+        if self._ultima is None or self._pasta_lida != self._pasta():
+            return None
+        return self._ultima if self._regras_lidas == self._regras().assinatura() else None
 
     def ou_nada(self) -> Varredura | None:
         """Para quem continua funcionando sem notas: None se a pasta não puder ser lida."""
