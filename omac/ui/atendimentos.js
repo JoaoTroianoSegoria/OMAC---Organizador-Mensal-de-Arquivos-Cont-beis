@@ -152,8 +152,9 @@ function linhaDoAtendimento(a) {
   } else if (a.nota_situacao === "nao_precisa") {
     tdNota.textContent = "não precisa";
     tdNota.classList.add("pg-nao-precisa");
-  } else if (a.contato_id && a.nome !== "(contato apagado)") {
-    // Falta a nota: o botão abre a janela com o nome e o CPF para copiar.
+  } else if (a.situacao === "pago" && a.contato_id && a.nome !== "(contato apagado)") {
+    // Falta a nota e já foi pago: o botão abre a janela com o nome e o CPF para copiar.
+    // Antes de pagar não aparece, para não emitir a nota de quem ainda não pagou.
     const emitir = Object.assign(document.createElement("button"), { type: "button", className: "btn btn-peq pg-emitir", textContent: "Emitir" });
     emitir.dataset.acao = "pg-emitir";
     emitir.dataset.id = a.id;
@@ -162,7 +163,7 @@ function linhaDoAtendimento(a) {
     tdNota.append(emitir);
   } else {
     tdNota.textContent = "—";
-    tdNota.title = "Falta emitir";
+    tdNota.title = a.situacao === "pago" ? "Falta emitir" : "Falta emitir: marque como pago para aparecer o botão Emitir";
     tdNota.classList.add("ag-sem-dado");
   }
 

@@ -41,7 +41,7 @@ const api = () => window.pywebview.api;
 
 /* Um script vazio ou cortado não gera erro nenhum: sem esta conferência, a tela fica muda. */
 const MODULOS_ESPERADOS = ["inicio", "relatorio", "notas", "extrato", "lembretes", "modelos", "contatos", "tratamentos", "atendimentos",
-  "backup", "resumo", "atualizacao"];
+  "backup", "resumo", "atualizacao", "configuracoes"];
 
 async function conferirModulos() {
   for (const nome of MODULOS_ESPERADOS.filter((m) => !modulos[m])) {
@@ -75,6 +75,8 @@ async function iniciar() {
   aplicarConfig();
   ligarEventos();
   ligarOlho();
+  ligarMural($("#ini-grade"));
+  ligarMural($(".grade-config"));
   // "notas" é o valor antigo de quem abria nas Notas fiscais: hoje é o Relatório mensal.
   if (estado.cfg.abrir_em === "notas") irPara("relatorio", "notas");
   else mostrarView("inicio");
@@ -328,17 +330,43 @@ function mostrarValores(visiveis) {
   Object.values(modulos).forEach((m) => m.aoMudarValores?.(visiveis));
 }
 
-/* O botão do olho, para quem desenha a tela pelo JS (os do HTML já vêm prontos). */
-function botaoOlho() {
-  const b = Object.assign(document.createElement("button"), { type: "button", className: "olho" });
-  b.dataset.acao = "olho";
-  b.innerHTML = '<svg class="ic"><use href="#i-olho-fechado"/></svg>';
-  const rotulo = valores.visiveis ? "Esconder os valores" : "Mostrar os valores";
-  b.title = rotulo;
-  b.setAttribute("aria-label", rotulo);
-  b.setAttribute("aria-pressed", String(valores.visiveis));
-  b.querySelector("use").setAttribute("href", valores.visiveis ? "#i-olho" : "#i-olho-fechado");
-  return b;
+/* ---------- Mural (Início e Configurações) ----------
+ *
+ * Numa grade comum, cada linha tem a altura do bloco mais alto dela, e um bloco baixo ao lado
+ * de um alto deixa um buraco embaixo. No mural, a grade tem linhas de 2px e cada bloco ocupa
+ * as linhas da sua altura: o de baixo sobe até encostar no de cima, na mesma coluna. A ordem
+ * continua da esquerda para a direita, e o bloco largo continua ocupando a linha toda.
+ * Quando um bloco muda de altura (abriu uma lista, mudou a janela ou o tamanho do texto),
+ * o ResizeObserver acerta só ele. Sem JS, fica a grade comum (que funciona, com os buracos).
+ */
+function ligarMural(grade) {
+  grade.classList.add("mural");
+  const ajustar = (item) => {
+    const estilo = getComputedStyle(grade);
+    const linha = parseFloat(estilo.gridAutoRows) || 2;
+    const espaco = parseFloat(estilo.columnGap) || 16;
+    const altura = item.getBoundingClientRect().height;
+    item.style.gridRowEnd = `span ${Math.max(1, Math.ceil((altura + espaco) / linha))}`;
+  };
+  // O ajuste fica para o próximo quadro: mudar o tamanho na hora do aviso faz o navegador
+  // reclamar ("ResizeObserver loop") quando a barra de rolagem aparece e muda as larguras.
+  const pendentes = new Set();
+  let quadro = 0;
+  const observador = new ResizeObserver((itens) => {
+    itens.forEach((i) => pendentes.add(i.target));
+    if (quadro) return;
+    quadro = requestAnimationFrame(() => {
+      quadro = 0;
+      pendentes.forEach(ajustar);
+      pendentes.clear();
+    });
+  });
+  const vigiar = (mudancas = []) => {
+    for (const m of mudancas) m.removedNodes.forEach((n) => { if (n.nodeType === 1) observador.unobserve(n); });
+    for (const item of grade.children) observador.observe(item); // observar de novo não repete
+  };
+  new MutationObserver(vigiar).observe(grade, { childList: true });
+  vigiar();
 }
 
 function ligarOlho() {

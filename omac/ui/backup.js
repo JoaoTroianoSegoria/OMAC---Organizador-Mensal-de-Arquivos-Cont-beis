@@ -31,6 +31,7 @@ modulos.config = {
   aoMostrar() {
     carregarBackup();
     carregarDestinatario();
+    carregarConfiguracoes(); // configuracoes.js: formato das notas e mensagens
   },
   irParaAba(grupo) {
     $(`#g-${grupo}`)?.closest("section")?.scrollIntoView({ block: "start" });

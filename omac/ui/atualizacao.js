@@ -7,6 +7,8 @@ modulos.atualizacao = {
     const disponivel = !r.erro && r.disponivel;
     $("#atualizacao-procurar").disabled = !disponivel;
     $("#atualizacao-indisponivel").hidden = disponivel;
+    const link = await api().atualizacao_link();
+    if (!link.erro) $("#atualizacao-link").textContent = link.link;
   },
   aoIniciar: () => procurarAtualizacao(false),
 };
@@ -17,6 +19,14 @@ Object.assign(acoes, {
     $("#atualizacao").close();
     const r = await api().atualizacao_adiar();
     if (r.erro) mostrarToast(r.erro, { erro: true });
+  },
+  "atualizacao-github": async () => {
+    const r = await api().atualizacao_abrir_pagina();
+    if (r.erro) mostrarToast(r.erro, { erro: true });
+  },
+  "atualizacao-copiar-link": async () => {
+    const link = $("#atualizacao-link").textContent;
+    if (link && await copiarTexto(link)) mostrarToast("Link copiado.");
   },
   "atualizacao-pagina": async () => {
     $("#atualizacao").close();
