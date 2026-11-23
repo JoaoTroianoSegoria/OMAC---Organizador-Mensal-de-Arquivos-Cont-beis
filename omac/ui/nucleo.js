@@ -41,7 +41,7 @@ const api = () => window.pywebview.api;
 
 /* Um script vazio ou cortado não gera erro nenhum: sem esta conferência, a tela fica muda. */
 const MODULOS_ESPERADOS = ["inicio", "relatorio", "notas", "extrato", "lembretes", "modelos", "contatos", "tratamentos", "atendimentos",
-  "backup", "resumo", "atualizacao", "configuracoes"];
+  "backup", "resumo", "atualizacao", "configuracoes", "emitir", "menu"];
 
 async function conferirModulos() {
   for (const nome of MODULOS_ESPERADOS.filter((m) => !modulos[m])) {

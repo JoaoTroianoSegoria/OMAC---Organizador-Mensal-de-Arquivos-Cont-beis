@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from datetime import date
 
-from .. import sistema
+from .. import config, sistema
 from ..dados import esquema
 from ..inicio.registro import widget
 from ..nucleo import ApiBase, seguro
@@ -212,11 +212,13 @@ class ContatosApi(ApiBase):
             pessoa = ct.buscar(contatos, d["contato_id"])
             pessoas.append({"contato_id": pessoa["id"], "nome": pessoa["nome"], "papel": d["papel"],
                             "cpf": cpfs.formatar(pessoa["cpf"]) if pessoa["cpf"] else "",
+                            "nascimento": pessoa.get("nascimento", ""),
                             "sugestao": self._sugestao_cpf(pessoa, notas)})
         tem = {p["contato_id"] for p in pessoas if p["cpf"] or p["sugestao"]}
         return {"id": contato["id"], "nome": contato["nome"], "pessoas": pessoas,
                 "escolhido": ct.escolha_da_nota(contatos, contato, lambda i: i in tem),
-                "site": self._cfg.get("site_nota", "")}
+                "site": self._cfg.get("site_nota", ""),
+                "categoria": self._cfg.get("emissao_categoria", "")}
 
     @seguro
     def contatos_cpf(self, contato_id: str):
@@ -234,6 +236,21 @@ class ContatosApi(ApiBase):
             if pessoa["cpf"]:
                 contato["nota_para"] = pessoa_id
         return self._vista_cpf(contato_id)
+
+    @seguro
+    def contatos_salvar_nascimento(self, contato_id: str, pessoa_id: str, data: str):
+        """Data de nascimento de uma pessoa da janela Emitir (o dependente, quase sempre). Vazio apaga."""
+        with self._armazem.editar(esquema.CONTATOS) as d:
+            contatos = d["contatos"]
+            ct.buscar(contatos, contato_id)
+            ct.buscar(contatos, pessoa_id)["nascimento"] = ct.nascimento(data)
+        return self._vista_cpf(contato_id)
+
+    @seguro
+    def contatos_categoria_emissao(self, categoria_id: str):
+        """Qual categoria de Comandos aparece ao lado, na janela Emitir (fica guardada)."""
+        self._cfg = config.salvar({**self._cfg, "emissao_categoria": str(categoria_id or "")})
+        return {}
 
     @seguro
     def contatos_nota_para(self, contato_id: str, pessoa_id: str):

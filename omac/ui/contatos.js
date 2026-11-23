@@ -31,7 +31,6 @@ modulos.contatos = {
     $("#ct-resp-lista").addEventListener("change", (e) => {
       if (e.target.classList.contains("ct-resp-nome")) preencherTelefoneDoResponsavel(e.target);
     });
-    $("#form-emitir-cpf").addEventListener("submit", (e) => { e.preventDefault(); salvarCpfDaEmissao($("#emitir-cpf-campo").value); });
   },
 };
 
@@ -241,6 +240,7 @@ function preencherContato(c) {
   $("#ct-nome").value = c ? c.nome : "";
   $("#ct-telefone").value = c && c.telefone ? telefoneBR(c.telefone) : "";
   $("#ct-cpf").value = c && c.cpf ? cpfBR(c.cpf) : "";
+  $("#ct-nascimento").value = c && c.nascimento ? c.nascimento : "";
   sugerirCpfDoContato(c);
   const responsaveis = c ? c.responsaveis : [];
   $("#ct-tem-responsaveis").checked = responsaveis.length > 0;
@@ -330,6 +330,7 @@ async function salvarContato(e) {
     nome: $("#ct-nome").value,
     telefone: $("#ct-telefone").value,
     cpf: $("#ct-cpf").value,
+    nascimento: $("#ct-nascimento").value,
     responsaveis: dadosDosResponsaveis(),
     orto: contatos.orto,
     valor: $("#ag-valor").value,
@@ -380,114 +381,6 @@ async function apagarContato() {
   });
 }
 
-
-/* ---------- Emitir nota: nome e CPF de quem recebe a nota, para copiar ----------
- *
- * Abre pelo botão "Emitir" da ficha de Atendimentos. Mostra o paciente e os responsáveis;
- * a última escolha fica guardada no contato. O CPF que estiver numa nota já emitida
- * aparece como sugestão, e só é guardado quando alguém clica em "Usar este CPF".
- */
-const emissao = { dados: null, escolhido: "", editando: false };
-
-Object.assign(acoes, {
-  "emitir-quem": (alvo) => escolherQuemRecebeANota(alvo.dataset.id),
-  "emitir-copiar": (alvo) => copiarDaEmissao(alvo.dataset.campo),
-  "emitir-alterar-cpf": () => { emissao.editando = true; desenharEmissao(); $("#emitir-cpf-campo").focus(); },
-  "emitir-cancelar-cpf": () => { emissao.editando = false; desenharEmissao(); },
-  "emitir-usar-sugestao": () => salvarCpfDaEmissao(pessoaDaEmissao().sugestao.cpf),
-  "emitir-site": async () => { const r = await api().abrir_site_nota(); if (r.erro) mostrarToast(r.erro, { erro: true }); },
-  "emitir-fechar": () => $("#emitir").close(),
-});
-
-/* `atendimento` (opcional): a linha da ficha, para mostrar a data e o valor. */
-async function abrirEmissao(contatoId, atendimento = null) {
-  const r = await api().contatos_cpf(contatoId);
-  if (r.erro) return mostrarToast(r.erro, { erro: true });
-  emissao.dados = r;
-  emissao.escolhido = r.escolhido;
-  emissao.editando = false;
-  $("#emitir-titulo").textContent = `Emitir nota: ${r.nome}`;
-  const linha = $("#emitir-atendimento");
-  linha.replaceChildren();
-  if (atendimento) {
-    linha.append(`Atendimento de ${dataBR(atendimento.data)}`);
-    if (atendimento.tratamento) linha.append(` · ${atendimento.tratamento}`);
-    if (atendimento.valor_centavos != null) linha.append(" · ", dinheiro(atendimento.valor_centavos));
-  }
-  linha.hidden = !atendimento;
-  $("#emitir-site").hidden = !r.site;
-  desenharEmissao();
-  $("#emitir").showModal();
-  if (!$("#form-emitir-cpf").hidden) $("#emitir-cpf-campo").focus();
-}
-
-const pessoaDaEmissao = () => emissao.dados.pessoas.find((p) => p.contato_id === emissao.escolhido) || emissao.dados.pessoas[0];
-
-function desenharEmissao() {
-  const r = emissao.dados;
-  const p = pessoaDaEmissao();
-  $("#emitir-quem-campo").hidden = r.pessoas.length < 2;
-  $("#emitir-quem").replaceChildren(...r.pessoas.map((x) => {
-    const b = Object.assign(document.createElement("button"), { type: "button", className: "escolha" });
-    b.dataset.acao = "emitir-quem";
-    b.dataset.id = x.contato_id;
-    const papel = x.papel ? x.papel[0].toUpperCase() + x.papel.slice(1) : "Paciente";
-    b.textContent = `${papel}: ${x.nome}`;
-    b.setAttribute("aria-pressed", String(x.contato_id === p.contato_id));
-    return b;
-  }));
-  $("#emitir-nome").textContent = p.nome;
-  const cpf = $("#emitir-cpf");
-  cpf.textContent = p.cpf || "Sem CPF guardado";
-  cpf.classList.toggle("emitir-falta", !p.cpf);
-  $("#emitir-copiar-cpf").hidden = !p.cpf;
-  $("#emitir-alterar-cpf").hidden = !p.cpf || emissao.editando;
-  const sugestao = p.sugestao;
-  $("#emitir-sugestao").hidden = !sugestao || emissao.editando;
-  if (sugestao) {
-    $("#emitir-sugestao-texto").textContent = p.cpf
-      ? `A nota nº ${sugestao.numero} saiu com outro CPF: ${sugestao.cpf}. Confira qual está certo.`
-      : `Achei o CPF na nota nº ${sugestao.numero}: ${sugestao.cpf}.`;
-  }
-  // Sem CPF, o campo já aparece para digitar; com CPF, só pelo lápis.
-  const digitar = !p.cpf || emissao.editando;
-  $("#form-emitir-cpf").hidden = !digitar;
-  $("#emitir-cpf-rotulo").textContent = `CPF de ${p.nome}`;
-  $("#emitir-cancelar-cpf").hidden = !p.cpf;
-  if (digitar) $("#emitir-cpf-campo").value = p.cpf || "";
-  $("#emitir-erro").hidden = true;
-}
-
-function escolherQuemRecebeANota(id) {
-  emissao.escolhido = id;
-  emissao.editando = false;
-  desenharEmissao();
-  api().contatos_nota_para(emissao.dados.id, id); // só lembra a escolha; não precisa esperar
-}
-
-async function copiarDaEmissao(campo) {
-  const p = pessoaDaEmissao();
-  const valor = campo === "cpf" ? p.cpf : p.nome;
-  if (!valor) return;
-  if (await copiarTexto(valor)) mostrarToast(campo === "cpf" ? `CPF copiado: ${valor}` : `Nome copiado: ${valor}`);
-  else mostrarToast("Não consegui copiar. Selecione o texto e use Ctrl+C.", { erro: true });
-}
-
-async function salvarCpfDaEmissao(valor) {
-  const p = pessoaDaEmissao();
-  const r = await api().contatos_salvar_cpf(emissao.dados.id, p.contato_id, valor);
-  if (r.erro) {
-    $("#emitir-erro").textContent = r.erro;
-    $("#emitir-erro").hidden = false;
-    return;
-  }
-  emissao.dados = r;
-  emissao.escolhido = p.contato_id;
-  emissao.editando = false;
-  desenharEmissao();
-  mostrarToast(valor.trim() ? `CPF de ${p.nome} guardado.` : `CPF de ${p.nome} apagado.`);
-  if (contatos.lista.length) carregarContatos(); // a janela de contato mostra o CPF novo
-}
 
 /* ---------- Widget do Início ---------- */
 

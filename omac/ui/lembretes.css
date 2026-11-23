@@ -94,3 +94,5 @@
   margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; color: var(--texto-2);
   max-height: 9.5rem; overflow: auto; font-size: .92rem; line-height: 1.45;
 }
+.lb-comando-variaveis summary { cursor: pointer; font-weight: 600; font-size: .88rem; }
+.lb-comando-variaveis[open] { display: flex; flex-direction: column; gap: .5rem; }

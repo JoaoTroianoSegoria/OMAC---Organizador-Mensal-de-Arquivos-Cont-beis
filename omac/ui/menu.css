@@ -1,0 +1,47 @@
+/* OMAC — menu lateral em grupos (menu.js). */
+
+.menu-grupo { display: flex; flex-direction: column; gap: .25rem; }
+.menu-grupo-titulo {
+  display: flex; align-items: center; gap: .5rem;
+  padding: .75rem .8rem .2rem;
+  color: var(--texto-3); font-size: .7rem; font-weight: 700;
+  letter-spacing: .08em; text-transform: uppercase;
+}
+.menu-grupo-titulo::after { content: ""; flex: 1; height: 1px; background: var(--linha); }
+[data-menu-compacto="1"] .menu-grupo-titulo { padding-top: .4rem; }
+[data-trilho="1"] .menu-grupo-titulo { padding: .45rem .35rem .2rem; }
+[data-trilho="1"] .menu-grupo-titulo span { display: none; }
+
+.lateral-rodape-linha { display: flex; align-items: center; justify-content: space-between; gap: .25rem; }
+.menu-organizar { flex: none; margin: .45rem .3rem 0 0; }
+.menu-organizar[aria-pressed="true"] { color: var(--acento); }
+[data-trilho="1"] .lateral-rodape-linha { justify-content: center; }
+[data-trilho="1"] .menu-organizar { margin-right: 0; }
+
+/* Organizando: o menu mostra os nomes mesmo na janela estreita, e cada tela tem a alça ⠿. */
+[data-trilho="1"][data-menu-editando="1"] .app { grid-template-columns: 17rem 1fr; }
+[data-trilho="1"][data-menu-editando="1"] .lateral { padding: 1.1rem .75rem; }
+[data-trilho="1"][data-menu-editando="1"] .menu-item { justify-content: flex-start; padding: .55rem .8rem; }
+[data-trilho="1"][data-menu-editando="1"] .menu-item .rotulo { display: flex; }
+.menu-editando .menu-grupo {
+  padding: .25rem; border-radius: var(--raio-m);
+  outline: 2px dashed var(--linha); outline-offset: -2px;
+  min-height: 3rem;
+}
+.menu-editando .menu-grupo-titulo { padding: .2rem .2rem .2rem .5rem; text-transform: none; letter-spacing: 0; }
+.menu-editando .menu-grupo-titulo::after { display: none; }
+.menu-grupo-nome {
+  flex: 1; min-width: 0;
+  font: inherit; font-size: .85rem; font-weight: 700; color: var(--texto);
+  padding: .3rem .5rem; border-radius: .5rem;
+  border: 1px solid var(--linha); background: var(--vidro-forte);
+}
+.menu-grupo-nome::placeholder { color: var(--texto-3); font-weight: 500; }
+.menu-editando .menu-grupo .menu-item { cursor: grab; }
+.menu-editando .menu-grupo .menu-item::after { content: "⠿"; color: var(--texto-3); font-size: 1.1rem; line-height: 1; }
+.menu-editando .menu-item[aria-current="page"] { box-shadow: none; }
+.menu-arrastando { opacity: .35; }
+.menu-edicao { display: flex; flex-wrap: wrap; align-items: center; gap: .4rem; padding: .5rem .25rem; }
+.menu-edicao-topo { padding: 0 .25rem .5rem .5rem; }
+.menu-edicao-topo strong { flex: 1; font-size: .9rem; }
+.menu-edicao .dica { flex: 1 1 100%; margin: 0; font-size: .8rem; }

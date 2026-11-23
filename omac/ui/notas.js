@@ -23,6 +23,7 @@ modulos.notas = {
   aoMostrar() {
     if (notasEstado.dados) preencherSeletores($("#sel-mes"), $("#sel-ano"), notasEstado.dados.competencias);
     if (notasEstado.chave !== chaveNotas()) carregarNotas();
+    else conferirNotas();
   },
   carregar: carregarNotas,
   ligar() {
@@ -42,6 +43,8 @@ modulos.notas = {
 };
 
 Object.assign(acoes, {
+  // O atalho de Atendimentos: o mesmo Atualizar das notas do Relatório mensal.
+  "notas-atualizar": atualizarNotas,
   exportar: (alvo) => exportar(alvo.dataset.formato),
   "abrir-nota": (alvo) => abrirNota(alvo.dataset.arquivo),
   "ver-avisos": () => {
@@ -72,9 +75,8 @@ async function carregarNotas() {
   }
   notasEstado.carregando = true;
   notasEstado.chave = chaveNotas();
-  const btn = $("#rel-atualizar");
-  btn.disabled = true;
-  btn.classList.add("girando");
+  const botoes = $$("[data-gira-notas]");
+  botoes.forEach((b) => { b.disabled = true; b.classList.add("girando"); });
   // Só mostra a barra se demorar (com o cache, normalmente é instantâneo).
   progressoTimer = setTimeout(() => { $("#progresso").hidden = false; }, 250);
 
@@ -90,6 +92,8 @@ async function carregarNotas() {
       return;
     }
     notasEstado.dados = r;
+    mostrarLeitura(r.lida_em);
+    avisarNotasNovas(r.novas);
     const env = await api().notas_enviadas();
     notasEstado.enviadas = new Set(env.numeros ?? []);
     if (relatorio.aba === "notas") preencherSeletores($("#sel-mes"), $("#sel-ano"), r.competencias);
@@ -98,11 +102,61 @@ async function carregarNotas() {
   } finally {
     clearTimeout(progressoTimer);
     $("#progresso").hidden = true;
-    btn.disabled = false;
-    btn.classList.remove("girando");
+    botoes.forEach((b) => { b.disabled = false; b.classList.remove("girando"); });
     notasEstado.carregando = false;
   }
 }
+
+/* ---------- Notas que chegam na pasta ----------
+ *
+ * Emitiu a nota no site e salvou o PDF: ao voltar para o OMAC (a janela ganha o foco), ele só
+ * compara nome, tamanho e data dos PDFs com a última leitura. Igual, não faz nada; mudou, faz
+ * o mesmo que o botão Atualizar, que lê só os arquivos novos (os outros vêm do cache).
+ * Nada fica vigiando a pasta enquanto o OMAC está parado. */
+
+function mostrarLeitura(hora) {
+  const p = $("#rel-lidas");
+  p.querySelector("span").textContent = hora ? `Notas lidas às ${hora}` : "";
+  p.hidden = !hora || relatorio.aba !== "notas";
+  $("#pg-atualizar-notas").title = hora
+    ? `Notas lidas às ${hora}. Clique para ler a pasta de novo (o mesmo Atualizar do Relatório mensal).`
+    : "Ler a pasta das notas de novo (o mesmo Atualizar do Relatório mensal)";
+}
+
+function avisarNotasNovas(novas) {
+  if (!novas || !novas.length) return;
+  const lista = [...novas].sort((a, b) => a.numero - b.numero);
+  if (lista.length === 1) return mostrarToast(`1 nota nova: nº ${lista[0].numero} – ${lista[0].paciente}`);
+  const primeiras = lista.slice(0, 3).map((n) => `nº ${n.numero}`).join(", ");
+  mostrarToast(`${lista.length} notas novas: ${primeiras}${lista.length > 3 ? "…" : ""}`);
+}
+
+/* Lê a pasta de novo e redesenha a tela aberta (o Relatório já se redesenha na leitura). */
+async function atualizarNotas() {
+  if (notasEstado.carregando) return;
+  await carregarNotas();
+  if (estado.view !== "relatorio") await modulos[estado.view]?.carregar?.();
+}
+
+let notasConferindo = false;
+let notasConferidasEm = 0;
+/* Devolve true quando leu a pasta de novo (e a tela aberta já foi redesenhada). */
+async function conferirNotas() {
+  if (!estado.cfg || !estado.cfg.notas_automatico || !estado.cfg.pasta_notas) return false;
+  if (notasConferindo || notasEstado.carregando || Date.now() - notasConferidasEm < 400) return false;
+  notasConferindo = true;
+  try {
+    const r = await api().notas_conferir();
+    notasConferidasEm = Date.now();
+    if (!r || !r.mudou) return false;
+    await atualizarNotas();
+    return true;
+  } finally {
+    notasConferindo = false;
+  }
+}
+window.addEventListener("focus", () => conferirNotas());
+document.addEventListener("visibilitychange", () => { if (!document.hidden) conferirNotas(); });
 
 /* ---------- Pesquisa ---------- */
 

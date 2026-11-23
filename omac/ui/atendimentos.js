@@ -25,7 +25,8 @@ const ficha = {
 const PARCELAS_MAX = 12;
 
 modulos.atendimentos = {
-  aoMostrar: carregarFicha,
+  // Chegou nota nova desde a última leitura? A conferência já redesenha a ficha.
+  async aoMostrar() { if (!(await conferirNotas())) carregarFicha(); },
   carregar: carregarFicha,
   ligar() {
     const hoje = new Date();
@@ -148,7 +149,7 @@ function linhaDoAtendimento(a) {
   if (a.nota_situacao === "ok") {
     tdNota.innerHTML = '<svg class="ic pg-ok"><use href="#i-ok"/></svg>';
     tdNota.append(" ok");
-    tdNota.title = a.nota_numero ? `Nota nº ${a.nota_numero}, achada na pasta` : "Marcada à mão";
+    tdNota.title = a.nota_numero && a.nota === "" ? `Nota nº ${a.nota_numero}, achada na pasta` : "Marcada à mão como emitida";
   } else if (a.nota_situacao === "nao_precisa") {
     tdNota.textContent = "não precisa";
     tdNota.classList.add("pg-nao-precisa");
@@ -255,12 +256,13 @@ function abrirAtendimento(a) {
   escolherForma(a ? a.forma : "");
   $("#pg-pago").checked = !!(a && a.pago_em);
 
-  // Nota achada na pasta não precisa (nem pode) ser marcada à mão.
+  // O que o automático achou (vale quando a escolha é "Automático"; as outras passam por cima).
   const achada = a && a.nota_numero;
-  $("#pg-nota-achada").hidden = !achada;
-  $("#pg-nota-achada-texto").textContent = achada ? `Nota nº ${a.nota_numero} achada na pasta.` : "";
-  $("#pg-nota-campo").hidden = !!achada;
-  $("#pg-nota-dica").hidden = !!achada;
+  $("#pg-nota-achada").hidden = !a;
+  $("#pg-nota-achada").classList.toggle("pg-nota-nada", !achada);
+  $("#pg-nota-achada-texto").textContent = !a ? ""
+    : achada ? `Automático: nota nº ${a.nota_numero}${a.nota_valor_centavos != null ? ` (${dinheiroTexto(a.nota_valor_centavos)})` : ""} achada na pasta.`
+      : "Automático: nenhuma nota da pasta é deste atendimento.";
   ficha.notaSugerida = false;
   escolherNota(a ? a.nota : "");
   $("#pg-contato-novo").hidden = true;

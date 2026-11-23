@@ -52,6 +52,7 @@ function mostrarAbaDoRelatorio(aba) {
   $$("[data-rel-pasta]").forEach((c) => { c.hidden = c.dataset.relPasta !== moduloDaAba(); });
   $("#rel-barra").hidden = aba === "regras";
   $("#rel-atualizar").hidden = aba === "regras";
+  $("#rel-lidas").hidden = aba !== "notas" || !$("#rel-lidas span").textContent;
   const fora = aba === "notas" && notasEstado.escopo !== "mes";
   $("#sel-mes").disabled = fora;
   $("#sel-ano").disabled = fora;

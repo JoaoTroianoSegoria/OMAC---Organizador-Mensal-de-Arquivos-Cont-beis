@@ -29,7 +29,8 @@ TRATAMENTOS_PADRAO = ["Limpeza", "Manutenção", "Botox"]
 # Nota: "" = falta (ou achada sozinha na pasta), "ok" = emitida (marcada à mão), "nao_precisa".
 NOTA_OK = "ok"
 NOTA_NAO_PRECISA = "nao_precisa"
-NOTAS = {"", NOTA_OK, NOTA_NAO_PRECISA}
+NOTA_FALTA = "falta"  # marcada à mão: falta, mesmo que o automático ache uma nota
+NOTAS = {"", NOTA_OK, NOTA_NAO_PRECISA, NOTA_FALTA}  # "" = automático
 # Formas em que a nota costuma não ser emitida: já sugerem "não precisa" (dá para trocar).
 SEM_NOTA_POR_PADRAO = {"dinheiro", "pix_pf"}
 
@@ -111,22 +112,69 @@ mesmo_paciente = tx.mesma_pessoa
 
 
 def nota_do_atendimento(atendimento: dict, nome: str, notas: list) -> int | None:
-    """Número da nota do mesmo paciente com competência no mês do atendimento."""
-    mes = atendimento["data"][:7]
-    for nota in notas:
-        if nota.competencia.isoformat()[:7] == mes and mesmo_paciente(nome, nota.paciente):
-            return nota.numero
-    return None
+    """Número da nota de um atendimento sozinho (o mesmo de `ligar_notas` com uma lista de um)."""
+    return ligar_notas([atendimento], {atendimento["id"]: nome}, notas).get(atendimento["id"])
+
+
+def ligar_notas(atendimentos: list[dict], nomes: dict[str, str], notas: list) -> dict[str, int]:
+    """Qual nota é de qual atendimento: {atendimento_id: número}. Cada nota vale para um só.
+
+    Mesmo paciente e mesmo mês da competência, e então, nesta ordem (cada etapa para todas as
+    notas antes da próxima, para uma reserva não roubar o atendimento de um valor exato):
+    1. o atendimento com o mesmo valor da nota (o pago antes, e o mais antigo);
+    2. dois a quatro atendimentos cuja soma é o valor da nota (a nota do valor total);
+    3. valor diferente (desconto...): o primeiro atendimento pago sem nota, senão o primeiro sem nota.
+    Marcado à mão como "não precisa" ou "falta" não recebe nota.
+    """
+    from itertools import combinations
+
+    def candidatos(nota, livres):
+        mes = nota.competencia.isoformat()[:7]
+        lista = [a for a in livres if a["data"][:7] == mes and a["nota"] not in (NOTA_NAO_PRECISA, NOTA_FALTA)
+                 and mesmo_paciente(nomes.get(a["id"], ""), nota.paciente)]
+        return sorted(lista, key=lambda a: (not a["pago_em"], a["data"], a["id"]))
+
+    ligados: dict[str, int] = {}
+    livres = list(atendimentos)
+    sobra = sorted(notas, key=lambda n: n.numero)
+
+    def ligar(nota, escolhidos):
+        for a in escolhidos:
+            ligados[a["id"]] = nota.numero
+            livres.remove(a)
+        sobra.remove(nota)
+
+    centavos = lambda n: int(round(n.valor * 100))
+    for nota in list(sobra):
+        iguais = [a for a in candidatos(nota, livres) if a["valor_centavos"] == centavos(nota)]
+        if iguais:
+            ligar(nota, iguais[:1])
+    for nota in list(sobra):
+        com_valor = [a for a in candidatos(nota, livres) if a["valor_centavos"]][:8]
+        achou = next((grupo for k in range(2, min(4, len(com_valor)) + 1) for grupo in combinations(com_valor, k)
+                      if sum(a["valor_centavos"] for a in grupo) == centavos(nota)), None)
+        if achou:
+            ligar(nota, list(achou))
+    for nota in list(sobra):
+        resto = candidatos(nota, livres)
+        if resto:
+            ligar(nota, resto[:1])
+    return ligados
 
 
 FALTA = "falta"
 
 
 def situacao_da_nota(atendimento: dict, numero_achado: int | None) -> str:
-    """"ok", "nao_precisa" ou "falta". Achada na pasta vale mais que a marcação à mão."""
-    if numero_achado or atendimento["nota"] == NOTA_OK:
+    """"ok", "nao_precisa" ou "falta". A marcação à mão vale mais; "" (automático) segue a pasta."""
+    marcada = atendimento["nota"]
+    if marcada == NOTA_OK:
         return NOTA_OK
-    return NOTA_NAO_PRECISA if atendimento["nota"] == NOTA_NAO_PRECISA else FALTA
+    if marcada == NOTA_NAO_PRECISA:
+        return NOTA_NAO_PRECISA
+    if marcada == NOTA_FALTA:
+        return FALTA
+    return NOTA_OK if numero_achado else FALTA
 
 
 # --- Lista ---------------------------------------------------------------------------

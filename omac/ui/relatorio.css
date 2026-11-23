@@ -60,3 +60,11 @@
 .rel-lote-envio { display: flex; flex-direction: column; gap: 1rem; }
 .rel-lote-colar { display: flex; flex-direction: column; gap: .3rem; }
 .rel-lote-colar .dica { margin: 0 0 0 1.9rem; }
+
+/* Abas à esquerda e, na aba das notas, a hora da última leitura da pasta à direita. */
+.rel-abas-linha { display: flex; align-items: center; justify-content: space-between; gap: .5rem 1rem; flex-wrap: wrap; }
+.rel-lidas {
+  display: inline-flex; align-items: center; gap: .4rem; margin: 0;
+  font-size: .85rem; color: var(--texto-3); font-variant-numeric: tabular-nums;
+}
+.rel-lidas .ic { width: 1rem; height: 1rem; color: var(--acento); }
