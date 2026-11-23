@@ -54,6 +54,7 @@ Notas fiscais, extrato bancário e as regras do extrato em abas de uma tela só,
 - **Notas canceladas** ficam fora do relatório e são movidas sozinhas para a subpasta `Canceladas`.
 - **Avisos antes de mandar para a contabilidade:** descrição sem "tratamento odontológico", número do arquivo diferente do número da nota, nota repetida, PDF ilegível, nome de arquivo fora do padrão.
 - **Rápido em PC antigo:** cada nota é lida uma única vez (≈5 ms) e fica em cache. Nas próximas vezes, só as notas novas são lidas.
+- **Notas novas chegam sozinhas:** emitiu a nota e salvou o PDF, ao voltar para o OMAC ele confere a pasta (só nome, tamanho e data dos arquivos, em milésimos de segundo) e, se mudou, lê só o que é novo e avisa: *“1 nota nova: nº 245 – Fulano”*. Nada fica vigiando a pasta enquanto o OMAC está parado. Dá para desligar nas Configurações e usar só o botão **Atualizar**, que também está em Atendimentos. No canto da aba aparece a hora da última leitura (*“Notas lidas às 14:32”*).
 - **Pesquisa num campo só:** nome do paciente ou do responsável, dependente, número, valor (`150`, `1.500,00`) ou data (`05/10`, `10/2026`). Cada palavra precisa aparecer na nota (`maria 150`). Procura no mês escolhido, no ano todo ou num período (de–até), sempre pela competência.
 - **Escolher várias notas:** uma caixa em cada nota. A escolha não se perde ao pesquisar de novo, e fica numa ilha presa embaixo da tela, com o total, o **x** para tirar uma nota e o botão **Enviar**.
 - **Enviar várias de uma vez:** se as notas são da mesma pessoa, o contato dela (ou de um responsável) já vem escolhido; se são de pessoas diferentes, escolhe-se o contato na lista. Uma mensagem só lista as notas, e **todos os PDFs vão juntos para a área de transferência**: um <kbd>Ctrl</kbd> + <kbd>V</kbd> na conversa cola todos. Depois o OMAC pergunta se marca todas como enviadas.
@@ -172,7 +173,7 @@ Notas fiscais, extrato bancário e as regras do extrato em abas de uma tela só,
 - **Valores escondidos:** o OMAC sempre abre com os valores como **R$ ----**, para quem passa perto do computador não ver. O botão **Valores**, com o olho, fica no canto de cima de cada tela com dinheiro (Início, Relatório mensal, Resumo, Atendimentos, Tratamentos e Lembretes) e mostra ou esconde todos de uma vez, e depois de alguns minutos sem mexer eles se escondem de novo (o tempo fica nas Configurações).
 - **Avisos que minimizam:** a faixa de avisos fica só com a quantidade, sem sumir, e abre de novo com um clique.
 - **Aviso de versão nova:** o OMAC avisa e abre o download no navegador. Trocar a pasta do programa não mexe nos dados.
-- **Menu lateral preparado para novos módulos.**
+- **Menu lateral em grupos** (Financeiro, Atendimento, Outros), com o nome de cada grupo e uma linha. No lápis, embaixo do menu, dá para arrastar as telas (ou usar as setas ↑ ↓), trocar os nomes, criar e apagar grupos, e voltar ao padrão. Tela nova de uma versão futura entra sozinha no último grupo.
 
 <p align="center">
   <img src="docs/capturas/notas-otimizado.png" alt="Visual otimizado" width="32%">
@@ -297,5 +298,5 @@ Para criar um módulo: uma pasta em `omac/` com a classe da API (herdando de `Ap
 - [x] **Lembretes e Comandos** (1.7.0).
 - [x] **Relatório mensal**, pesquisa de notas, envio de várias notas de uma vez e **Modelos** para imprimir (1.8.0).
 - [x] **CPF nos contatos** com a janela **Emitir**, **valores escondidos** e **lembretes que repetem** (1.9.0).
-- [x] **Comandos na janela Emitir**, com variáveis, data de nascimento no contato e valor para copiar (1.10.1).
+- [x] **Comandos na janela Emitir**, com variáveis, data de nascimento no contato e valor para copiar; **menu lateral em grupos** que dá para organizar; **notas novas lidas sozinhas** ao voltar para o OMAC (1.10.1).
 - [x] **Formato do nome das notas** e **mensagem com variáveis** configuráveis, olho no topo das telas e blocos encaixados no Início e nas Configurações (1.10.0).
