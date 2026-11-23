@@ -31,6 +31,19 @@ class NotasApi(ApiBase):
             "canceladas_movidas": v.canceladas_movidas,
             "competencias": v.competencias(),
             "qtd_pasta": len(v.notas),
+            **self._leitura_das_notas(),
+        }
+
+    @seguro
+    def notas_conferir(self):
+        """Chamado quando o OMAC volta para a frente: só diz se a pasta mudou (não lê nada)."""
+        return {"mudou": self._servico_notas.mudou()}
+
+    def _leitura_das_notas(self) -> dict:
+        s = self._servico_notas
+        return {
+            "lida_em": s.lida_em.strftime("%H:%M") if s.lida_em else "",
+            "novas": [{"numero": n.numero, "paciente": n.paciente} for n in s.novas],
         }
 
     @seguro
