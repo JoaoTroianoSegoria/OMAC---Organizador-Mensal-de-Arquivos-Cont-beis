@@ -41,6 +41,8 @@ PADRAO = {
     "ocultar_valores_minutos": 5,  # esconde os valores de novo depois de X minutos parado; 0 = não
     "abrir_em": "inicio",  # tela ao abrir: "inicio" | "notas"
     "inicio_cartoes": [],  # ordem e escolhas dos widgets do Início (vazio = padrão)
+    "menu": [],  # grupos do menu lateral: [{"nome": "Financeiro", "itens": ["relatorio", ...]}]; vazio = padrão
+    "notas_automatico": True,  # ao voltar para o OMAC, confere se chegou nota nova na pasta
     # Backup
     "backup_pasta": "",
     "backup_automatico": False,
@@ -106,7 +108,7 @@ def normalizar(cfg: dict) -> dict:
         limpo["escala_fonte"] = 1.0
     limpo["versao"] = VERSAO
     for chave in ("alto_contraste", "reduzir_movimento", "atualizacao_automatica",
-                  "backup_automatico", "backup_arquivos", "colar_sozinho"):
+                  "backup_automatico", "backup_arquivos", "colar_sozinho", "notas_automatico"):
         limpo[chave] = bool(limpo[chave])
     for chave in ("pasta_notas", "pasta_extratos", "pasta_saida",
                   "assistente_nome", "chave_pix", "atualizacao_adiada_em", "site_nota",
@@ -124,6 +126,7 @@ def normalizar(cfg: dict) -> dict:
     limpo["backup_dia_mes"] = _inteiro(limpo["backup_dia_mes"], 1, 28, 1)
     limpo["tratamentos"] = _lista_de_nomes(limpo["tratamentos"], PADRAO["tratamentos"])
     limpo["inicio_cartoes"] = _cartoes(limpo["inicio_cartoes"])
+    limpo["menu"] = _menu(limpo["menu"])
     recolhidos = limpo["avisos_recolhidos"]
     limpo["avisos_recolhidos"] = [str(r) for r in recolhidos] if isinstance(recolhidos, list) else []
     return limpo
@@ -160,3 +163,20 @@ def _cartoes(valor) -> list[dict]:
             escolhidos.append({"id": item["id"], "visivel": bool(item.get("visivel", True)),
                                "largo": bool(item.get("largo", False))})
     return escolhidos
+
+
+def _menu(valor) -> list[dict]:
+    """Só confere o formato: quais telas existem quem sabe é a interface (nucleo.js), que
+    completa o que faltar. Cada tela fica em um grupo só; nome de grupo vazio vira só a linha."""
+    grupos, vistos = [], set()
+    for grupo in valor if isinstance(valor, list) else []:
+        if not isinstance(grupo, dict) or len(grupos) >= 12:
+            continue
+        itens = []
+        for item in grupo.get("itens") if isinstance(grupo.get("itens"), list) else []:
+            if isinstance(item, str) and item and item not in vistos:
+                vistos.add(item)
+                itens.append(item)
+        nome = " ".join(str(grupo.get("nome") or "").split())[:30]
+        grupos.append({"nome": nome, "itens": itens})
+    return grupos
