@@ -25,7 +25,8 @@ const ficha = {
 const PARCELAS_MAX = 12;
 
 modulos.atendimentos = {
-  aoMostrar: carregarFicha,
+  // Chegou nota nova desde a última leitura? A conferência já redesenha a ficha.
+  async aoMostrar() { if (!(await conferirNotas())) carregarFicha(); },
   carregar: carregarFicha,
   ligar() {
     const hoje = new Date();
