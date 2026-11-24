@@ -14,8 +14,8 @@ from pathlib import Path
 from typing import Callable
 
 from .. import config
-from .leitor import PADRAO, Regras
-from .pasta import Cache, Varredura, varrer
+from .leitor import PADRAO, Regras, ler_nome_arquivo
+from .pasta import PASTA_CANCELADAS, Cache, Varredura, varrer
 
 
 class SemPasta(ValueError):
@@ -97,6 +97,23 @@ class ServicoNotas:
         except Exception:  # noqa: BLE001
             traceback.print_exc()
             return None
+
+    def proximo_numero(self) -> int | None:
+        """O maior número de nota da pasta + 1 (as canceladas da subpasta contam, pelo nome do
+        arquivo). Pasta vazia ou sem pasta: None, porque não dá para saber."""
+        v = self.ou_nada()
+        if v is None:
+            return None
+        numeros = [n.numero for n in v.notas]
+        try:
+            canceladas = self.pasta() / PASTA_CANCELADAS
+            if canceladas.is_dir():
+                regras = self._regras()
+                numeros += [lido[0] for p in canceladas.iterdir()
+                            if p.suffix.lower() == ".pdf" and (lido := ler_nome_arquivo(p.name, regras))]
+        except (OSError, SemPasta):
+            pass
+        return max(numeros) + 1 if numeros else None
 
     def do_mes(self, ano: int, mes: int) -> list | None:
         v = self.ou_nada()

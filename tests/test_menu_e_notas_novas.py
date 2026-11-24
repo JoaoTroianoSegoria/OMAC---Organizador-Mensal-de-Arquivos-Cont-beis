@@ -59,7 +59,7 @@ def test_conferir_so_avisa_quando_a_pasta_muda_e_a_leitura_diz_as_novas(api):
     assert api.notas_conferir() == {"mudou": True}
 
     segunda = api.notas_do_mes(2026, 10)
-    assert segunda["novas"] == [{"numero": 900, "paciente": "PACIENTE NOVO"}]
+    assert segunda["novas"] == [{"numero": 900, "paciente": "PACIENTE NOVO", "renomear": None}]
     assert api.notas_conferir() == {"mudou": False}
     assert api.notas_do_mes(2026, 10)["novas"] == []  # só avisa uma vez
 

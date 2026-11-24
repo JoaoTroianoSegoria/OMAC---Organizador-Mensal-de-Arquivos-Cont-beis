@@ -263,11 +263,13 @@ function dataBR(iso) {
   return `${d}/${m}/${a}`;
 }
 
+/* Cada item: [título, mensagem] ou [título, mensagem, elemento no fim (ex.: um botão)]. */
 function listaDeAvisos(itens) {
-  return itens.map(([titulo, msg]) => {
+  return itens.map(([titulo, msg, extra]) => {
     const li = document.createElement("li");
     if (titulo) li.append(Object.assign(document.createElement("b"), { textContent: `${titulo}: ` }));
     li.append(msg);
+    if (extra) li.append(extra);
     return li;
   });
 }
@@ -487,7 +489,8 @@ function mostrarQtdAvisos(faixa, qtd) {
 
 /* ---------- Notificações ---------- */
 
-function mostrarToast(texto, { erro = false, acoes: botoes = [] } = {}) {
+/* `fica`: não some sozinho (o erro também não). */
+function mostrarToast(texto, { erro = false, acoes: botoes = [], fica = false } = {}) {
   const t = document.createElement("div");
   t.className = `toast vidro${erro ? " erro" : ""}`;
   t.setAttribute("role", erro ? "alert" : "status");
@@ -498,8 +501,8 @@ function mostrarToast(texto, { erro = false, acoes: botoes = [] } = {}) {
   caixa.className = "toast-acoes";
   for (const [rotulo, fn] of botoes) {
     const b = Object.assign(document.createElement("button"), { className: "btn btn-peq", textContent: rotulo });
-    // Desfazer vale uma vez só: o aviso sai junto. ("Abrir" e "Mostrar na pasta" ficam.)
-    b.addEventListener("click", rotulo === "Desfazer" ? () => { t.remove(); fn(); } : fn);
+    // Desfazer e Renomear valem uma vez só: o aviso sai junto. ("Abrir" e "Mostrar na pasta" ficam.)
+    b.addEventListener("click", ["Desfazer", "Renomear"].includes(rotulo) ? () => { t.remove(); fn(); } : fn);
     caixa.append(b);
   }
   const fechar = Object.assign(document.createElement("button"), { className: "btn btn-peq btn-icone" });
@@ -511,7 +514,34 @@ function mostrarToast(texto, { erro = false, acoes: botoes = [] } = {}) {
 
   $("#toasts").append(t);
   // Erro fica até fechar; o resto some sozinho (com tempo de sobra para ler).
-  if (!erro) setTimeout(() => t.remove(), 12000);
+  if (!erro && !fica) setTimeout(() => t.remove(), 12000);
+}
+
+/* Pergunta antes de fazer (marcar Pago, Agendado, Atendido...). Uma janela só para todos.
+ * Enter confirma (o botão principal já vem com o foco); Esc ou Cancelar desistem. */
+function confirmarAcao(texto, rotuloSim) {
+  const janela = $("#confirmar");
+  $("#confirmar-texto").textContent = texto;
+  $("#confirmar-sim").textContent = rotuloSim;
+  janela.returnValue = "";
+  janela.showModal();
+  $("#confirmar-sim").focus();
+  return new Promise((resolver) => {
+    janela.addEventListener("close", () => resolver(janela.returnValue === "sim"), { once: true });
+  });
+}
+
+/* Caixa de marcar que pede confirmação: o clique já trocou a marca, então ela volta até a
+ * pessoa confirmar. `fazer(marcar)` grava; se der erro, a caixa fica como estava. */
+async function marcarComConfirmacao(caixa, perguntas, fazer) {
+  const marcar = caixa.checked;
+  caixa.checked = !marcar;
+  const [texto, rotulo] = marcar ? perguntas.marcar : perguntas.desmarcar;
+  if (!(await confirmarAcao(texto, rotulo))) return caixa.focus();
+  caixa.checked = marcar;
+  await fazer(marcar);
+  // A lista se redesenha: o foco volta para a mesma caixa, para seguir com o teclado.
+  document.querySelector(`[data-acao="${caixa.dataset.acao}"][data-id="${caixa.dataset.id}"]`)?.focus();
 }
 
 function toastDeArquivo(texto, caminho) {

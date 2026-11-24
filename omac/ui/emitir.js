@@ -3,7 +3,8 @@
  * À esquerda, o que o site da nota pede, cada um com Copiar: nome e CPF de quem recebe a nota
  * (o paciente ou um responsável; a última escolha fica guardada no contato), data e valor do
  * atendimento e, quando a nota sai no nome de um responsável, os dados do dependente.
- * À direita, os Comandos da categoria escolhida, com as [variáveis] já preenchidas.
+ * À direita, os Comandos da categoria escolhida, com as [variáveis] já preenchidas. O [numero-nota]
+ * é o maior número da pasta + 1: um palpite, que a conferência do PDF baixado corrige (notas.js).
  *
  * O CPF que estiver numa nota já emitida aparece como sugestão, e só é guardado quando alguém
  * clica em "Usar este CPF". Tudo fica só neste computador.
@@ -11,7 +12,7 @@
 "use strict";
 
 const emissao = {
-  dados: null, // contatos_cpf: {id, nome, pessoas, escolhido, site, categoria}
+  dados: null, // contatos_cpf: {id, nome, pessoas, escolhido, site, categoria, proximo_numero}
   atendimento: null,
   escolhido: "",
   editando: false,
@@ -232,6 +233,10 @@ function valoresDaEmissao() {
     "cpf": p.cpf,
     "data-competencia": a ? dataBR(a.data) : "",
     "valor": valorDaEmissao(),
+    // Para o nome do PDF: 000000013, 23-11 e 21-11.
+    "numero-nota": emissao.dados.proximo_numero ? String(emissao.dados.proximo_numero).padStart(9, "0") : "",
+    "data-hoje": diaMesHoje(),
+    "comp": a ? dataBR(a.data).slice(0, 5).replace("/", "-") : "",
     "tratamento": a ? a.tratamento : "",
     "nome-do-dependente": dep ? dep.nome : "",
     "cpf-dependente": dep ? dep.cpf : "",
@@ -239,9 +244,16 @@ function valoresDaEmissao() {
   };
 }
 
+function diaMesHoje() {
+  const hoje = new Date();
+  return `${String(hoje.getDate()).padStart(2, "0")}-${String(hoje.getMonth() + 1).padStart(2, "0")}`;
+}
+
 const ROTULOS_DA_FALTA = {
   "cpf": (v) => `o CPF de ${v.nome}`,
   "data-competencia": () => "a data do atendimento",
+  "comp": () => "a data do atendimento",
+  "numero-nota": () => "o número da próxima nota: a pasta das notas está vazia ou não foi escolhida",
   "valor": () => "o valor do atendimento",
   "tratamento": () => "o tratamento do atendimento",
   "cpf-dependente": (v) => `o CPF de ${v["nome-do-dependente"]}`,

@@ -43,6 +43,9 @@
 }
 .modal-acoes { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: .6rem; margin-top: .25rem; }
 .modal-erro { color: var(--erro); font-weight: 600; }
+/* A pergunta antes de marcar (Pago, Agendado, Atendido): curta e com o texto maior. */
+.modal-confirmar { width: min(28rem, calc(100vw - 2rem)); }
+.confirmar-texto { font-size: 1.1rem; line-height: 1.45; }
 .modal .faixa { padding: .85rem 1rem; border-radius: var(--raio-p); }
 .lembretes-lista { margin: 0; gap: .45rem; font-size: 1.05rem; }
 .lembretes-lista:empty { display: none; }

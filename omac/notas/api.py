@@ -2,15 +2,18 @@
 
 from __future__ import annotations
 
+import os
+from datetime import date
 from pathlib import Path
 
-from datetime import date
-
 from .. import config, sistema
+from ..contatos import cpf as cpfs
 from ..nucleo import ApiBase, seguro
+from ..texto import mesma_pessoa, normalizar
 from . import exportar as exp
 from . import pesquisa
-from .leitor import FORMATO_PADRAO, SERVICO_PADRAO, FormatoInvalido, Regras, compilar_formato, ler_nome_arquivo, responsavel
+from .leitor import (FORMATO_PADRAO, SERVICO_PADRAO, FormatoInvalido, Regras, compilar_formato, ler_nome_arquivo,
+                     nome_certo, problema_no_nome, responsavel)
 
 
 class NotasApi(ApiBase):
@@ -25,7 +28,7 @@ class NotasApi(ApiBase):
         v = self._servico_notas.ler()
         notas = v.do_mes(int(ano), int(mes))
         return {
-            "notas": [_nota_para_js(n) for n in notas],
+            "notas": self._notas_para_js(notas),
             "total_centavos": sum(int(n.valor * 100) for n in notas),
             "avisos": v.avisos,
             "canceladas_movidas": v.canceladas_movidas,
@@ -41,10 +44,81 @@ class NotasApi(ApiBase):
 
     def _leitura_das_notas(self) -> dict:
         s = self._servico_notas
+        contatos = self._lista_de_contatos() if s.novas else []
         return {
             "lida_em": s.lida_em.strftime("%H:%M") if s.lida_em else "",
-            "novas": [{"numero": n.numero, "paciente": n.paciente} for n in s.novas],
+            "novas": [{"numero": n.numero, "paciente": n.paciente, "renomear": self._renomear(n, contatos)}
+                      for n in s.novas],
         }
+
+    def _notas_para_js(self, notas) -> list[dict]:
+        contatos = self._lista_de_contatos()  # uma leitura só, para todas as notas com o nome errado
+        return [{**_nota_para_js(n), "renomear": self._renomear(n, contatos)} for n in notas]
+
+    # --- Nome do arquivo errado (o site baixa o PDF com um nome só de números) ------------
+
+    @staticmethod
+    def _nome_de_quem_recebe(nota, contatos: list[dict]) -> str:
+        """O nome do arquivo é o de quem recebe a nota (o tomador). Do contato, se achar (pelo
+        CPF ou pelo nome), para sair escrito como nos Contatos; senão, como está no PDF."""
+        if nota.cpf_tomador:
+            achado = next((c for c in contatos if c.get("cpf") and cpfs.digitos(c["cpf"]) == nota.cpf_tomador), None)
+            if achado:
+                return achado["nome"]
+        nome = nota.tomador or nota.paciente
+        if nome and nome != "(sem nome)":
+            iguais = [c for c in contatos if normalizar(c["nome"]) == normalizar(nome)]
+            parecidos = iguais or [c for c in contatos if mesma_pessoa(c["nome"], nome)]
+            if len(parecidos) == 1:
+                return parecidos[0]["nome"]
+            return nome
+        return ""
+
+    def _renomear(self, nota, contatos: list[dict]) -> dict | None:
+        """Sugestão de nome certo para o PDF, ou None se o nome dele já está certo."""
+        regras = self._regras_notas()
+        motivo = problema_no_nome(nota, regras)
+        if not motivo:
+            return None
+        nome = self._nome_de_quem_recebe(nota, contatos)
+        if not nome:
+            return None
+        return {"motivo": motivo, "de": nota.arquivo, "nome": nome, "para": nome_certo(nota, nome, regras)}
+
+    @seguro
+    def notas_renomear(self, arquivo: str, novo: str):
+        """Renomeia o PDF de uma nota na pasta, sem passar por cima de outro arquivo.
+        Depois a tela lê a pasta de novo (só esse PDF é lido; os outros vêm do cache)."""
+        pasta = self._servico_notas.pasta()
+        origem = pasta / Path(arquivo).name
+        if not origem.is_file():
+            return {"erro": f"Não encontrei o arquivo “{arquivo}”. Ele foi movido ou renomeado?"}
+        novo = " ".join(str(novo or "").split())
+        if novo.lower().endswith(".pdf"):
+            novo = novo[:-4].rstrip()
+        if not novo or any(c in novo for c in '<>:"/\\|?*') or novo.strip(". ") != novo:
+            return {"erro": 'O nome não pode ficar vazio, terminar com ponto nem ter / \\ : * ? " < > |'}
+        novo += ".pdf"
+        nota = next((n for n in (self._servico_notas.todas() or []) if n.arquivo == origem.name), None)
+        lido = ler_nome_arquivo(novo, self._regras_notas())
+        if lido is None:
+            return {"erro": "Esse nome não segue o formato das Configurações → Notas fiscais. "
+                            "O OMAC não conseguiria ler o número e o nome dele."}
+        if nota is not None and lido[0] != nota.numero:
+            return {"erro": f"O número no nome ({lido[0]}) é diferente do número da nota ({nota.numero})."}
+        destino = pasta / novo
+        if destino.name == origem.name:
+            return {"arquivo": novo}
+        # Mesmo nome com outras maiúsculas é o próprio arquivo (o Windows não diferencia).
+        if destino.exists() and not (destino.name.lower() == origem.name.lower() and destino.samefile(origem)):
+            return {"erro": f"Já existe um arquivo com o nome “{novo}” na pasta. Nada foi mudado."}
+        try:
+            os.rename(origem, destino)
+        except PermissionError:
+            return {"erro": "Não consegui renomear: o PDF está aberto em outro programa? Feche e tente de novo."}
+        except OSError as e:
+            return {"erro": f"Não consegui renomear o arquivo ({e.strerror or e})."}
+        return {"arquivo": novo}
 
     @seguro
     def notas_pesquisar(self, texto: str, escopo: str, ano: int, mes: int, de: str = "", ate: str = ""):
@@ -62,7 +136,7 @@ class NotasApi(ApiBase):
             notas, inicio, fim = v.notas, None, None
         achadas = pesquisa.filtrar(notas, texto, inicio, fim)
         return {
-            "notas": [_nota_para_js(n) for n in achadas],
+            "notas": self._notas_para_js(achadas),
             "total_centavos": sum(int(n.valor * 100) for n in achadas),
         }
 

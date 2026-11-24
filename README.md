@@ -55,6 +55,7 @@ Notas fiscais, extrato bancário e as regras do extrato em abas de uma tela só,
 - **Avisos antes de mandar para a contabilidade:** descrição sem "tratamento odontológico", número do arquivo diferente do número da nota, nota repetida, PDF ilegível, nome de arquivo fora do padrão.
 - **Rápido em PC antigo:** cada nota é lida uma única vez (≈5 ms) e fica em cache. Nas próximas vezes, só as notas novas são lidas.
 - **Notas novas chegam sozinhas:** emitiu a nota e salvou o PDF, ao voltar para o OMAC ele confere a pasta (só nome, tamanho e data dos arquivos, em milésimos de segundo) e, se mudou, lê só o que é novo e avisa: *“1 nota nova: nº 245 – Fulano”*. Nada fica vigiando a pasta enquanto o OMAC está parado. Dá para desligar nas Configurações e usar só o botão **Atualizar**, que também está em Atendimentos. No canto da aba aparece a hora da última leitura (*“Notas lidas às 14:32”*).
+- **Renomear o PDF baixado:** o site da nota baixa o PDF com um nome só de números (*589129308401233923233.pdf*). Quando um PDF assim chega (ou um com o número errado no nome), o OMAC avisa e oferece **Renomear** com o nome certo, montado com o número, as datas e o nome de quem recebe a nota que estão **dentro do PDF** (o nome sai como está nos Contatos, quando dá para achar pelo CPF ou pelo nome), no formato das Configurações: *NFS-e Nº 000000013 - Fulana de Tal - 23-11 - COMP 21-11.pdf*. O nome aparece antes e dá para mudar; o OMAC nunca passa por cima de outro arquivo. O botão também fica na faixa de avisos.
 - **Pesquisa num campo só:** nome do paciente ou do responsável, dependente, número, valor (`150`, `1.500,00`) ou data (`05/10`, `10/2026`). Cada palavra precisa aparecer na nota (`maria 150`). Procura no mês escolhido, no ano todo ou num período (de–até), sempre pela competência.
 - **Escolher várias notas:** uma caixa em cada nota. A escolha não se perde ao pesquisar de novo, e fica numa ilha presa embaixo da tela, com o total, o **x** para tirar uma nota e o botão **Enviar**.
 - **Enviar várias de uma vez:** se as notas são da mesma pessoa, o contato dela (ou de um responsável) já vem escolhido; se são de pessoas diferentes, escolhe-se o contato na lista. Uma mensagem só lista as notas, e **todos os PDFs vão juntos para a área de transferência**: um <kbd>Ctrl</kbd> + <kbd>V</kbd> na conversa cola todos. Depois o OMAC pergunta se marca todas como enviadas.
@@ -123,7 +124,7 @@ Notas fiscais, extrato bancário e as regras do extrato em abas de uma tela só,
 ### Tratamentos (ortodontia)
 
 <p align="center">
-  <img src="docs/capturas/tratamentos.png" alt="Lista de pacientes de ortodontia com o confere do mês" width="49%">
+  <img src="docs/capturas/tratamentos.png" alt="Lista de pacientes de ortodontia com o agendado do mês" width="49%">
   <img src="docs/capturas/tratamentos-mensagem.png" alt="Janela de mensagem com a escolha de quem recebe" width="49%">
 </p>
 
@@ -134,9 +135,9 @@ Notas fiscais, extrato bancário e as regras do extrato em abas de uma tela só,
 - **Os pacientes de ortodontia**, com telefone e valor da manutenção. **Novo paciente** abre a janela de contato com a ortodontia já ligada; escrever o nome de quem já é contato abre o cadastro dele.
 - **Três mensagens prontas:** agendar a manutenção do mês, cobrar com a chave Pix das Configurações e agendar o retorno. O texto pode ser ajustado antes de abrir a conversa.
 - **Para quem enviar** se escolhe na hora: o próprio paciente ou um dos responsáveis. O OMAC lembra a última escolha, e o texto já sai falando com o responsável sobre o paciente.
-- **Confere do mês:** marca quem já está agendado e recomeça sozinho todo dia 1, mesmo que o app esteja fechado nesse dia.
+- **Agendado do mês:** marca quem já está com a manutenção agendada e recomeça sozinho todo dia 1, mesmo que o app esteja fechado nesse dia. Marcar e desmarcar o **Agendado** e o **Atendido** pedem confirmação (Enter confirma), para um clique sem querer não mudar nada.
 - **Atendido no mês e histórico:** marque quem já foi atendido. A aba **Histórico** mostra, mês a mês, quem veio, quem não veio e quem estava de alta, e o nome de cada paciente abre o histórico completo dele ("veio em 8 de 10 meses"). Dá para corrigir um mês que passou com um clique.
-- **Alta temporária:** com o dia em que foi dada e o dia em que acaba. Enquanto durar, o paciente fica fora do confere, e o OMAC avisa quando a alta termina.
+- **Alta temporária:** com o dia em que foi dada e o dia em que acaba. Enquanto durar, o paciente fica fora da lista do mês, e o OMAC avisa quando a alta termina.
 - **Finalizados:** quem termina o tratamento vai para outra aba e pode voltar para a lista se precisar.
 
 ### Atendimentos (a ficha do mês)
@@ -147,9 +148,9 @@ Notas fiscais, extrato bancário e as regras do extrato em abas de uma tela só,
 </p>
 
 - **A ficha de papel, dentro do app:** paciente, tratamento, data, valor, forma de pagamento (Pix PJ, Pix PF, dinheiro, débito ou crédito), em quantas vezes no crédito, pago e nota.
-- **Pago sem esforço:** fica em branco enquanto espera; se o mês acabar sem marcar, aparece como **não pago**. Pagou depois, é só marcar.
+- **Pago sem esforço:** fica em branco enquanto espera; se o mês acabar sem marcar, aparece como **não pago**. Pagou depois, é só marcar. Na lista, marcar e desmarcar o pago perguntam antes (*“Marcar o atendimento de Fulano (21/11 · R$ 180,00) como pago?”*), e Enter confirma.
 - **Nota em três situações:** **ok** (achada sozinha na pasta, ou marcada como emitida), **falta emitir** e **não precisa**. Dinheiro e Pix PF já sugerem "não precisa", e dá para trocar.
-- **Emitir:** onde falta a nota e o atendimento já foi pago aparece o botão **Emitir** (antes de pagar ele não aparece, para não emitir sem querer), que abre uma janela com o nome e o CPF de quem recebe a nota (o paciente ou um responsável, e a última escolha fica guardada), cada um com o botão **Copiar**, e o botão para abrir o site onde a nota é emitida (configurável). Ao lado, os **Comandos** da categoria escolhida (ela fica guardada), com Copiar e um ✓ no que já foi copiado. Nos comandos dá para usar variáveis como `[nome]`, `[cpf]`, `[data-competencia]`, `[valor]`, `[nome-do-dependente]`, `[cpf-dependente]` e `[data-nascimento-dependente]`, que saem preenchidas; se faltar um dado, o OMAC pede antes de copiar. A data e o valor (só o número, como `180,00`) também têm Copiar.
+- **Emitir:** onde falta a nota e o atendimento já foi pago aparece o botão **Emitir** (antes de pagar ele não aparece, para não emitir sem querer), que abre uma janela com o nome e o CPF de quem recebe a nota (o paciente ou um responsável, e a última escolha fica guardada), cada um com o botão **Copiar**, e o botão para abrir o site onde a nota é emitida (configurável). Ao lado, os **Comandos** da categoria escolhida (ela fica guardada), com Copiar e um ✓ no que já foi copiado. Nos comandos dá para usar variáveis como `[nome]`, `[cpf]`, `[data-competencia]`, `[valor]`, `[nome-do-dependente]`, `[cpf-dependente]` e `[data-nascimento-dependente]`, que saem preenchidas; se faltar um dado, o OMAC pede antes de copiar. Para o nome do PDF há `[numero-nota]` (o maior número da pasta + 1, com 9 dígitos), `[data-hoje]` e `[comp]` (dia-mês): `NFS-e Nº [numero-nota] - [nome] - [data-hoje] - COMP [comp]`. A data e o valor (só o número, como `180,00`) também têm Copiar.
 - **O paciente é um contato:** o campo completa com a lista de contatos; um nome novo vira contato ao salvar. Paciente de ortodontia já vem com a manutenção e o valor.
 - **Resumo do mês:** recebido, a receber, não pago e quantos estão sem nota, com filtros. **Exportar Excel:** a ficha do mês em uma folha deitada, pronta para imprimir.
 
@@ -298,5 +299,6 @@ Para criar um módulo: uma pasta em `omac/` com a classe da API (herdando de `Ap
 - [x] **Lembretes e Comandos** (1.7.0).
 - [x] **Relatório mensal**, pesquisa de notas, envio de várias notas de uma vez e **Modelos** para imprimir (1.8.0).
 - [x] **CPF nos contatos** com a janela **Emitir**, **valores escondidos** e **lembretes que repetem** (1.9.0).
+- [x] **Nome do PDF da nota** nos Comandos e **Renomear** o PDF baixado com nome de números; confirmação no **Pago**, **Agendado** e **Atendido**; "Confere" virou **Agendado** (1.10.2).
 - [x] **Comandos na janela Emitir**, com variáveis, data de nascimento no contato e valor para copiar; **menu lateral em grupos** que dá para organizar; **notas novas lidas sozinhas** ao voltar para o OMAC (1.10.1).
 - [x] **Formato do nome das notas** e **mensagem com variáveis** configuráveis, olho no topo das telas e blocos encaixados no Início e nas Configurações (1.10.0).
