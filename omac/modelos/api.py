@@ -164,7 +164,7 @@ class ModelosApi(ApiBase):
 
     # --- Widget do Início --------------------------------------------------------------------
 
-    @widget("modelos", "Modelos", ordem=80)
+    @widget("modelos", "Modelos", ordem=80, no_hoje=False)
     def _widget_modelos(self, hoje: date) -> dict:
         return {"modelos": [{"id": m["id"], "titulo": m["titulo"], "tipo": md.tipo(m)}
                             for m in md.em_ordem(self._lista_de_modelos())]}
