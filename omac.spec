@@ -10,7 +10,12 @@ from pathlib import Path
 
 from PyInstaller.utils.hooks import collect_all
 
-datas = [("omac/ui", "omac/ui")]
+# A tela vai com os scripts e os estilos juntos num arquivo de cada (abre mais rápido);
+# os arquivos-fonte continuam separados em omac/ui.
+sys.path.insert(0, SPECPATH)
+from tools.juntar_tela import juntar  # noqa: E402
+
+datas = [(str(juntar(Path(SPECPATH) / "build" / "tela")), "omac/ui")]
 binaries = []
 hiddenimports = []
 

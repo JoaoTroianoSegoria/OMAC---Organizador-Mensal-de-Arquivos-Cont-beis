@@ -170,6 +170,7 @@ Notas fiscais, extrato bancário e as regras do extrato em abas de uma tela só,
 
 - **Visual "Bonito"**, com efeito de vidro líquido, cantos arredondados e temas claro/escuro (ou automático, seguindo o Windows).
 - **Visual "Otimizado"**, sem transparências nem animações, para computador fraco. Ele já vem ligado sozinho na primeira vez em PCs com pouca memória.
+- **Leve em PC fraco:** voltar a uma tela não desenha tudo de novo quando nada mudou, as pesquisas esperam você parar de digitar, o Início só calcula os cartões que aparecem, e as notas e os extratos já são lidos enquanto a janela abre (a leitura dos extratos fica guardada, então nem a primeira abertura do dia precisa abrir os PDFs).
 - **Acessibilidade:** texto de 100% a 200% (também com <kbd>Ctrl</kbd> + <kbd>+</kbd> / <kbd>−</kbd> / <kbd>0</kbd>), alto contraste, opção de reduzir animações, navegação por teclado e leitores de tela.
 - **Valores escondidos:** o OMAC sempre abre com os valores como **R$ ----**, para quem passa perto do computador não ver. O botão **Valores**, com o olho, fica no canto de cima de cada tela com dinheiro (Início, Relatório mensal, Resumo, Atendimentos, Tratamentos e Lembretes) e mostra ou esconde todos de uma vez, e depois de alguns minutos sem mexer eles se escondem de novo (o tempo fica nas Configurações).
 - **Avisos que minimizam:** a faixa de avisos fica só com a quantidade, sem sumir, e abre de novo com um clique.
@@ -236,6 +237,8 @@ python -m tests.fabrica pasta-de-teste   # cria notas e extratos de exemplo para
 
 - `tools/capturas.py` regenera as imagens deste README (precisa do `playwright`). Os dados de exemplo são gravados no formato da 1.5.0, então as capturas também passam pela migração.
 - `tools/icone.py` regenera o ícone.
+- `tools/juntar_tela.py` junta os scripts e os estilos da tela num `omac.js` e num `omac.css` (o `omac.spec` chama sozinho ao gerar o `.exe`; os arquivos-fonte continuam separados em `omac/ui`). Assim a tela pede 3 arquivos em vez de 29 e abre mais rápido, principalmente no 32 bits. Se um script quebrar, a faixa vermelha continua dizendo o arquivo e a linha de verdade.
+- `tools/desempenho.py` mede a tela nos 4 modos (visual × reduzir animações) com a CPU 4× mais lenta: quadros travados, tempo de abrir, trocar de tela e do olho. Roda em cada PR e a tabela sai no resumo da execução.
 
 ### Gerar uma versão
 
@@ -278,7 +281,7 @@ omac/
 tests/                testes + gerador de notas e extratos de exemplo
 ```
 
-**Dados** (`%APPDATA%\OMAC`): `config.json`, `contatos.json`, `tratamentos.json`, `atendimentos.json`, `lembretes.json`, `notas-enviadas.json`, `comandos.json`, `modelos.json` (e a pasta `modelos/` com os arquivos), `regras-extrato.json` e `cache-notas.json`. Regras:
+**Dados** (`%APPDATA%\OMAC`): `config.json`, `contatos.json`, `tratamentos.json`, `atendimentos.json`, `lembretes.json`, `notas-enviadas.json`, `comandos.json`, `modelos.json` (e a pasta `modelos/` com os arquivos), `regras-extrato.json`, `cache-notas.json` e `cache-extratos.json` (os dois caches são descartáveis e ficam fora do backup). Regras:
 
 - só `omac/dados` lê e grava arquivos; os módulos pedem ao armazém, que guarda cada arquivo em memória e só lê de novo se ele mudar no disco;
 - todo arquivo tem `"versao"`; mudar o formato = subir a versão em `esquema.py` e escrever um passo em `migracoes.py` (com teste). Campo novo com valor padrão não precisa de migração;
@@ -299,6 +302,7 @@ Para criar um módulo: uma pasta em `omac/` com a classe da API (herdando de `Ap
 - [x] **Lembretes e Comandos** (1.7.0).
 - [x] **Relatório mensal**, pesquisa de notas, envio de várias notas de uma vez e **Modelos** para imprimir (1.8.0).
 - [x] **CPF nos contatos** com a janela **Emitir**, **valores escondidos** e **lembretes que repetem** (1.9.0).
+- [x] **Desempenho** sem mudar nada do que a tela faz: listas que só redesenham quando algo mudou, pesquisas que esperam parar de digitar, Início calculando só os cartões que aparecem, tela junta no `.exe`, cache do extrato e leitura das notas e extratos enquanto a janela abre (1.11.0).
 - [x] **Nome do PDF da nota** nos Comandos e **Renomear** o PDF baixado com nome de números; confirmação no **Pago**, **Agendado** e **Atendido**; "Confere" virou **Agendado** (1.10.2).
 - [x] **Comandos na janela Emitir**, com variáveis, data de nascimento no contato e valor para copiar; **menu lateral em grupos** que dá para organizar; **notas novas lidas sozinhas** ao voltar para o OMAC (1.10.1).
 - [x] **Formato do nome das notas** e **mensagem com variáveis** configuráveis, olho no topo das telas e blocos encaixados no Início e nas Configurações (1.10.0).
