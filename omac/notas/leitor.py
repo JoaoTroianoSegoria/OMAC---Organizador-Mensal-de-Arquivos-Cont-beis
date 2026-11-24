@@ -194,6 +194,44 @@ def ler_nome_arquivo(nome: str, regras: Regras = PADRAO) -> tuple[int, str] | No
     return int(m.group("numero")), paciente
 
 
+def problema_no_nome(nota: Nota, regras: Regras = PADRAO) -> str:
+    """Por que o nome do arquivo não serve ("" = está certo): fora do formato ou com outro número.
+
+    O site novo baixa o PDF com um nome só de números; aí o OMAC sugere o nome certo.
+    """
+    lido = ler_nome_arquivo(nota.arquivo, regras)
+    if lido is None:
+        return "fora_do_formato"
+    return "numero_diferente" if lido[0] != nota.numero else ""
+
+
+# Caracteres que o Windows não aceita em nome de arquivo.
+_RE_PROIBIDO = re.compile(r'[<>:"/\\|?*\x00-\x1f]')
+
+
+def nome_certo(nota: Nota, nome: str, regras: Regras = PADRAO) -> str:
+    """O nome do arquivo no formato das Configurações, com os dados de dentro do PDF.
+
+    O número sai com 9 dígitos (000000013) e as datas como dd-mm. Se o formato não tem a
+    competência, ela vai no fim (" - COMP 21-11"), que a leitura ignora: é o jeito da clínica.
+    """
+    formato = " ".join(str(regras.formato or "").split()) or FORMATO_PADRAO
+    try:
+        compilar_formato(formato)
+    except FormatoInvalido:
+        formato = FORMATO_PADRAO
+    valores = {
+        NUMERO: f"{nota.numero:09d}",
+        NOME: " ".join(_RE_PROIBIDO.sub(" ", nome).split()),
+        EMISSAO: f"{nota.emissao:%d-%m}",
+        COMPETENCIA: f"{nota.competencia:%d-%m}",
+    }
+    texto = _RE_VARIAVEL.sub(lambda m: valores.get(m.group(1).strip().lower(), m.group(0)), formato)
+    if "[" + COMPETENCIA + "]" not in formato.lower().replace(" ", ""):
+        texto += f" - COMP {valores[COMPETENCIA]}"
+    return " ".join(_RE_PROIBIDO.sub("-", texto).split()) + ".pdf"
+
+
 def responsavel(nota: Nota) -> str:
     """Quem recebe a nota. O nome do arquivo é o do responsável, mesmo com dependente."""
     if nota.responsavel:
