@@ -146,6 +146,9 @@ Notas fiscais, extrato bancário e as regras do extrato em abas de uma tela só,
   <img src="docs/capturas/atendimentos.png" alt="Ficha de atendimentos do mês" width="49%">
   <img src="docs/capturas/atendimentos-atendimento.png" alt="Janela de atendimento" width="49%">
 </p>
+<p align="center">
+  <img src="docs/capturas/atendimentos-emitir.png" alt="Janela Emitir nota, com o nome, o CPF e os comandos já preenchidos" width="70%">
+</p>
 
 - **A ficha de papel, dentro do app:** paciente, tratamento, data, valor, forma de pagamento (Pix PJ, Pix PF, dinheiro, débito ou crédito), em quantas vezes no crédito, pago e nota.
 - **Pago sem esforço:** fica em branco enquanto espera; se o mês acabar sem marcar, aparece como **não pago**. Pagou depois, é só marcar. Na lista, marcar e desmarcar o pago perguntam antes (*“Marcar o atendimento de Fulano (21/11 · R$ 180,00) como pago?”*), e Enter confirma.
