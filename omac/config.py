@@ -37,6 +37,7 @@ PADRAO = {
     "servico_esperado": "tratamento odontológico",  # a descrição da nota deve ter isso; "" = não avisa
     "mensagem_nota": "",  # modelo da mensagem de uma nota, com [variáveis]; "" = o padrão
     "mensagem_notas": "",  # modelo para várias notas juntas; "" = o padrão
+    "mensagem_cobranca": "",  # modelo da cobrança de um atendimento (1.12.0); "" = o padrão
     "emissao_categoria": "",  # id da categoria de Comandos que aparece na janela Emitir
     "ocultar_valores_minutos": 5,  # esconde os valores de novo depois de X minutos parado; 0 = não
     "abrir_em": "inicio",  # tela ao abrir: "inicio" | "notas"
@@ -117,7 +118,8 @@ def normalizar(cfg: dict) -> dict:
         limpo[chave] = bool(limpo[chave])
     for chave in ("pasta_notas", "pasta_extratos", "pasta_saida",
                   "assistente_nome", "chave_pix", "atualizacao_adiada_em", "site_nota",
-                  "formato_arquivo", "servico_esperado", "mensagem_nota", "mensagem_notas", "emissao_categoria",
+                  "formato_arquivo", "servico_esperado", "mensagem_nota", "mensagem_notas", "mensagem_cobranca",
+                  "emissao_categoria",
                   "backup_pasta", "backup_ultimo", "backup_erro"):
         limpo[chave] = str(limpo[chave] or "")
     try:
