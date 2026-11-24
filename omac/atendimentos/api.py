@@ -11,6 +11,7 @@ from ..inicio.registro import widget
 from ..nucleo import ApiBase, seguro
 from ..texto import normalizar
 from ..tratamentos import orto
+from ..whatsapp import variaveis as vr
 from . import exportar as exp
 from . import ficha as fc
 
@@ -94,7 +95,47 @@ class AtendimentosApi(ApiBase):
                 salvo.update(fc.adicionar(atendimentos, contato["id"], dados, hoje))
 
         self._editar_ficha(mudar)
-        return self._lista_ficha(int(salvo["data"][:4]), int(salvo["data"][5:7]))
+        marcado = self._atendido_pela_ficha(contato["id"], salvo, hoje)
+        return {**self._lista_ficha(int(salvo["data"][:4]), int(salvo["data"][5:7])),
+                "atendido_marcado": contato["nome"] if marcado else ""}
+
+    def _atendido_pela_ficha(self, contato_id: str, atendimento: dict, hoje: date) -> bool:
+        """Atendimento de manutenção de quem está em Tratamentos: marca o Atendido do mês, com o dia
+        do atendimento. Só marca (nunca desmarca) e não mexe em mês já marcado."""
+        if "MANUTENCAO" not in normalizar(atendimento.get("tratamento") or ""):
+            return False
+        dia = atendimento["data"]
+        if dia > hoje.isoformat():
+            return False
+        with self._armazem.editar(esquema.TRATAMENTOS) as d:
+            t = orto.do_contato(d["tratamentos"], contato_id)
+            if t is None or orto.situacao(t) == orto.FINALIZADO or dia[:7] in t["atendidos"]:
+                return False
+            t["atendidos"] = {**t["atendidos"], dia[:7]: dia}
+        return True
+
+    # --- Cobrar pelo WhatsApp (só quem ainda não pagou) -------------------------------------
+
+    @seguro
+    def atendimentos_preparar_cobranca(self, atendimento_id: str):
+        """O paciente e cada responsável, com a mensagem de cobrança de cada um."""
+        a = fc.buscar(self._armazem.ler(esquema.ATENDIMENTOS)["atendimentos"], atendimento_id)
+        contatos = self._lista_de_contatos()
+        paciente = ct.buscar(contatos, a["contato_id"])
+        dia = date.fromisoformat(a["data"])
+        destinos = [{**d, "mensagem": vr.mensagem_cobranca(self._cfg, d["nome"], paciente["nome"], dia,
+                                                            a.get("tratamento", ""), a.get("valor_centavos"))}
+                    for d in ct.destinos(contatos, paciente)]
+        precisa_pix = "[chave-pix]" in vr.modelo(self._cfg, vr.COBRANCA).replace(" ", "").lower()
+        return {"id": a["id"], "nome": paciente["nome"], "data": a["data"], "tratamento": a.get("tratamento", ""),
+                "valor_centavos": a.get("valor_centavos"), "destinos": destinos,
+                "escolhido": ct.destino_escolhido(contatos, paciente)["contato_id"],
+                "sem_pix": precisa_pix and not self._cfg.get("chave_pix", "").strip()}
+
+    @seguro
+    def atendimentos_cobrar(self, atendimento_id: str, destino_id: str, telefone: str, mensagem: str):
+        a = fc.buscar(self._armazem.ler(esquema.ATENDIMENTOS)["atendimentos"], atendimento_id)
+        return self._mensagem_para(a["contato_id"], destino_id, telefone, mensagem) or {}
 
     @seguro
     def atendimentos_marcar_pago(self, atendimento_id: str, pago: bool, ano: int, mes: int):
