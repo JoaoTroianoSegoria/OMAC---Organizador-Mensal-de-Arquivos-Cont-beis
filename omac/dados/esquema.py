@@ -48,6 +48,8 @@ ITENS: dict[str, dict[str, dict]] = {
                             "criado_em": "", "nascimento": ""}},
     TRATAMENTOS: {"tratamentos": {
         "valor_centavos": None, "agendado_em": "", "finalizado_em": "", "alta_inicio": "", "alta_fim": "",
+        "agendado_para": "",  # "AAAA-MM": mês que já ficou agendado antes de chegar (1.12.0)
+        "consulta_em": "",  # "AAAA-MM-DD": dia da próxima consulta, se foi informado (1.12.0)
         "atendidos": {},  # "AAAA-MM" → dia em que foi marcado como atendido
         "altas": [],  # altas que já acabaram: [{"inicio", "fim"}], para o histórico
         "criado_em": "",  # primeiro mês do histórico
