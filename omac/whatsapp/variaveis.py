@@ -1,7 +1,7 @@
 """Mensagem da nota com variáveis: a pessoa escreve o texto do jeito dela e põe [variáveis] no meio.
 
-Dois modelos (Configurações → WhatsApp): um para uma nota e outro para várias notas juntas.
-Vazio nas Configurações quer dizer o padrão, que é o texto das versões anteriores.
+Três modelos (Configurações → WhatsApp): uma nota, várias notas juntas e a cobrança de um
+atendimento (1.12.0). Vazio nas Configurações quer dizer o padrão.
 """
 
 from __future__ import annotations
@@ -14,14 +14,20 @@ from decimal import Decimal
 from ..planilha import MESES
 from .mensagens import assinatura
 
-NOTA, NOTAS = "nota", "notas"
+NOTA, NOTAS, COBRANCA = "nota", "notas", "cobranca"
+CHAVES = {NOTA: "mensagem_nota", NOTAS: "mensagem_notas", COBRANCA: "mensagem_cobranca"}
 
 MODELO_NOTA = ("[assinatura]Olá, [primeiro-nome-do-responsavel].\n"
                "Segue a nota fiscal referente ao tratamento odontológico realizado dia [data-competencia].")
 MODELO_NOTAS = ("[assinatura]Olá, [primeiro-nome-do-responsavel].\n"
                 "Seguem as [quantidade-de-notas] notas fiscais referentes ao tratamento odontológico:\n"
                 "[lista-das-notas]")
-PADROES = {NOTA: MODELO_NOTA, NOTAS: MODELO_NOTAS}
+MODELO_COBRANCA = ("[assinatura]Olá, [primeiro-nome-do-responsavel].\n"
+                   "Passando para lembrar do pagamento do atendimento de [primeiro-nome-do-paciente] "
+                   "em [data-do-atendimento] ([tratamento]), no valor de [valor].\n"
+                   "Segue a chave Pix: [chave-pix]\n"
+                   "Depois me envie o comprovante, por favor.")
+PADROES = {NOTA: MODELO_NOTA, NOTAS: MODELO_NOTAS, COBRANCA: MODELO_COBRANCA}
 
 # nome → o que é (aparece nos botões e na ajuda da tela). A ordem é a dos botões.
 VARIAVEIS = {
@@ -34,6 +40,17 @@ VARIAVEIS = {
     "data-de-emissao": "Data de emissão (30/10)",
     "numero-da-nota": "Número da nota",
     "valor": "Valor da nota (R$ 180,00)",
+    "assinatura": "*Assistente Fulano:* (o nome das Configurações)",
+}
+VARIAVEIS_DA_COBRANCA = {
+    "nome-do-responsavel": "Nome de quem recebe a mensagem",
+    "primeiro-nome-do-responsavel": "Só o primeiro nome de quem recebe",
+    "nome-do-paciente": "Nome do paciente atendido",
+    "primeiro-nome-do-paciente": "Só o primeiro nome do paciente",
+    "data-do-atendimento": "Dia do atendimento (21/11)",
+    "tratamento": "O tratamento da ficha (Manutenção)",
+    "valor": "Valor do atendimento (R$ 180,00)",
+    "chave-pix": "A chave Pix das Configurações",
     "assinatura": "*Assistente Fulano:* (o nome das Configurações)",
 }
 VARIAVEIS_SO_DE_VARIAS = {
@@ -60,14 +77,19 @@ class NotaDaMensagem:
     valor: Decimal
 
 
+def tipo_certo(tipo: str) -> str:
+    return tipo if tipo in PADROES else NOTA
+
+
 def variaveis_do(tipo: str) -> dict[str, str]:
+    if tipo == COBRANCA:
+        return dict(VARIAVEIS_DA_COBRANCA)
     return {**VARIAVEIS, **VARIAVEIS_SO_DE_VARIAS} if tipo == NOTAS else dict(VARIAVEIS)
 
 
 def modelo(cfg: dict, tipo: str) -> str:
     """O modelo das Configurações, ou o padrão."""
-    chave = "mensagem_notas" if tipo == NOTAS else "mensagem_nota"
-    return cfg.get(chave) or PADROES[tipo]
+    return cfg.get(CHAVES[tipo]) or PADROES[tipo]
 
 
 def desconhecidas(texto: str, tipo: str) -> list[str]:
@@ -177,5 +199,41 @@ EXEMPLO = {
 
 
 def previa(texto: str, tipo: str, assistente: str) -> dict:
+    if tipo == COBRANCA:
+        exemplo = valores_cobranca(assistente, EXEMPLO_RESPONSAVEL, "LUCAS COSTA RIBEIRO", date(2026, 10, 30),
+                                   "Manutenção", 18000, "chave@exemplo.com")
+        return {"texto": _limpar(preencher(str(texto or ""), exemplo)), "desconhecidas": desconhecidas(str(texto or ""), tipo)}
     return {"texto": preencher(str(texto or ""), valores(assistente, EXEMPLO_RESPONSAVEL, EXEMPLO[tipo])),
             "desconhecidas": desconhecidas(str(texto or ""), tipo)}
+
+
+# --- Cobrança de um atendimento (Atendimentos → botão de cobrar) -----------------------
+
+
+def valores_cobranca(assistente: str, destinatario: str, paciente: str, dia: date, tratamento: str,
+                     valor_centavos: int | None, chave_pix: str) -> dict[str, str]:
+    return {
+        "assinatura": assinatura(assistente),
+        "nome-do-responsavel": nome_bonito(destinatario),
+        "primeiro-nome-do-responsavel": _primeiro(destinatario),
+        "nome-do-paciente": nome_bonito(paciente),
+        "primeiro-nome-do-paciente": _primeiro(paciente),
+        "data-do-atendimento": f"{dia:%d/%m}",
+        "tratamento": " ".join(str(tratamento or "").split()),
+        "valor": _reais(Decimal(valor_centavos) / 100) if valor_centavos is not None else "",
+        "chave-pix": " ".join(str(chave_pix or "").split()),
+    }
+
+
+def _limpar(texto: str) -> str:
+    """O que sobra quando um dado falta: "()" sem tratamento, ", no valor de ." sem valor."""
+    texto = re.sub(r"\s*\(\s*\)", "", texto)
+    texto = re.sub(r",?\s*no valor de\s*(?=[.,\n]|$)", "", texto)
+    return texto.strip()
+
+
+def mensagem_cobranca(cfg: dict, destinatario: str, paciente: str, dia: date, tratamento: str,
+                      valor_centavos: int | None) -> str:
+    v = valores_cobranca(cfg.get("assistente_nome", ""), destinatario, paciente, dia, tratamento, valor_centavos,
+                         cfg.get("chave_pix", ""))
+    return _limpar(preencher(modelo(cfg, COBRANCA), v))
