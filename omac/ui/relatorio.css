@@ -68,3 +68,7 @@
   font-size: .85rem; color: var(--texto-3); font-variant-numeric: tabular-nums;
 }
 .rel-lidas .ic { width: 1rem; height: 1rem; color: var(--acento); }
+
+/* Renomear o PDF da nota: o nome antigo (só números) pode ser comprido. */
+.nt-renomear-de { font-family: ui-monospace, monospace; word-break: break-all; }
+.aviso-renomear { margin-left: .5rem; vertical-align: middle; }

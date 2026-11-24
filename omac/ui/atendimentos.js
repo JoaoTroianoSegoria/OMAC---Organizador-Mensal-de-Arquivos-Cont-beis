@@ -185,13 +185,23 @@ function linhaDoAtendimento(a) {
   return tr;
 }
 
-async function marcarPagoNaLista(caixa) {
-  const r = await api().atendimentos_marcar_pago(caixa.dataset.id, caixa.checked, ficha.ano, ficha.mes);
-  if (r.erro) {
-    caixa.checked = !caixa.checked;
-    return mostrarToast(r.erro, { erro: true });
-  }
-  aplicarFicha(r);
+/* A caixa Pago da lista pergunta antes (marcar e desmarcar); o formulário não, porque já tem Salvar. */
+function marcarPagoNaLista(caixa) {
+  const a = atendimentoDa(caixa);
+  if (!a) return;
+  const valor = a.valor_centavos == null ? "" : ` · ${dinheiroTexto(a.valor_centavos)}`;
+  const qual = `${a.nome} (${dataBR(a.data).slice(0, 5)}${valor})`;
+  return marcarComConfirmacao(caixa, {
+    marcar: [`Marcar o atendimento de ${qual} como pago?`, "Marcar como pago"],
+    desmarcar: [`Tirar o pago do atendimento de ${qual}?`, "Tirar o pago"],
+  }, async (pago) => {
+    const r = await api().atendimentos_marcar_pago(a.id, pago, ficha.ano, ficha.mes);
+    if (r.erro) {
+      caixa.checked = !pago;
+      return mostrarToast(r.erro, { erro: true });
+    }
+    aplicarFicha(r);
+  });
 }
 
 async function exportarFicha() {

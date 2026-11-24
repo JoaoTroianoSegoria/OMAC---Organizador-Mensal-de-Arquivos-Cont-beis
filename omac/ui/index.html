@@ -742,7 +742,7 @@
               <strong class="cartao-valor" id="ag-feitos">0</strong>
             </div>
             <div class="cartao vidro">
-              <span class="cartao-rotulo">Falta conferir</span>
+              <span class="cartao-rotulo">Falta agendar</span>
               <strong class="cartao-valor" id="ag-faltam">0</strong>
             </div>
             <div class="cartao vidro">
@@ -753,7 +753,7 @@
 
           <div class="escolhas ag-filtros" id="ag-filtros">
             <button class="escolha" data-acao="ag-filtro" data-filtro="todos">Todos</button>
-            <button class="escolha" data-acao="ag-filtro" data-filtro="pendentes">Falta conferir</button>
+            <button class="escolha" data-acao="ag-filtro" data-filtro="pendentes">Falta agendar</button>
             <button class="escolha" data-acao="ag-filtro" data-filtro="agendados">Já agendados</button>
             <button class="escolha" data-acao="ag-filtro" data-filtro="nao_atendidos">Falta atender</button>
           </div>
@@ -763,7 +763,7 @@
               <caption class="so-leitor">Pacientes em tratamento</caption>
               <thead>
                 <tr>
-                  <th scope="col" class="c-confere" title="Marque quando a manutenção do mês já estiver agendada. Recomeça todo dia 1.">Confere</th>
+                  <th scope="col" class="c-confere" title="Marque quando a manutenção do mês já estiver agendada. Recomeça todo dia 1.">Agendado</th>
                   <th scope="col" class="c-confere" title="Marque quando o paciente for atendido no mês. Fica guardado no histórico.">Atendido</th>
                   <th scope="col">Paciente</th>
                   <th scope="col" class="c-telefone">Telefone</th>
@@ -774,7 +774,7 @@
               <tbody id="ag-ativos-corpo"></tbody>
             </table>
           </div>
-          <p class="dica" id="ag-dica">O confere e o atendido recomeçam sozinhos todo dia 1. O atendido de cada mês fica guardado na aba <strong>Histórico</strong>.</p>
+          <p class="dica" id="ag-dica">O agendado e o atendido recomeçam sozinhos todo dia 1. O atendido de cada mês fica guardado na aba <strong>Histórico</strong>.</p>
 
           <div class="vazio vidro" id="ag-ativos-vazio" hidden>
             <span class="vazio-icone"><svg class="ic"><use href="#i-agenda"/></svg></span>
@@ -804,7 +804,7 @@
           <div class="vazio vidro" id="ag-altas-vazio" hidden>
             <span class="vazio-icone"><svg class="ic"><use href="#i-agenda"/></svg></span>
             <h2>Nenhum paciente em alta temporária</h2>
-            <p>Para dar uma alta, clique no lápis ao lado do paciente e escolha <strong>Alta temporária</strong>. Enquanto ela durar, ele fica fora do confere do mês.</p>
+            <p>Para dar uma alta, clique no lápis ao lado do paciente e escolha <strong>Alta temporária</strong>. Enquanto ela durar, ele fica fora da lista do mês.</p>
           </div>
         </div>
 
@@ -1573,11 +1573,15 @@
         <details class="lb-comando-variaveis">
           <summary>Variáveis para a janela Emitir</summary>
           <p class="dica">Só são trocadas quando o comando é copiado na janela <strong>Emitir</strong>, em Atendimentos. Aqui e na aba Comandos, o texto é copiado como está.</p>
+          <p class="dica">Para o nome do PDF da nota, por exemplo: <code>NFS-e Nº [numero-nota] - [nome] - [data-hoje] - COMP [comp]</code></p>
           <div class="cfg-variaveis" data-alvo="lb-comando-texto">
             <button class="btn btn-peq" type="button" data-acao="cfg-variavel" data-variavel="nome">[nome]</button>
             <button class="btn btn-peq" type="button" data-acao="cfg-variavel" data-variavel="cpf">[cpf]</button>
             <button class="btn btn-peq" type="button" data-acao="cfg-variavel" data-variavel="data-competencia">[data-competencia]</button>
             <button class="btn btn-peq" type="button" data-acao="cfg-variavel" data-variavel="valor">[valor]</button>
+            <button class="btn btn-peq" type="button" data-acao="cfg-variavel" data-variavel="numero-nota" title="O número da próxima nota, com 9 dígitos: 000000013">[numero-nota]</button>
+            <button class="btn btn-peq" type="button" data-acao="cfg-variavel" data-variavel="data-hoje" title="A data de hoje, como 23-11">[data-hoje]</button>
+            <button class="btn btn-peq" type="button" data-acao="cfg-variavel" data-variavel="comp" title="A data do atendimento (competência), como 21-11">[comp]</button>
             <button class="btn btn-peq" type="button" data-acao="cfg-variavel" data-variavel="tratamento">[tratamento]</button>
             <button class="btn btn-peq" type="button" data-acao="cfg-variavel" data-variavel="nome-do-dependente">[nome-do-dependente]</button>
             <button class="btn btn-peq" type="button" data-acao="cfg-variavel" data-variavel="cpf-dependente">[cpf-dependente]</button>
@@ -1952,6 +1956,36 @@
         <button class="btn btn-primario" type="button" data-acao="bk-confirmar"><svg class="ic"><use href="#i-atualizar"/></svg><span>Restaurar</span></button>
       </div>
     </div>
+  </dialog>
+
+  <!-- Pergunta antes de marcar ou desmarcar (Pago, Agendado, Atendido): confirmarAcao() em nucleo.js -->
+  <dialog class="modal vidro modal-confirmar" id="confirmar" aria-labelledby="confirmar-texto">
+    <form method="dialog" class="modal-corpo">
+      <p class="confirmar-texto" id="confirmar-texto"></p>
+      <div class="modal-acoes">
+        <button class="btn" type="submit" value="nao">Cancelar</button>
+        <button class="btn btn-primario" type="submit" value="sim" id="confirmar-sim" autofocus></button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- Renomear o PDF de uma nota (nome só de números ou com o número errado): notas.js -->
+  <dialog class="modal vidro" id="nt-renomear" aria-labelledby="nt-renomear-titulo">
+    <form id="form-nt-renomear" class="modal-corpo">
+      <h2 id="nt-renomear-titulo">Renomear o PDF da nota</h2>
+      <p id="nt-renomear-motivo"></p>
+      <p class="dica">Agora: <span class="nt-renomear-de" id="nt-renomear-de"></span></p>
+      <div class="campo campo-texto">
+        <label class="rotulo-campo" for="nt-renomear-para">Nome certo</label>
+        <input id="nt-renomear-para" type="text" autocomplete="off" spellcheck="false" required>
+        <p class="dica">Montado com o número, as datas e o nome de quem recebe a nota, como estão dentro do PDF. Dá para mudar antes de renomear.</p>
+      </div>
+      <p class="modal-erro" id="nt-renomear-erro" role="alert" hidden></p>
+      <div class="modal-acoes">
+        <button class="btn" type="button" data-acao="nt-renomear-fechar">Cancelar</button>
+        <button class="btn btn-primario" type="submit"><svg class="ic"><use href="#i-lapis"/></svg><span>Renomear</span></button>
+      </div>
+    </form>
   </dialog>
 
   <div class="avisos-flutuantes" id="toasts" aria-live="polite"></div>

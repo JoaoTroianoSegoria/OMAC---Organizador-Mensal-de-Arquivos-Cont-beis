@@ -39,6 +39,7 @@ modulos.notas = {
       if (e.target.matches(".rel-escolher")) escolherParaEnviar(Number(e.target.dataset.numero), e.target.checked);
     });
     $("#rel-marcar-todas").addEventListener("change", (e) => escolherTodas(e.target.checked));
+    $("#form-nt-renomear").addEventListener("submit", (e) => { e.preventDefault(); renomearNota(); });
   },
 };
 
@@ -56,6 +57,11 @@ Object.assign(acoes, {
   },
   "rel-escopo": (alvo) => mudarEscopo(alvo.dataset.escopo),
   "rel-limpar-pesquisa": limparPesquisa,
+  "nt-renomear": (alvo) => {
+    const n = notasEstado.lista.find((x) => x.arquivo === alvo.dataset.arquivo);
+    if (n) abrirRenomear(n);
+  },
+  "nt-renomear-fechar": () => $("#nt-renomear").close(),
 });
 
 let progressoTimer = null;
@@ -125,6 +131,17 @@ function mostrarLeitura(hora) {
 
 function avisarNotasNovas(novas) {
   if (!novas || !novas.length) return;
+  // O PDF veio do site com um nome só de números (ou com o número errado): oferece o nome certo.
+  // Esse aviso fica até alguém fechar, porque a nota sem o nome certo fica sem o paciente.
+  for (const n of novas.filter((x) => x.renomear)) {
+    mostrarToast(`Nota nova nº ${n.numero} – ${n.renomear.nome}: o nome do PDF ${n.renomear.motivo === "numero_diferente"
+      ? "tem outro número" : "está fora do formato"}.`, {
+      fica: true,
+      acoes: [["Renomear", () => abrirRenomear(n)]],
+    });
+  }
+  novas = novas.filter((x) => !x.renomear);
+  if (!novas.length) return;
   const lista = [...novas].sort((a, b) => a.numero - b.numero);
   if (lista.length === 1) return mostrarToast(`1 nota nova: nº ${lista[0].numero} – ${lista[0].paciente}`);
   const primeiras = lista.slice(0, 3).map((n) => `nº ${n.numero}`).join(", ");
@@ -157,6 +174,52 @@ async function conferirNotas() {
 }
 window.addEventListener("focus", () => conferirNotas());
 document.addEventListener("visibilitychange", () => { if (!document.hidden) conferirNotas(); });
+
+/* ---------- Renomear o PDF (o site baixa com um nome só de números) ----------
+ *
+ * O número, as datas e o nome de quem recebe vêm de dentro do PDF (o nome, dos Contatos
+ * quando dá para achar). O Python monta pelo formato das Configurações e não passa por cima
+ * de arquivo nenhum; depois a pasta é lida de novo. */
+
+let notaRenomeando = null;
+
+function botaoRenomear(n) {
+  const b = Object.assign(document.createElement("button"), { type: "button", className: "btn btn-peq aviso-renomear" });
+  b.dataset.acao = "nt-renomear";
+  b.dataset.arquivo = n.arquivo;
+  b.innerHTML = '<svg class="ic"><use href="#i-lapis"/></svg><span>Renomear</span>';
+  b.title = `Renomear para ${n.renomear.para}`;
+  b.setAttribute("aria-label", `Renomear o PDF da nota ${n.numero} para ${n.renomear.para}`);
+  return b;
+}
+
+/* `n`: uma nota da lista ou da leitura nova ({numero, arquivo?, renomear: {motivo, para}}). */
+function abrirRenomear(n) {
+  const arquivo = n.arquivo || n.renomear.de;
+  notaRenomeando = { numero: n.numero, arquivo };
+  $("#nt-renomear-motivo").textContent = n.renomear.motivo === "numero_diferente"
+    ? `O número no nome do PDF é diferente do número da nota (${n.numero}).`
+    : `O nome do PDF da nota nº ${n.numero} está fora do formato, então o OMAC não sabe de quem ela é.`;
+  $("#nt-renomear-de").textContent = arquivo;
+  $("#nt-renomear-para").value = n.renomear.para.replace(/\.pdf$/i, "");
+  $("#nt-renomear-erro").hidden = true;
+  $("#nt-renomear").showModal();
+  $("#nt-renomear-para").focus();
+}
+
+async function renomearNota() {
+  if (!notaRenomeando) return;
+  const r = await api().notas_renomear(notaRenomeando.arquivo, $("#nt-renomear-para").value);
+  if (r.erro) {
+    $("#nt-renomear-erro").textContent = r.erro;
+    $("#nt-renomear-erro").hidden = false;
+    return;
+  }
+  $("#nt-renomear").close();
+  notaRenomeando = null;
+  mostrarToast(`PDF renomeado: ${r.arquivo}`);
+  await atualizarNotas();
+}
 
 /* ---------- Pesquisa ---------- */
 
@@ -223,9 +286,13 @@ function desenharNotas() {
   marcarCabecalho();
   desenharVazio(nomeMes);
 
-  // Avisos: os de cada nota da lista + os gerais da pasta
+  // Avisos: os de cada nota da lista + os gerais da pasta. O do nome do arquivo ganha o Renomear.
   const itens = [];
-  for (const n of notas) for (const a of n.avisos) itens.push([`Nota nº ${n.numero}`, a]);
+  for (const n of notas) {
+    const doNome = n.renomear ? n.avisos.findIndex((a) => a.includes("nome do arquivo")) : -1;
+    n.avisos.forEach((a, i) => itens.push([`Nota nº ${n.numero}`, a, i === doNome ? botaoRenomear(n) : null]));
+    if (n.renomear && doNome < 0) itens.push([`Nota nº ${n.numero}`, "O nome do arquivo está fora do formato.", botaoRenomear(n)]);
+  }
   for (const a of avisos) itens.push([a.arquivo || "", a.mensagem]);
   $("#avisos-lista").replaceChildren(...listaDeAvisos(itens));
   mostrarQtdAvisos($("#faixa-avisos"), itens.length);

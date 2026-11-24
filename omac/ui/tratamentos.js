@@ -1,4 +1,4 @@
-/* OMAC — Tratamentos (ortodontia): confere do mês, atendido, altas, histórico e mensagens.
+/* OMAC — Tratamentos (ortodontia): agendado do mês, atendido, altas, histórico e mensagens.
  *
  * Nome, telefone e responsáveis são do contato: criar e alterar o paciente é pela janela
  * de contato (contatos.js), com a chave "Em tratamento de orto" ligada. */
@@ -148,7 +148,7 @@ function desenharAtivos() {
   if (visiveis.length === 0) {
     const tr = document.createElement("tr");
     const td = celula({
-      pendentes: "Todos os pacientes já foram conferidos neste mês.",
+      pendentes: "Todos os pacientes já estão agendados neste mês.",
       agendados: "Nenhum paciente marcado como agendado neste mês.",
       nao_atendidos: "Todos os pacientes já foram atendidos neste mês.",
     }[agenda.filtro], "ag-nada");
@@ -208,24 +208,38 @@ function desenharFinalizados() {
   }));
 }
 
-async function marcarAgendado(caixa) {
-  const r = await api().tratamentos_marcar(caixa.dataset.id, caixa.checked);
-  if (r.erro) {
-    caixa.checked = !caixa.checked;
-    return mostrarToast(r.erro, { erro: true });
-  }
-  aplicarAgenda(r);
-}
-
 const mesAtualDaAgenda = () => `${agenda.ano}-${String(agenda.mes).padStart(2, "0")}`;
 
-async function marcarAtendido(caixa) {
-  const r = await api().tratamentos_marcar_atendido(caixa.dataset.id, mesAtualDaAgenda(), caixa.checked);
-  if (r.erro) {
-    caixa.checked = !caixa.checked;
-    return mostrarToast(r.erro, { erro: true });
-  }
-  aplicarAgenda(r);
+/* Agendado e Atendido perguntam antes de marcar e de desmarcar (a mesma janela do Pago). */
+function marcarNaAgenda(caixa, perguntas, gravar) {
+  return marcarComConfirmacao(caixa, perguntas, async (marcar) => {
+    const r = await gravar(marcar);
+    if (r.erro) {
+      caixa.checked = !marcar;
+      return mostrarToast(r.erro, { erro: true });
+    }
+    aplicarAgenda(r);
+  });
+}
+
+function marcarAgendado(caixa) {
+  const p = pacienteAgenda(caixa);
+  if (!p) return;
+  const mes = MESES[agenda.mes - 1].toLowerCase();
+  return marcarNaAgenda(caixa, {
+    marcar: [`${p.nome} já tem a manutenção de ${mes} agendada?`, "Marcar como agendado"],
+    desmarcar: [`Tirar o agendado de ${p.nome} em ${mes}?`, "Tirar o agendado"],
+  }, (marcar) => api().tratamentos_marcar(p.id, marcar));
+}
+
+function marcarAtendido(caixa) {
+  const p = pacienteAgenda(caixa);
+  if (!p) return;
+  const mes = MESES[agenda.mes - 1].toLowerCase();
+  return marcarNaAgenda(caixa, {
+    marcar: [`Marcar ${p.nome} como atendido em ${mes}?`, "Marcar como atendido"],
+    desmarcar: [`Tirar o atendido de ${p.nome} em ${mes}?`, "Tirar o atendido"],
+  }, (marcar) => api().tratamentos_marcar_atendido(p.id, mesAtualDaAgenda(), marcar));
 }
 
 /* ---------- Histórico ---------- */
