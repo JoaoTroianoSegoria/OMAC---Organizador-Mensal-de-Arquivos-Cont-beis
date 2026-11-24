@@ -27,12 +27,8 @@ modulos.notas = {
   },
   carregar: carregarNotas,
   ligar() {
-    let espera = null;
-    $("#rel-busca").addEventListener("input", (e) => {
-      notasEstado.busca = e.target.value;
-      clearTimeout(espera);
-      espera = setTimeout(pesquisarNotas, 200);
-    });
+    const pesquisarDepois = depoisDeDigitar(pesquisarNotas, 200);
+    $("#rel-busca").addEventListener("input", (e) => { notasEstado.busca = e.target.value; pesquisarDepois(); });
     $("#rel-de").addEventListener("change", (e) => { notasEstado.de = e.target.value; pesquisarNotas(); });
     $("#rel-ate").addEventListener("change", (e) => { notasEstado.ate = e.target.value; pesquisarNotas(); });
     $("#tabela-corpo").addEventListener("change", (e) => {

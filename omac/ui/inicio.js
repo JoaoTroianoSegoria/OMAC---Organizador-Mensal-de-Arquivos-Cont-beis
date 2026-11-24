@@ -7,13 +7,14 @@
  */
 "use strict";
 
-const inicio = { painel: null, json: "", editando: false, arrastando: null };
+const inicio = { painel: null, editando: false, arrastando: null };
 
 modulos.inicio = {
   aoMostrar: carregarInicio,
   carregar: carregarInicio,
   // O gráfico do resumo tem a dica em texto: desenha de novo para ela esconder ou mostrar o valor.
-  aoMudarValores: () => { if (inicio.painel) desenharInicio(); },
+  // Só se estiver na tela: fora dela, a volta já redesenha (o olho entra no desenharSeMudou).
+  aoMudarValores: () => { if (inicio.painel && estado.view === "inicio") desenharInicio(); },
   ligar() {
     const grade = $("#ini-grade");
     grade.addEventListener("dragstart", (e) => {
@@ -43,7 +44,15 @@ modulos.inicio = {
 
 Object.assign(acoes, {
   "ini-atualizar": carregarInicio,
-  "ini-personalizar": () => { inicio.editando = !inicio.editando; desenharInicio(); },
+  "ini-personalizar": async () => {
+    inicio.editando = !inicio.editando;
+    if (inicio.editando) {
+      // Fora do Personalizar os escondidos nem são calculados: agora eles vêm também.
+      const r = await api().inicio_painel(true);
+      if (!r.erro) inicio.painel = r;
+    }
+    desenharInicio();
+  },
   "ini-restaurar": restaurarCartoes,
   "ini-subir": (alvo) => moverCartao(alvo.dataset.id, -1),
   "ini-descer": (alvo) => moverCartao(alvo.dataset.id, 1),
@@ -52,14 +61,11 @@ Object.assign(acoes, {
 });
 
 async function carregarInicio() {
-  const r = await api().inicio_painel();
+  // Fora do Personalizar, o Python só calcula os cartões que aparecem.
+  const r = await api().inicio_painel(inicio.editando);
   if (r.erro) return mostrarToast(r.erro, { erro: true });
-  // Voltar ao Início quase sempre traz os mesmos dados: aí não desenha de novo (era o "pisca").
-  const json = JSON.stringify(r);
-  if (inicio.painel && json === inicio.json && $("#ini-grade").children.length) return;
-  inicio.json = json;
   inicio.painel = r;
-  desenharInicio();
+  desenharSeMudou("inicio", r, desenharInicio);
 }
 
 /* Recarrega o Início se ele estiver na tela (depois de mudar algo em outro lugar). */

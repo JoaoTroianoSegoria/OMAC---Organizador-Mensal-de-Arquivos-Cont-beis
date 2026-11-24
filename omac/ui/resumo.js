@@ -12,7 +12,7 @@ modulos.resumo = {
   aoMostrar: carregarResumo,
   carregar: carregarResumo,
   // A dica de cada mês do gráfico é texto: desenha de novo para ela esconder ou mostrar o valor.
-  aoMudarValores: () => { if (resumoAno.dados) desenharResumo(); },
+  aoMudarValores: () => { if (resumoAno.dados && estado.view === "resumo") desenharResumo(); },
   ligar() {
     $("#rs-ano").addEventListener("change", (e) => {
       resumoAno.ano = Number(e.target.value);
@@ -25,7 +25,7 @@ async function carregarResumo() {
   const r = await api().resumo_ano(resumoAno.ano);
   if (r.erro) return mostrarToast(r.erro, { erro: true });
   resumoAno.dados = r;
-  desenharResumo();
+  desenharSeMudou("resumo", r, desenharResumo);
 }
 
 const emReais = (centavos) => (centavos == null ? "" : dinheiro(centavos));

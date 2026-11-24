@@ -13,7 +13,8 @@ modulos.modelos = {
   aoMostrar: carregarModelos,
   carregar: carregarModelos,
   ligar() {
-    $("#md-busca").addEventListener("input", (e) => { modelosEstado.busca = e.target.value; desenharModelos(); });
+    const desenharDepois = depoisDeDigitar(desenharModelos);
+    $("#md-busca").addEventListener("input", (e) => { modelosEstado.busca = e.target.value; desenharDepois(); });
     $("#form-md-modelo").addEventListener("submit", salvarModelo);
   },
 };

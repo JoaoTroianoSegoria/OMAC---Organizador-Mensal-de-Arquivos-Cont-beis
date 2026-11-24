@@ -79,7 +79,7 @@ function aplicarFicha(r) {
   ficha.totais = r.totais;
   ficha.meses = r.meses;
   ficha.notasLidas = r.notas_lidas;
-  desenharFicha();
+  desenharSeMudou("ficha", r, desenharFicha);
 }
 
 function seletoresDaFicha() {

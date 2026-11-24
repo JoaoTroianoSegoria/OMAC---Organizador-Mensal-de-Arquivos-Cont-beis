@@ -27,7 +27,9 @@ modulos.contatos = {
     $("#form-contato").addEventListener("submit", salvarContato);
     $("#ct-tem-responsaveis").addEventListener("change", mostrarResponsaveisDoContato);
     $("#ct-nome").addEventListener("change", carregarSeJaExiste);
-    $("#ct-busca").addEventListener("input", (e) => { contatos.busca = e.target.value; desenharContatos(); });
+    // Desenha quando a pessoa para de digitar, e não a cada letra (lista longa em PC fraco).
+    const desenharDepois = depoisDeDigitar(desenharContatos);
+    $("#ct-busca").addEventListener("input", (e) => { contatos.busca = e.target.value; desenharDepois(); });
     $("#ct-resp-lista").addEventListener("change", (e) => {
       if (e.target.classList.contains("ct-resp-nome")) preencherTelefoneDoResponsavel(e.target);
     });
@@ -63,8 +65,9 @@ function aplicarContatos(r) {
   if (r.erro) return mostrarToast(r.erro, { erro: true });
   contatos.lista = r.contatos;
   contatos.aConferir = r.a_conferir;
-  $("#ct-nomes").replaceChildren(...r.contatos.map((c) => Object.assign(document.createElement("option"), { value: c.nome })));
-  if (estado.view === "contatos") desenharContatos();
+  desenharSeMudou("ct-nomes", r.contatos.map((c) => c.nome), () =>
+    $("#ct-nomes").replaceChildren(...r.contatos.map((c) => Object.assign(document.createElement("option"), { value: c.nome }))));
+  if (estado.view === "contatos") desenharSeMudou("contatos", r, desenharContatos);
 }
 
 function passaNaBusca(c) {

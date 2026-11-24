@@ -28,13 +28,22 @@
       const motor = (navigator.userAgent.match(/Chrome\/(\d+)/) || [])[1] || "?";
       faixa.querySelector("code").textContent = window.omacErrosDeTela.slice(0, 5).join(" | ") + " | motor " + motor;
     }
+    /* No .exe os scripts vêm juntos num omac.js (tools/juntar_tela.py): diz o arquivo e a linha de verdade. */
+    function omacOndeFoi(arquivo, linha) {
+      const nome = String(arquivo || "").split("/").pop().split("?")[0];
+      const partes = window.OMAC_PARTES;
+      if (nome !== "omac.js" || !partes) return nome + ":" + linha;
+      let parte = partes[0];
+      for (const p of partes) if (p[0] <= linha) parte = p;
+      return parte[1] + ":" + (linha - parte[0] + 1);
+    }
     window.addEventListener("error", function (e) {
       const alvo = e.target;
       if (alvo && alvo.dataset && alvo.dataset.omacCarregador) return; // o carregador tenta de novo e avisa
       if (alvo && alvo !== window && (alvo.src || alvo.href)) {
         omacMostrarErroDeTela("Não carregou: " + String(alvo.src || alvo.href).split("/").pop());
       } else {
-        omacMostrarErroDeTela(e.message + " (" + String(e.filename || "").split("/").pop() + ":" + e.lineno + ")");
+        omacMostrarErroDeTela(e.message + " (" + omacOndeFoi(e.filename, e.lineno) + ")");
       }
     }, true);
     window.addEventListener("unhandledrejection", function (e) {

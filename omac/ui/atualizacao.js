@@ -2,16 +2,22 @@
 "use strict";
 
 modulos.atualizacao = {
-  async ligar() {
-    const r = await api().atualizacao_disponivel_aqui();
-    const disponivel = !r.erro && r.disponivel;
-    $("#atualizacao-procurar").disabled = !disponivel;
-    $("#atualizacao-indisponivel").hidden = disponivel;
-    const link = await api().atualizacao_link();
-    if (!link.erro) $("#atualizacao-link").textContent = link.link;
-  },
-  aoIniciar: () => procurarAtualizacao(false),
+  // Nada disso é urgente: espera a primeira tela aparecer, para não disputar com ela.
+  aoIniciar: () => setTimeout(async () => {
+    await prepararAtualizacao();
+    procurarAtualizacao(false);
+  }, 3000),
 };
+
+/* O botão "Procurar" e o link das Configurações. */
+async function prepararAtualizacao() {
+  const r = await api().atualizacao_disponivel_aqui();
+  const disponivel = !r.erro && r.disponivel;
+  $("#atualizacao-procurar").disabled = !disponivel;
+  $("#atualizacao-indisponivel").hidden = disponivel;
+  const link = await api().atualizacao_link();
+  if (!link.erro) $("#atualizacao-link").textContent = link.link;
+}
 
 Object.assign(acoes, {
   "atualizacao-procurar": () => procurarAtualizacao(true),
