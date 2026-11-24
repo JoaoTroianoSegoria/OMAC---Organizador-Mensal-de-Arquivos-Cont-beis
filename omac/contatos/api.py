@@ -218,7 +218,8 @@ class ContatosApi(ApiBase):
         return {"id": contato["id"], "nome": contato["nome"], "pessoas": pessoas,
                 "escolhido": ct.escolha_da_nota(contatos, contato, lambda i: i in tem),
                 "site": self._cfg.get("site_nota", ""),
-                "categoria": self._cfg.get("emissao_categoria", "")}
+                "categoria": self._cfg.get("emissao_categoria", ""),
+                "proximo_numero": self._servico_notas.proximo_numero()}
 
     @seguro
     def contatos_cpf(self, contato_id: str):
