@@ -188,8 +188,8 @@ def test_api_modelos_previa_salvar_e_padrao(api):
 
 def test_envio_usa_o_modelo(api):
     api.mensagens_salvar("nota", "Bom dia, [nome-do-responsavel]! Nota nº [numero-da-nota] de [mes-competencia].")
-    r = api.notas_preparar_envio(803)
-    assert r["mensagem"] == "Bom dia, Fernanda Costa! Nota nº 803 de outubro."
+    r = api.notas_preparar_lote([803])
+    assert r["destinos"][0]["mensagem"] == "Bom dia, Fernanda Costa! Nota nº 803 de outubro."
     api.mensagens_salvar("notas", "[quantidade-de-notas] notas para [primeiro-nome-do-responsavel]:\n[lista-das-notas]")
     r = api.notas_preparar_lote([801, 802], "", "Fulana de Tal")
     assert r["destinos"][0]["mensagem"] == ("2 notas para Fulana:\n• Ana Beatriz Moreira: 01/10\n"

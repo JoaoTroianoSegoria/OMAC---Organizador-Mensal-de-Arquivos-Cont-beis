@@ -155,7 +155,7 @@ def test_alterar_finalizado_mantem_a_data_original():
 
 
 def test_confere_vale_so_no_mes_marcado():
-    p = {"agendado_em": ""}
+    p = {"agendado_em": "", "agendado_para": "", "consulta_em": ""}
     pc.marcar_agendado(p, True, date(2026, 11, 30))
     assert pc.agendado_no_mes(p, date(2026, 11, 1))
     assert not pc.agendado_no_mes(p, date(2026, 12, 1))
@@ -457,3 +457,107 @@ def test_desfazer_exclusao_de_quem_esta_de_alta(api):
     p = _salvar(api, {"nome": "Maria", **ALTA})["altas"][0]
     api.contatos_restaurar_tratamento(_excluir(api, p)["tratamento_apagado"])
     assert api.tratamentos_listar()["altas"][0]["alta_fim"] == "2026-12-31"
+
+
+# --- 1.12.0: agendar o próximo mês, dia da consulta, dia que veio ---------------------------
+
+
+def _vazio():
+    return pc.completar({"id": "t", "contato_id": "c", "criado_em": "2026-01-01"})
+
+
+def test_agendar_o_proximo_mes_ja_vem_marcado_quando_ele_chega():
+    p = _vazio()
+    nov = date(2026, 11, 20)
+    pc.marcar_agendado(p, True, nov)
+    pc.marcar_atendido(p, "2026-11", True, nov)
+    pc.agendar_proximo(p, True, nov, "2026-12-04")
+    assert p["agendado_para"] == "2026-12" and p["consulta_em"] == "2026-12-04"
+    dez = date(2026, 12, 1)
+    assert pc.agendado_no_mes(p, dez) and pc.agendado_antes(p, dez)
+    assert not pc.atendido_no_mes(p, dez)  # só falta o Atendido
+    assert not pc.agendado_no_mes(p, date(2027, 1, 2))  # vale só para dezembro
+
+
+def test_virada_do_ano_e_desfazer():
+    p = _vazio()
+    dez = date(2026, 12, 15)
+    assert pc.proximo_mes(dez) == "2027-01"
+    pc.agendar_proximo(p, True, dez)
+    assert p["agendado_para"] == "2027-01" and p["consulta_em"] == ""
+    pc.agendar_proximo(p, False, dez)
+    assert p["agendado_para"] == ""
+    # Em janeiro, desmarcar o Agendado também desfaz o que veio de dezembro.
+    pc.agendar_proximo(p, True, dez, "2027-01-08")
+    jan = date(2027, 1, 2)
+    pc.marcar_agendado(p, False, jan)
+    assert not pc.agendado_no_mes(p, jan) and p["consulta_em"] == ""
+
+
+def test_dia_da_consulta_precisa_ser_no_mes_agendado():
+    p = _vazio()
+    with pytest.raises(pc.PacienteInvalido, match="dezembro"):
+        pc.agendar_proximo(p, True, date(2026, 11, 20), "2026-11-30")
+    with pytest.raises(pc.PacienteInvalido, match="novembro"):
+        pc.marcar_agendado(p, True, date(2026, 11, 20), "2026-12-01")
+    with pytest.raises(pc.PacienteInvalido, match="não existe"):
+        pc.marcar_agendado(p, True, date(2026, 11, 20), "2026-11-31")
+    pc.marcar_agendado(p, True, date(2026, 11, 20), "2026-11-25")
+    assert p["consulta_em"] == "2026-11-25"
+
+
+def test_dia_que_veio_no_historico():
+    p = _vazio()
+    pc.marcar_agendado(p, True, date(2026, 11, 2), "2026-11-10")
+    # Marcou o Atendido no dia 12, depois da consulta do dia 10: o dia que ele veio é o 10.
+    pc.marcar_atendido(p, "2026-11", True, date(2026, 11, 12))
+    assert pc.dia_que_veio(p, "2026-11") == "2026-11-10"
+    # Sem consulta marcada, é o dia em que marcou.
+    pc.marcar_atendido(p, "2026-10", True, date(2026, 10, 21))
+    assert pc.dia_que_veio(p, "2026-10") == "2026-10-21"
+    # Mês marcado depois (esqueceram na hora): não dá para saber o dia.
+    pc.marcar_atendido(p, "2026-09", True, date(2026, 11, 12))
+    assert pc.dia_que_veio(p, "2026-09") == ""
+    meses = {m["mes"]: m["dia"] for m in pc.historico_do_paciente(p, date(2026, 11, 20))["meses"]}
+    assert meses[11] == "2026-11-10" and meses[10] == "2026-10-21" and meses[9] == ""
+
+
+def test_api_proximo_mes_consulta_e_widget(api, monkeypatch):
+    p = _novo(api)["ativos"][0]
+    hoje = date.today()
+    r = api.tratamentos_marcar(p["id"], True, hoje.isoformat())
+    a = r["ativos"][0]
+    assert a["agendado"] and a["consulta"] == hoje.isoformat() and not a["agendado_antes"]
+    assert api._widget_tratamentos(hoje)["consultas_hoje"] == ["Maria Exemplo"]
+    r = api.tratamentos_agendar_proximo(p["id"], True, "")
+    assert r["ativos"][0]["proximo"] == {"agendado": True, "consulta": ""}
+    assert r["proximo_mes"] == pc.proximo_mes(hoje)
+    assert "erro" in api.tratamentos_agendar_proximo(p["id"], True, "1999-01-01")
+
+
+def test_mensagem_de_agendar_confirma_o_dia():
+    from omac.tratamentos import mensagens as msg
+    texto = msg.agendar("Exemplo", "Pedro Alves", date(2026, 11, 20), "Helena", consulta="2026-12-04")
+    assert "confirmar a manutenção do aparelho de Pedro na sexta-feira, 04/12" in texto
+    assert "Vamos agendar" in msg.agendar("Exemplo", "Pedro Alves", date(2026, 11, 20))
+
+
+def test_manutencao_na_ficha_marca_o_atendido(api):
+    p = _novo(api)["ativos"][0]
+    hoje = date.today()
+    # Outro tratamento não marca.
+    r = api.atendimentos_salvar({"nome": "Maria Exemplo", "tratamento": "Limpeza", "data": hoje.isoformat(),
+                                 "valor": "100,00", "forma": "pix_pj"})
+    assert r["atendido_marcado"] == "" and not api.tratamentos_listar()["ativos"][0]["atendido"]
+    r = api.atendimentos_salvar({"nome": "Maria Exemplo", "tratamento": "manutenção do aparelho",
+                                 "data": hoje.isoformat(), "valor": "250,00", "forma": "pix_pj"})
+    assert r["atendido_marcado"] == "Maria Exemplo"
+    assert api.tratamentos_listar()["ativos"][0]["atendido"] is True
+    assert pc.dia_que_veio(api._armazem.ler(esquema.TRATAMENTOS)["tratamentos"][0], hoje.isoformat()[:7]) == hoje.isoformat()
+    # Outra manutenção no mesmo mês não mexe; quem não é de orto também não.
+    r = api.atendimentos_salvar({"nome": "Maria Exemplo", "tratamento": "Manutenção", "data": hoje.isoformat(),
+                                 "valor": "250,00", "forma": "pix_pj"})
+    assert r["atendido_marcado"] == ""
+    r = api.atendimentos_salvar({"nome": "Outra Pessoa", "tratamento": "Manutenção", "data": hoje.isoformat(),
+                                 "valor": "250,00", "forma": "pix_pj"})
+    assert r["atendido_marcado"] == "" and p["id"]
