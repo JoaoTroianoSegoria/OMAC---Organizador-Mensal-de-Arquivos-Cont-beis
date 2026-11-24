@@ -47,7 +47,7 @@ class InicioApi(ApiBase):
             "dia_lembrete": self._cfg["lembrete_fechamento_dia"],
         }
 
-    @widget("resumo", "Resumo do ano", ordem=70, largo=True)
+    @widget("resumo", "Resumo do ano", ordem=70, largo=True, no_hoje=False)
     def _widget_resumo(self, hoje: date) -> dict:
         dados = resumo.montar(hoje.year, hoje, self._servico_notas.todas(), None, {})
         return {k: dados[k] for k in ("ano", "faturamento_centavos", "media_centavos", "melhor", "notas_lidas")} | {
@@ -56,14 +56,21 @@ class InicioApi(ApiBase):
         }
 
     @seguro
-    def inicio_painel(self):
+    def inicio_painel(self, todos: bool = False):
+        """Os dados dos cartões visíveis (e dos que o "Hoje" usa). `todos`: também os escondidos,
+        para o Personalizar mostrar como cada um fica."""
         hoje = date.today()
+        cartoes = registro.cartoes(self._cfg["inicio_cartoes"])
+        visiveis = {c["id"] for c in cartoes if c["visivel"]}
+        hoje_visivel = "hoje" in visiveis
         widgets = {}
         for w in registro.em_ordem():
+            if not (todos or w.id in visiveis or (hoje_visivel and w.no_hoje)):
+                continue
             try:
                 widgets[w.id] = getattr(self, w.metodo)(hoje)
             except Exception as e:  # noqa: BLE001 — um widget com problema não apaga os outros
                 traceback.print_exc()
                 widgets[w.id] = {"erro": str(e) or e.__class__.__name__}
-        return {"data": hoje.isoformat(), "cartoes": registro.cartoes(self._cfg["inicio_cartoes"]),
+        return {"data": hoje.isoformat(), "cartoes": cartoes,
                 "titulos": {w.id: w.titulo for w in registro.em_ordem()}, "widgets": widgets}
