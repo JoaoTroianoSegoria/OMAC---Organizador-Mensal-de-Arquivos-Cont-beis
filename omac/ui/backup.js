@@ -122,7 +122,7 @@ const NOMES_DOS_ARQUIVOS = {
   "atendimentos.json": "Atendimentos (ficha)",
   "lembretes.json": "Contas e lembretes",
   "notas-enviadas.json": "Notas já enviadas",
-  "comandos.json": "Comandos",
+  "comandos.json": "Textos prontos",
   "modelos.json": "Modelos",
   "regras-extrato.json": "Regras do extrato",
 };

@@ -204,6 +204,11 @@ function pendenciasDeHoje(w) {
     const livres = w.lembretes.livres || [];
     if (livres.length) itens.push([`${plural(livres.length, "lembrete em aberto", "lembretes em aberto")}`, "lembretes", "livres"]);
   }
+  if (ok(w.tratamentos) && w.tratamentos.consultas_hoje && w.tratamentos.consultas_hoje.length) {
+    const nomes = w.tratamentos.consultas_hoje;
+    const lista = nomes.length <= 3 ? `: ${nomes.join(", ")}` : "";
+    itens.push([`${plural(nomes.length, "paciente de orto tem consulta hoje", "pacientes de orto têm consulta hoje")}${lista}`, "tratamentos", "ativos"]);
+  }
   if (ok(w.tratamentos)) {
     const faltam = w.tratamentos.ativos - w.tratamentos.agendados;
     if (faltam > 0) itens.push([`${plural(faltam, "paciente de orto", "pacientes de orto")} para agendar no mês`, "tratamentos", "ativos"]);

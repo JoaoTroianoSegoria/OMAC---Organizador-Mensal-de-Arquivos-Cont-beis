@@ -5,10 +5,6 @@
 
 const relatorio = {
   aba: "notas",   // "notas" | "extrato" | "regras"
-  lote: null,     // o que o Python preparou para o envio (notas, contatos, destinos…)
-  destino: "",    // contato_id de quem recebe ("" = contato novo)
-  nomeContato: "", // o nome que gerou os destinos: digitar o mesmo de novo não refaz nada
-  enviando: [],   // números do envio aberto, para marcar como enviadas depois
 };
 
 modulos.relatorio = {
@@ -17,11 +13,6 @@ modulos.relatorio = {
     desenharIlha();
   },
   carregar() { return modulos[moduloDaAba()].carregar(); },
-  ligar() {
-    $("#form-rel-lote").addEventListener("submit", enviarLote);
-    $("#rel-lote-contato").addEventListener("change", trocarContatoDoLote);
-    $("#rel-lote").addEventListener("close", () => { relatorio.lote = null; });
-  },
   // Sem a pasta dos extratos não há regras para mostrar.
   aoAplicarConfig(cfg) { $('#rel-abas [data-aba="regras"]').hidden = !cfg.pasta_extratos; },
   antesDeMostrar: mostrarAbaDoRelatorio,
@@ -36,9 +27,6 @@ Object.assign(acoes, {
   "rel-tirar": (alvo) => escolherParaEnviar(Number(alvo.dataset.numero), false),
   "rel-limpar-selecao": limparSelecao,
   "rel-enviar-lote": abrirLote,
-  "rel-lote-destino": (alvo) => escolherDestinoDoLote(alvo.dataset.id),
-  "rel-lote-fechar": () => $("#rel-lote").close(),
-  "rel-lote-marcar": marcarLoteEnviado,
 });
 
 function mostrarAbaDoRelatorio(aba) {
@@ -94,108 +82,108 @@ function limparSelecao() {
   desenharIlha();
 }
 
-/* ---------- Envio de várias notas ---------- */
+/* ---------- Enviar notas (uma ou várias) ----------
+ * Pela janela de mensagem (mensagem.js). Uma nota só usa o mesmo caminho: o Python escolhe o
+ * contato pelo nome que está na nota, e dá para trocar por outro (mãe, pai...). */
 
-async function abrirLote() {
+function abrirLote() {
   const numeros = [...notasEstado.selecao.keys()];
-  if (!numeros.length) return;
+  if (numeros.length) abrirEnvioDeNotas(numeros, { daEscolha: true });
+}
+
+/* `daEscolha`: veio da ilha (limpa a escolha depois). `umaPorVez`: veio da lista de notas a
+ * enviar (oferece a próxima). */
+async function abrirEnvioDeNotas(numeros, { daEscolha = false, umaPorVez = false } = {}) {
   const r = await api().notas_preparar_lote(numeros);
   if (r.erro) return mostrarToast(r.erro, { erro: true });
-  relatorio.enviando = numeros;
-  $("#rel-lote-titulo").textContent = numeros.length === 1 ? "Enviar 1 nota" : `Enviar ${numeros.length} notas juntas`;
-  const linhas = r.notas.map((n) => {
+  let lote = r;
+  const uma = r.notas.length === 1;
+  const itens = r.notas.map((n) => {
     const li = document.createElement("li");
     li.append(`Nº ${n.numero} · ${n.paciente} · ${dataBR(n.competencia)} · `, dinheiro(n.valor_centavos));
     return li;
   });
-  const total = texto("li", "Total: ", "rel-lote-total");
-  total.append(dinheiro(r.total_centavos));
-  linhas.push(total);
-  $("#rel-lote-notas").replaceChildren(...linhas);
-  $("#rel-lote-contatos").replaceChildren(...r.contatos.map((c) => new Option(c.nome)));
-  $("#rel-lote-contato").value = r.nome;
-  $("#rel-lote-contato-dica").textContent = r.mesma_pessoa
-    ? "Já escolhi pelo nome que está nas notas. Para mandar para outra pessoa, digite outro contato."
-    : "As notas são de pessoas diferentes: escolha o contato que vai receber (ou escreva um nome novo).";
-  $("#rel-lote-colar-campo").hidden = !r.colar_disponivel;
-  $("#rel-lote-colar").checked = r.colar_sozinho;
-  $("#rel-lote-erro").hidden = true;
-  $("#rel-lote-passo").hidden = true;
-  $("#rel-lote-acoes-1").hidden = false;
-  $("#rel-lote-acoes-2").hidden = true;
-  aplicarLote(r);
-  $("#rel-lote").showModal();
-  if (!r.destinos.length) $("#rel-lote-contato").focus();
-  else ($("#rel-lote-telefone").value ? $("#rel-lote-mensagem") : $("#rel-lote-telefone")).focus();
-}
-
-function aplicarLote(r) {
-  relatorio.lote = r;
-  relatorio.nomeContato = r.nome;
-  $("#rel-lote-destinos").replaceChildren(...r.destinos.map((d) => {
-    const b = Object.assign(document.createElement("button"), { type: "button", className: "escolha" });
-    b.dataset.acao = "rel-lote-destino";
-    b.dataset.id = d.contato_id;
-    b.textContent = d.papel ? `${d.nome} (${d.papel})` : d.nome;
-    return b;
-  }));
-  $("#rel-lote-destinos-campo").hidden = r.destinos.length < 2;
-  $("#rel-lote-envio").hidden = r.destinos.length === 0;
-  $("#rel-lote-abrir").disabled = r.destinos.length === 0;
-  if (r.destinos.length) escolherDestinoDoLote(r.escolhido);
-}
-
-function destinoDoLote() {
-  const { destinos } = relatorio.lote;
-  return destinos.find((d) => d.contato_id === relatorio.destino) || destinos[0];
-}
-
-function escolherDestinoDoLote(id) {
-  relatorio.destino = id;
-  const d = destinoDoLote();
-  $$("#rel-lote-destinos .escolha").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.id === d.contato_id)));
-  $("#rel-lote-telefone").value = d.telefone ? telefoneBR(d.telefone) : "";
-  $("#rel-lote-mensagem").value = d.mensagem;
-}
-
-/* Outro contato digitado ou escolhido na lista: refaz para quem mandar e a mensagem. */
-async function trocarContatoDoLote() {
-  if (!relatorio.lote) return;
-  const nome = $("#rel-lote-contato").value.trim();
-  // O "change" também vem ao sair do campo: com o mesmo nome, não apaga o telefone digitado.
-  if (normalizarNome(nome) === normalizarNome(relatorio.nomeContato)) return;
-  relatorio.nomeContato = nome;
-  const contato = relatorio.lote.contatos.find((c) => normalizarNome(c.nome) === normalizarNome(nome));
-  const r = await api().notas_preparar_lote(relatorio.enviando, contato ? contato.id : "", contato ? "" : nome);
-  if (r.erro) return mostrarToast(r.erro, { erro: true });
-  if (relatorio.lote) aplicarLote(r);
-}
-
-async function enviarLote(e) {
-  e.preventDefault();
-  if (!relatorio.lote || !relatorio.lote.destinos.length) return;
-  const d = destinoDoLote();
-  const colar = !$("#rel-lote-colar-campo").hidden && $("#rel-lote-colar").checked;
-  $("#rel-lote-erro").hidden = true;
-  const r = await api().notas_enviar_lote(relatorio.enviando, relatorio.lote.contato_id, d.contato_id, d.nome,
-    $("#rel-lote-telefone").value, $("#rel-lote-mensagem").value, colar);
-  if (r.erro) {
-    $("#rel-lote-erro").textContent = r.erro;
-    $("#rel-lote-erro").hidden = false;
-    return;
+  if (!uma) {
+    const total = texto("li", "Total: ", "rel-lote-total");
+    total.append(dinheiro(r.total_centavos));
+    itens.push(total);
   }
-  if (!$("#rel-lote-colar-campo").hidden) estado.cfg.colar_sozinho = colar;
-  const pdfs = r.qtd === 1 ? "o PDF" : `os ${r.qtd} PDFs`;
-  $("#rel-lote-passo-texto").textContent = r.colando
-    ? `Abri a conversa. Quando ela aparecer, o OMAC cola ${pdfs} sozinho: confira e aperte Enter. Depois volte aqui.`
-    : r.pdf_copiado
-      ? `Na conversa, aperte Ctrl + V para colar ${pdfs} de uma vez e envie. Depois volte aqui.`
-      : `Abri a pasta das notas: arraste ${pdfs} para a conversa e envie. Depois volte aqui.`;
-  $("#rel-lote-passo").hidden = false;
-  $("#rel-lote-acoes-1").hidden = true;
-  $("#rel-lote-acoes-2").hidden = false;
-  $("#rel-lote-marcar-texto").textContent = r.qtd === 1 ? "Já enviei, marcar como enviada" : `Já enviei, marcar as ${r.qtd} como enviadas`;
-  $("#rel-lote-marcar").focus();
+  abrirJanelaMensagem({
+    titulo: uma ? `Enviar a nota nº ${r.notas[0].numero}` : `Enviar ${r.notas.length} notas juntas`,
+    itens,
+    busca: {
+      contatos: r.contatos,
+      valor: r.nome,
+      dica: r.mesma_pessoa
+        ? "Já escolhi pelo nome que está na nota. Para mandar para outra pessoa, digite outro contato."
+        : "As notas são de pessoas diferentes: escolha o contato que vai receber (ou escreva um nome novo).",
+      trocar: async (nome, contato) => {
+        const novo = await api().notas_preparar_lote(numeros, contato ? contato.id : "", contato ? "" : nome);
+        if (novo.erro) {
+          mostrarToast(novo.erro, { erro: true });
+          return null;
+        }
+        lote = novo;
+        return { destinos: novo.destinos, escolhido: novo.escolhido };
+      },
+    },
+    destinos: r.destinos,
+    escolhido: r.escolhido,
+    texto: (d) => d.mensagem,
+    colar: r.colar_disponivel ? { marcado: r.colar_sozinho } : null,
+    botao: uma ? "Copiar o PDF e abrir o WhatsApp" : "Copiar os PDFs e abrir o WhatsApp",
+    enviar: async ({ destino, telefone, texto: mensagem, colar }) => {
+      const x = await api().notas_enviar_lote(numeros, lote.contato_id, destino.contato_id, destino.nome,
+        telefone, mensagem, colar);
+      if (!x.erro && r.colar_disponivel) estado.cfg.colar_sozinho = colar;
+      return x;
+    },
+    depois: (x) => ({ passo: passoDoEnvio(x), acoes: acoesDepoisDoEnvio(numeros, { daEscolha, umaPorVez }) }),
+  });
+}
+
+function passoDoEnvio(x) {
+  const pdfs = x.qtd === 1 ? "o PDF" : `os ${x.qtd} PDFs`;
+  if (x.colando) return `Abri a conversa. Quando ela aparecer, o OMAC cola ${pdfs} sozinho: confira e aperte Enter. Depois volte aqui.`;
+  if (x.pdf_copiado) return `Na conversa, aperte Ctrl + V para colar ${pdfs} de uma vez e envie. Depois volte aqui.`;
+  return `Abri a pasta das notas: arraste ${pdfs} para a conversa e envie. Depois volte aqui.`;
+}
+
+const outrasParaEnviar = (numeros) => whats.notas.filter((n) => !numeros.includes(n.numero));
+
+function acoesDepoisDoEnvio(numeros, { daEscolha, umaPorVez }) {
+  const proxima = umaPorVez && outrasParaEnviar(numeros).length > 0;
+  const acoesDaJanela = [
+    { rotulo: "Agora não", acao: () => $("#msg").close() },
+    {
+      rotulo: numeros.length === 1 ? "Já enviei, marcar como enviada" : `Já enviei, marcar as ${numeros.length} como enviadas`,
+      acao: () => marcarNotasEnviadas(numeros, { daEscolha, proxima: false }),
+      primario: !proxima,
+    },
+  ];
+  if (proxima) {
+    acoesDaJanela.push({ rotulo: "Já enviei, próxima nota", acao: () => marcarNotasEnviadas(numeros, { proxima: true }), primario: true });
+  }
+  return acoesDaJanela;
+}
+
+async function marcarNotasEnviadas(numeros, { daEscolha = false, proxima = false } = {}) {
+  const r = await api().notas_marcar_enviadas(numeros, true);
+  if (r.erro) return erroNaJanelaMensagem(r.erro);
+  numeros.forEach((n) => notasEstado.enviadas.add(n));
+  if (daEscolha) limparSelecao();
+  if (notasEstado.dados) desenharNotas();
+  await carregarAEnviar();
+  if (proxima && whats.notas.length) return abrirEnvioDeNotas([whats.notas[0].numero], { umaPorVez: true });
+  $("#msg").close();
+  mostrarToast(numeros.length === 1 ? "Nota marcada como enviada." : `${numeros.length} notas marcadas como enviadas.`, {
+    acoes: [["Desfazer", async () => {
+      await api().notas_marcar_enviadas(numeros, false);
+      numeros.forEach((n) => notasEstado.enviadas.delete(n));
+      if (notasEstado.dados) desenharNotas();
+      carregarAEnviar();
+    }]],
+  });
 }
 
 /* Resposta da tentativa de colar sozinho (vem do Python). */
@@ -204,24 +192,3 @@ window.omacColagem = (colou) => {
     ? "Colei os PDFs na conversa. Confira e aperte Enter no WhatsApp."
     : "Não consegui colar sozinho. Na conversa, aperte Ctrl + V.");
 };
-
-async function marcarLoteEnviado() {
-  const numeros = relatorio.enviando;
-  const r = await api().notas_marcar_enviadas(numeros, true);
-  if (r.erro) {
-    $("#rel-lote-erro").textContent = r.erro;
-    $("#rel-lote-erro").hidden = false;
-    return;
-  }
-  $("#rel-lote").close();
-  numeros.forEach((n) => notasEstado.enviadas.add(n));
-  limparSelecao();
-  desenharNotas();
-  mostrarToast(numeros.length === 1 ? "Nota marcada como enviada." : `${numeros.length} notas marcadas como enviadas.`, {
-    acoes: [["Desfazer", async () => {
-      await api().notas_marcar_enviadas(numeros, false);
-      numeros.forEach((n) => notasEstado.enviadas.delete(n));
-      desenharNotas();
-    }]],
-  });
-}

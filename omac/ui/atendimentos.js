@@ -50,6 +50,7 @@ Object.assign(acoes, {
   "pg-novo": () => abrirAtendimento(null),
   "pg-editar": (alvo) => abrirAtendimento(atendimentoDa(alvo)),
   "pg-emitir": (alvo) => { const a = atendimentoDa(alvo); if (a) abrirEmissao(a.contato_id, a); },
+  "pg-cobrar": (alvo) => abrirCobranca(alvo.dataset.id),
   "pg-fechar": () => $("#pg-atendimento").close(),
   "pg-forma": (alvo) => escolherForma(ficha.forma === alvo.dataset.forma ? "" : alvo.dataset.forma, true),
   "pg-nota": (alvo) => { ficha.notaSugerida = false; escolherNota(alvo.dataset.nota); },
@@ -170,6 +171,10 @@ function linhaDoAtendimento(a) {
 
   const tdAcao = document.createElement("td");
   tdAcao.className = "c-acao";
+  // Ainda não pagou: o WhatsApp para cobrar (some quando a caixa Pago é marcada).
+  if (a.situacao !== "pago" && a.contato_id && a.nome !== "(contato apagado)") {
+    tdAcao.append(botaoIcone("pg-cobrar", "i-whats", `Cobrar ${a.nome} pelo WhatsApp`, { id: a.id }));
+  }
   tdAcao.append(botaoIcone("pg-editar", "i-lapis", `Alterar o atendimento de ${a.nome}`, { id: a.id }));
 
   tr.append(
@@ -201,6 +206,26 @@ function marcarPagoNaLista(caixa) {
       return mostrarToast(r.erro, { erro: true });
     }
     aplicarFicha(r);
+  });
+}
+
+/* ---------- Cobrar pelo WhatsApp ---------- */
+
+async function abrirCobranca(id) {
+  const r = await api().atendimentos_preparar_cobranca(id);
+  if (r.erro) return mostrarToast(r.erro, { erro: true });
+  const sobre = `${dataBR(r.data).slice(0, 5)}${r.tratamento ? ` · ${r.tratamento}` : ""}`;
+  abrirJanelaMensagem({
+    titulo: (d) => (d && d.papel ? `Cobrar ${d.nome} (${d.papel} de ${r.nome})` : `Cobrar ${r.nome}`),
+    itens: [texto("li", `Atendimento de ${sobre}${r.valor_centavos != null ? ` · ${dinheiroTexto(r.valor_centavos)}` : ""}`)],
+    destinos: r.destinos,
+    escolhido: r.escolhido,
+    rotuloDestino: (d) => (d.papel ? `${d.nome} (${d.papel})` : `${d.nome} (paciente)`),
+    texto: (d) => d.mensagem,
+    falta: () => (r.sem_pix
+      ? { texto: "A mensagem de cobrança usa a chave Pix: preencha nas Configurações.", botao: "Abrir Configurações", acao: () => { mostrarView("config"); $("#cfg-pix").focus(); } }
+      : null),
+    enviar: ({ destino, telefone, texto: mensagem }) => api().atendimentos_cobrar(r.id, destino.contato_id, telefone, mensagem),
   });
 }
 
@@ -314,6 +339,8 @@ async function salvarAtendimento(e) {
   const outroMes = r.ano !== ficha.ano || r.mes !== ficha.mes;
   aplicarFicha(r);
   if (outroMes) mostrarToast(`O atendimento foi para ${MESES[r.mes - 1]} de ${r.ano}, o mês da data dele.`);
+  // Manutenção de paciente de orto: o Atendido de Tratamentos foi marcado junto.
+  if (r.atendido_marcado) mostrarToast(`${r.atendido_marcado} ficou como atendido em Tratamentos neste mês.`);
 }
 
 async function excluirAtendimento() {

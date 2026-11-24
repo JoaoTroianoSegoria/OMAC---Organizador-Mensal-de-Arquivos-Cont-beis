@@ -1,4 +1,4 @@
-/* OMAC — Lembretes: notas a enviar, contas, lembretes livres e comandos.
+/* OMAC — Lembretes: notas a enviar, contas e lembretes livres (os Comandos viraram Textos prontos).
  *
  * No WhatsApp o OMAC só deixa a conversa pronta: quem aperta enviar é a pessoa.
  * Quem recebe os lembretes de contas é um contato (Configurações). */
@@ -9,17 +9,10 @@ const whats = {
   notas: [],
   contas: [],
   destinatario: null, // contato que recebe os lembretes
-  envioContas: null, // dados da janela "Enviar lembrete" das contas
   livres: { em_aberto: [], programados: [], feitos: [], padrao: "", nomes: [] },
   livreEditando: null,
   repetir: "nao", // repetição escolhida no formulário de lembrete
-  envioPara: "", // contato da janela de envio ("" = quem recebe os lembretes de contas)
   diaVisto: new Date().toDateString(), // para mostrar os lembretes de novo quando o dia vira com o app aberto
-  categorias: [],
-  categoria: "", // id da categoria aberta em Comandos
-  comandoEditando: null,
-  categoriaEditando: null,
-  atual: null, // nota aberta na janela de envio
   contaEditando: null,
   mesContas: "", // "AAAA-MM" da coluna "este mês" das contas
   lembrete: null,
@@ -33,12 +26,8 @@ modulos.lembretes = {
   ligar() {
     $("#form-conta").addEventListener("submit", salvarConta);
     $("#form-livre").addEventListener("submit", salvarLivre);
-    $("#form-lb-envio").addEventListener("submit", enviarLembreteDeContas);
-    $("#form-lb-comando").addEventListener("submit", salvarComando);
-    $("#form-lb-categoria").addEventListener("submit", salvarCategoria);
     $("#form-destinatario").addEventListener("submit", (e) => { e.preventDefault(); definirDestinatario(); });
     $("#cfg-destinatario").addEventListener("change", definirDestinatario);
-    $("#form-envio").addEventListener("submit", (e) => e.preventDefault());
     $("#conta-dia").replaceChildren(...diasDoMes().map((d) => new Option(`Dia ${d}`, String(d))));
     $("#cfg-fechamento").replaceChildren(new Option("Desligado", "0"),
       ...diasDoMes(28).map((d) => new Option(`Todo dia ${d}`, String(d))));
@@ -66,12 +55,8 @@ function diasDoMes(fim = 31) {
 
 Object.assign(acoes, {
   "whats-aba": (alvo) => mostrarAbaWhats(alvo.dataset.aba),
-  "whats-enviar": (alvo) => abrirEnvio(Number(alvo.dataset.numero)),
+  "whats-enviar": (alvo) => abrirEnvioDeNotas([Number(alvo.dataset.numero)], { umaPorVez: true }),
   "whats-ja-enviada": (alvo) => marcarSemEnviar(Number(alvo.dataset.numero)),
-  "whats-abrir-conversa": abrirConversa,
-  "whats-fechar-envio": () => $("#envio").close(),
-  "whats-marcar-fechar": () => concluirEnvio(false),
-  "whats-proxima": () => concluirEnvio(true),
   "whats-conta-editar": (alvo) => editarConta(whats.contas[Number(alvo.dataset.indice)]),
   "whats-conta-apagar": (alvo) => apagarConta(whats.contas[Number(alvo.dataset.indice)]),
   "whats-conta-paga": marcarContaPaga,
@@ -80,8 +65,6 @@ Object.assign(acoes, {
   "whats-ver-lembretes": () => verLembretesDoDia(true),
   "lb-lembrar": (alvo) => abrirEnvioDeContas(whats.contas[Number(alvo.dataset.indice)].nome),
   "lb-lembrar-todas": () => abrirEnvioDeContas(null),
-  "lb-envio-fechar": () => $("#lb-envio-contas").close(),
-  "lb-envio-ir": irParaOndeFaltaContato,
   "lb-livre-feito": (alvo) => marcarLivre(alvo.dataset.id, true),
   "lb-livre-desfazer": (alvo) => marcarLivre(alvo.dataset.id, false),
   "lb-livre-editar": (alvo) => editarLivre(alvo.dataset.id),
@@ -90,18 +73,6 @@ Object.assign(acoes, {
   "lb-repetir": (alvo) => escolherRepeticao(alvo.dataset.repetir),
   "lb-livre-enviar": (alvo) => abrirEnvioDeLivre(alvo.dataset.id),
   "lb-pop-feito": marcarLivreNoLembrete,
-  "lb-categoria": (alvo) => { whats.categoria = alvo.dataset.id; desenharComandos(); },
-  "lb-categoria-nova": () => abrirCategoria(null),
-  "lb-categoria-renomear": () => abrirCategoria(categoriaAtual()),
-  "lb-categoria-apagar": apagarCategoria,
-  "lb-categoria-mover": (alvo) => moverCategoria(Number(alvo.dataset.passo)),
-  "lb-categoria-fechar": () => $("#lb-categoria").close(),
-  "lb-comando-novo": () => abrirComando(null),
-  "lb-comando-editar": (alvo) => abrirComando(comandoPorId(alvo.dataset.id)),
-  "lb-comando-fechar": () => $("#lb-comando").close(),
-  "lb-comando-apagar": apagarComando,
-  "lb-comando-mover": (alvo) => moverComando(alvo.dataset.id, Number(alvo.dataset.passo)),
-  "lb-copiar": (alvo) => copiarComando(alvo.dataset.id),
   "whats-fechar-lembretes": () => $("#lembretes").close(),
   "whats-ir-extrato": () => { $("#lembretes").close(); irPara("relatorio", "extrato"); },
   "whats-enviar-lembrete": enviarLembrete,
@@ -115,12 +86,11 @@ function mostrarAbaWhats(aba) {
   $("#whats-enviar").hidden = aba !== "enviar";
   $("#whats-contas").hidden = aba !== "contas";
   $("#whats-livres").hidden = aba !== "livres";
-  $("#whats-comandos").hidden = aba !== "comandos";
 }
 
 async function carregarWhats() {
   mostrarAbaWhats(whats.aba);
-  await Promise.all([carregarAEnviar(), carregarContas(), carregarDestinatario(), carregarLivres(), carregarComandos()]);
+  await Promise.all([carregarAEnviar(), carregarContas(), carregarDestinatario(), carregarLivres()]);
 }
 
 /* ---------- Notas a enviar ---------- */
@@ -178,60 +148,13 @@ function desenharAEnviar(r) {
   }));
 }
 
-/* ---------- Janela de envio ---------- */
-
-async function abrirEnvio(numero) {
-  const r = await api().notas_preparar_envio(numero);
-  if (r.erro) return mostrarToast(r.erro, { erro: true });
-  whats.atual = r;
-  $("#envio-titulo").textContent = `Nota nº ${r.numero} para ${r.nome}`;
-  $("#envio-telefone").value = r.telefone;
-  $("#envio-mensagem").value = r.mensagem;
-  $("#envio-erro").hidden = true;
-  $("#envio-passo").hidden = true;
-  $("#envio-acoes-1").hidden = false;
-  $("#envio-acoes-2").hidden = true;
-  const janela = $("#envio");
-  if (!janela.open) janela.showModal();
-  (r.telefone ? $("#envio-mensagem") : $("#envio-telefone")).focus();
-}
-
-async function abrirConversa() {
-  $("#envio-erro").hidden = true;
-  const r = await api().notas_enviar(whats.atual.numero, $("#envio-telefone").value, $("#envio-mensagem").value);
-  if (r.erro) {
-    // Um aviso comum ficaria escondido atrás da janela.
-    $("#envio-erro").textContent = r.erro;
-    $("#envio-erro").hidden = false;
-    return;
-  }
-  $("#envio-passo-texto").textContent = r.pdf_copiado
-    ? "Na conversa, aperte Ctrl + V para anexar o PDF e envie. Depois volte aqui."
-    : "Abri a pasta com o PDF: arraste o arquivo para a conversa e envie. Depois volte aqui.";
-  $("#envio-passo").hidden = false;
-  $("#envio-acoes-1").hidden = true;
-  $("#envio-acoes-2").hidden = false;
-  const proximas = whats.notas.filter((n) => n.numero !== whats.atual.numero).length;
-  $("#envio-proxima").hidden = proximas === 0;
-}
+/* ---------- Enviar uma nota ----------
+ * A mesma janela de várias notas (relatorio.js), com uma nota só. Daqui ela ainda oferece
+ * "Já enviei, próxima nota" enquanto houver notas na lista. */
 
 function notasMudaram() {
   notasEstado.chave = "";
   if (estado.view === "relatorio" && relatorio.aba === "notas") carregarNotas();
-}
-
-async function concluirEnvio(irParaProxima) {
-  const numero = whats.atual.numero;
-  const r = await api().notas_marcar_enviada(numero, true);
-  if (r.erro) {
-    $("#envio-erro").textContent = r.erro;
-    $("#envio-erro").hidden = false;
-    return;
-  }
-  await carregarAEnviar();
-  notasMudaram();
-  if (irParaProxima && whats.notas.length) return abrirEnvio(whats.notas[0].numero);
-  $("#envio").close();
 }
 
 async function marcarSemEnviar(numero) {
@@ -598,60 +521,48 @@ async function abrirEnvioDeContas(nome) {
   const r = await api().lembretes_preparar_contas(nome);
   if (r.erro) return mostrarToast(r.erro, { erro: true });
   if (!r.contas.length) return mostrarToast("Nenhuma conta em aberto para lembrar.");
-  whats.envioContas = r;
-  whats.envioPara = "";
-  $("#lb-envio-titulo").textContent = r.destinatario ? `Lembrete para ${r.destinatario}` : "Lembrete de pagamento";
-  $("#lb-envio-lista").replaceChildren(...r.contas.map((c) => {
-    const li = document.createElement("li");
-    li.append(Object.assign(document.createElement("b"), { textContent: `${c.nome}: ` }), c.situacao);
-    return li;
-  }));
-  $("#lb-envio-texto").value = r.mensagem;
-  const semContato = !r.destinatario || !r.telefone;
-  $("#lb-envio-sem-contato").hidden = !semContato;
-  $("#lb-envio-sem-contato-texto").textContent = !r.destinatario
-    ? "Falta escolher quem recebe os lembretes."
-    : `${r.destinatario} está sem telefone.`;
-  $("#lb-envio-ir").textContent = !r.destinatario ? "Abrir Configurações" : "Abrir Contatos";
-  $("#lb-envio-abrir").disabled = semContato;
-  $("#lb-envio-contas").showModal();
-  $("#lb-envio-texto").focus();
-}
-
-function irParaOndeFaltaContato() {
-  $("#lb-envio-contas").close();
-  if ($("#lembretes").open) $("#lembretes").close();
-  if (whats.envioContas && whats.envioContas.destinatario) mostrarView("contatos");
-  else irPara("config", "whats");
+  abrirEnvioDeLembrete(r, r.destinatario ? `Lembrete para ${r.destinatario}` : "Lembrete de pagamento",
+    r.contas.map((c) => {
+      const li = document.createElement("li");
+      li.append(Object.assign(document.createElement("b"), { textContent: `${c.nome}: ` }), c.situacao);
+      return li;
+    }), "");
 }
 
 /* Um lembrete livre pelo WhatsApp: a mesma janela das contas, com a mensagem do lembrete. */
 async function abrirEnvioDeLivre(id) {
   const r = await api().lembretes_preparar_livre(id);
   if (r.erro) return mostrarToast(r.erro, { erro: true });
-  whats.envioContas = r;
-  whats.envioPara = r.contato_id;
-  $("#lb-envio-titulo").textContent = r.destinatario ? `Lembrete para ${r.destinatario}` : "Enviar lembrete";
-  $("#lb-envio-lista").replaceChildren(texto("li", r.titulo));
-  $("#lb-envio-texto").value = r.mensagem;
-  const semContato = !r.destinatario || !r.telefone;
-  $("#lb-envio-sem-contato").hidden = !semContato;
-  $("#lb-envio-sem-contato-texto").textContent = !r.destinatario
-    ? "Falta escolher quem recebe os lembretes."
-    : `${r.destinatario} está sem telefone.`;
-  $("#lb-envio-ir").textContent = !r.destinatario ? "Abrir Configurações" : "Abrir Contatos";
-  $("#lb-envio-abrir").disabled = semContato;
-  $("#lb-envio-contas").showModal();
-  $("#lb-envio-texto").focus();
+  abrirEnvioDeLembrete(r, r.destinatario ? `Lembrete para ${r.destinatario}` : "Enviar lembrete",
+    [texto("li", r.titulo)], r.contato_id);
 }
 
-async function enviarLembreteDeContas(e) {
-  e.preventDefault();
-  const r = await api().lembretes_enviar($("#lb-envio-texto").value, whats.envioPara || "");
-  if (r.erro) return mostrarToast(r.erro, { erro: true });
-  $("#lb-envio-contas").close();
-  if (r.sem_contato) return mostrarToast("Falta o telefone de quem recebe os lembretes.", { erro: true });
-  mostrarToast("Conversa aberta no WhatsApp. É só conferir e enviar.");
+/* Contas e lembretes vão para quem recebe os lembretes (ou quem o lembrete escolheu): o
+ * telefone é o do contato, então a janela mostra só a mensagem. `para` "" = quem recebe os lembretes. */
+function abrirEnvioDeLembrete(r, titulo, itens, para) {
+  const semContato = !r.destinatario || !r.telefone;
+  abrirJanelaMensagem({
+    titulo,
+    itens,
+    destinos: [{ contato_id: para || "", nome: r.destinatario || "", papel: "", telefone: r.telefone || "" }],
+    semTelefone: true,
+    texto: () => r.mensagem,
+    falta: () => (semContato
+      ? {
+        texto: !r.destinatario ? "Falta escolher quem recebe os lembretes." : `${r.destinatario} está sem telefone.`,
+        botao: !r.destinatario ? "Abrir Configurações" : "Abrir Contatos",
+        acao: () => {
+          if ($("#lembretes").open) $("#lembretes").close();
+          if (r.destinatario) mostrarView("contatos");
+          else irPara("config", "whats");
+        },
+      }
+      : null),
+    enviar: async ({ texto: mensagem }) => {
+      const resposta = await api().lembretes_enviar(mensagem, para || "");
+      return resposta.sem_contato ? { erro: "Falta o telefone de quem recebe os lembretes." } : resposta;
+    },
+  });
 }
 
 /* ---------- Lembretes livres ---------- */
@@ -811,189 +722,3 @@ async function apagarLivre(id) {
   });
 }
 
-/* ---------- Comandos ---------- */
-
-async function carregarComandos() {
-  aplicarComandos(await api().comandos_listar());
-}
-
-function aplicarComandos(r) {
-  if (r.erro) return mostrarToast(r.erro, { erro: true });
-  whats.categorias = r.categorias;
-  if (!r.categorias.some((c) => c.id === whats.categoria)) whats.categoria = r.categorias.length ? r.categorias[0].id : "";
-  desenharSeMudou("lb-comandos", [r, whats.categoria], desenharComandos);
-}
-
-const categoriaAtual = () => whats.categorias.find((c) => c.id === whats.categoria) || null;
-const comandoPorId = (id) => (categoriaAtual() ? categoriaAtual().comandos.find((c) => c.id === id) : null);
-
-function desenharComandos() {
-  const cat = categoriaAtual();
-  $("#lb-categorias").replaceChildren(...whats.categorias.map((c) => {
-    const b = Object.assign(document.createElement("button"), { type: "button", className: "escolha" });
-    b.dataset.acao = "lb-categoria";
-    b.dataset.id = c.id;
-    b.setAttribute("aria-pressed", String(c.id === whats.categoria));
-    b.append(c.nome);
-    if (c.comandos.length) b.append(" ", Object.assign(document.createElement("span"), { className: "ag-qtd", textContent: `(${c.comandos.length})` }));
-    return b;
-  }));
-  $("#lb-categorias").hidden = whats.categorias.length === 0;
-  $("#lb-categoria-cab").hidden = !cat;
-  const vazio = !cat || cat.comandos.length === 0;
-  $("#lb-comandos").hidden = vazio;
-  $("#lb-comandos-dica").hidden = vazio;
-  $("#lb-comandos-vazio").hidden = !vazio;
-  $("#lb-comandos-vazio-titulo").textContent = cat ? "Nenhum comando nesta categoria" : "Nenhuma categoria ainda";
-  $("#lb-comandos-vazio-texto").textContent = cat
-    ? "Clique em Novo comando e escreva um texto que você manda sempre, como o endereço ou o horário."
-    : "Crie uma categoria (por exemplo: Geral, Pós-atendimento, Orçamentos) e depois os comandos dentro dela.";
-  if (!cat) {
-    $("#lb-comandos").replaceChildren();
-    return;
-  }
-  $("#lb-categoria-nome").textContent = cat.nome;
-  const i = whats.categorias.indexOf(cat);
-  const subir = botaoIcone("lb-categoria-mover", "i-cima", `Mover “${cat.nome}” para a esquerda`, { passo: -1 });
-  subir.disabled = i === 0;
-  subir.querySelector("svg").classList.add("lb-seta-esq");
-  const descer = botaoIcone("lb-categoria-mover", "i-cima", `Mover “${cat.nome}” para a direita`, { passo: 1 });
-  descer.disabled = i === whats.categorias.length - 1;
-  descer.querySelector("svg").classList.add("lb-seta-dir");
-  $("#lb-categoria-botoes").replaceChildren(subir, descer,
-    botaoIcone("lb-categoria-renomear", "i-lapis", `Renomear “${cat.nome}”`, {}),
-    botaoIcone("lb-categoria-apagar", "i-lixeira", `Apagar a categoria “${cat.nome}”`, {}));
-  $("#lb-comandos").replaceChildren(...cat.comandos.map((c, n) => {
-    const li = Object.assign(document.createElement("li"), { className: "lb-comando vidro" });
-    const cab = Object.assign(document.createElement("div"), { className: "lb-comando-cab" });
-    cab.append(Object.assign(document.createElement("strong"), { textContent: c.nome }));
-    const botoes = Object.assign(document.createElement("div"), { className: "lb-livre-botoes" });
-    const cima = botaoIcone("lb-comando-mover", "i-cima", `Subir “${c.nome}”`, { id: c.id, passo: -1 });
-    cima.disabled = n === 0;
-    const baixo = botaoIcone("lb-comando-mover", "i-seta", `Descer “${c.nome}”`, { id: c.id, passo: 1 });
-    baixo.disabled = n === cat.comandos.length - 1;
-    const copiar = Object.assign(document.createElement("button"), { type: "button", className: "btn btn-primario btn-peq" });
-    copiar.dataset.acao = "lb-copiar";
-    copiar.dataset.id = c.id;
-    copiar.innerHTML = '<svg class="ic"><use href="#i-copiar"/></svg><span>Copiar</span>';
-    copiar.setAttribute("aria-label", `Copiar “${c.nome}”`);
-    botoes.append(cima, baixo, botaoIcone("lb-comando-editar", "i-lapis", `Alterar “${c.nome}”`, { id: c.id }));
-    const rodapeDele = Object.assign(document.createElement("div"), { className: "lb-comando-rodape" });
-    rodapeDele.append(botoes, copiar);
-    li.append(cab, Object.assign(document.createElement("p"), { className: "lb-comando-texto", textContent: c.texto }), rodapeDele);
-    return li;
-  }));
-}
-
-/* Copia exatamente o texto guardado. O jeito do navegador primeiro; se ele não deixar,
- * o jeito antigo (uma caixa de texto escondida). */
-async function copiarTexto(textoDele) {
-  try {
-    await navigator.clipboard.writeText(textoDele);
-    return true;
-  } catch {
-    const area = Object.assign(document.createElement("textarea"), { value: textoDele });
-    area.setAttribute("readonly", "");
-    area.style.cssText = "position:fixed;top:-100px;opacity:0";
-    document.body.append(area);
-    area.select();
-    const ok = document.execCommand("copy");
-    area.remove();
-    return ok;
-  }
-}
-
-async function copiarComando(id) {
-  const c = comandoPorId(id);
-  if (!c) return;
-  if (await copiarTexto(c.texto)) mostrarToast(`Copiado: ${c.nome}`);
-  else mostrarToast("Não consegui copiar. Selecione o texto e use Ctrl + C.", { erro: true });
-}
-
-function abrirComando(c) {
-  if (!categoriaAtual()) return;
-  whats.comandoEditando = c;
-  $("#lb-comando-titulo").textContent = c ? "Alterar comando" : `Novo comando em ${categoriaAtual().nome}`;
-  $("#lb-comando-nome").value = c ? c.nome : "";
-  $("#lb-comando-texto").value = c ? c.texto : "";
-  $("#lb-comando-apagar").hidden = !c;
-  $("#lb-comando-erro").hidden = true;
-  $("#lb-comando").showModal();
-  $("#lb-comando-nome").focus();
-}
-
-async function salvarComando(e) {
-  e.preventDefault();
-  const r = await api().comandos_salvar(whats.categoria,
-    { nome: $("#lb-comando-nome").value, texto: $("#lb-comando-texto").value },
-    whats.comandoEditando ? whats.comandoEditando.id : null);
-  if (r.erro) {
-    $("#lb-comando-erro").textContent = r.erro;
-    $("#lb-comando-erro").hidden = false;
-    return;
-  }
-  $("#lb-comando").close();
-  aplicarComandos(r);
-}
-
-async function apagarComando() {
-  const c = whats.comandoEditando;
-  const categoria = whats.categoria;
-  const r = await api().comandos_apagar(categoria, c.id);
-  $("#lb-comando").close();
-  if (r.erro) return mostrarToast(r.erro, { erro: true });
-  aplicarComandos(r);
-  mostrarToast(`Comando apagado: ${c.nome}`, {
-    acoes: [["Desfazer", async () => aplicarComandos(await api().comandos_restaurar(categoria, r.apagado, r.posicao))]],
-  });
-}
-
-async function moverComando(id, passo) {
-  const r = await api().comandos_mover(whats.categoria, id, passo);
-  aplicarComandos(r);
-  $(`[data-acao="lb-comando-mover"][data-id="${id}"][data-passo="${passo}"]`)?.focus();
-}
-
-function abrirCategoria(c) {
-  whats.categoriaEditando = c;
-  $("#lb-categoria-titulo").textContent = c ? "Renomear categoria" : "Nova categoria";
-  $("#lb-categoria-campo").value = c ? c.nome : "";
-  $("#lb-categoria-erro").hidden = true;
-  $("#lb-categoria").showModal();
-  $("#lb-categoria-campo").focus();
-}
-
-async function salvarCategoria(e) {
-  e.preventDefault();
-  const r = await api().comandos_salvar_categoria($("#lb-categoria-campo").value,
-    whats.categoriaEditando ? whats.categoriaEditando.id : null);
-  if (r.erro) {
-    $("#lb-categoria-erro").textContent = r.erro;
-    $("#lb-categoria-erro").hidden = false;
-    return;
-  }
-  $("#lb-categoria").close();
-  whats.categoria = r.salva.id;
-  aplicarComandos(r);
-}
-
-async function apagarCategoria() {
-  const cat = categoriaAtual();
-  const r = await api().comandos_apagar_categoria(cat.id);
-  if (r.erro) return mostrarToast(r.erro, { erro: true });
-  aplicarComandos(r);
-  const qtd = cat.comandos.length ? ` (com ${plural(cat.comandos.length, "comando", "comandos")})` : "";
-  mostrarToast(`Categoria apagada: ${cat.nome}${qtd}`, {
-    acoes: [["Desfazer", async () => {
-      const volta = await api().comandos_restaurar_categoria(r.apagada, r.posicao);
-      whats.categoria = r.apagada.id;
-      aplicarComandos(volta);
-    }]],
-  });
-}
-
-async function moverCategoria(passo) {
-  const id = whats.categoria;
-  aplicarComandos(await api().comandos_mover_categoria(id, passo));
-  $(`[data-acao="lb-categoria-mover"][data-passo="${passo}"]`)?.focus();
-}

@@ -88,3 +88,11 @@
 .ag-resp:not(.ag-recebe) { color: var(--texto-2); background: var(--vidro-forte); }
 .ag-recebe { display: inline-flex; align-items: center; gap: .25rem; }
 .ag-recebe .ic { width: .85rem; height: .85rem; }
+
+/* ---------- Feitos no mês e o "agendar o próximo mês" (1.12.0) ---------- */
+.ag-concluidos { display: flex; flex-direction: column; gap: .6rem; margin-top: .75rem; }
+.ag-concluidos-titulo { font-size: 1.1rem; }
+.ag-c-proximo { white-space: nowrap; }
+.ag-proximo-feito { color: var(--acento); border-color: color-mix(in srgb, var(--acento) 45%, transparent); }
+.ag-proximo-feito .ic { width: 1rem; height: 1rem; }
+.ag-consulta, .ag-veio-antes { font-variant-numeric: tabular-nums; }
