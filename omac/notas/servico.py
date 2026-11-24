@@ -44,15 +44,17 @@ class ServicoNotas:
             raise SemPasta(f"Não encontrei a pasta “{pasta}”. Ela foi movida ou renomeada?")
         return Path(pasta)
 
-    def ler(self) -> Varredura:
-        """Lê a pasta de novo (as notas já lidas vêm do cache)."""
+    def ler(self, avisar: bool = True) -> Varredura:
+        """Lê a pasta de novo (as notas já lidas vêm do cache). `avisar=False`: sem a barra de
+        progresso na tela (a leitura em segundo plano ao abrir o app)."""
         pasta = self.pasta()
         regras = self._regras()
         with self._trava:
             antes = self._ultima if self._pasta_lida == str(pasta) else None
             # Antes de ler: um PDF que chegue durante a leitura muda a impressão e é lido na próxima.
             impressao = _impressao(pasta)
-            self._ultima = varrer(pasta, Cache(config.caminho_cache(), regras), self._progresso, regras=regras)
+            self._ultima = varrer(pasta, Cache(config.caminho_cache(), regras), self._progresso if avisar else None,
+                                  regras=regras)
             self._pasta_lida = str(pasta)
             self._regras_lidas = regras.assinatura()
             # As canceladas que a leitura levou para a subpasta não são mudança de quem usa.
