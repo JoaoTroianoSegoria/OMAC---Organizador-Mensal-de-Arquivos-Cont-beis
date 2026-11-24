@@ -8,7 +8,8 @@ dia pela metade. Os dias que nenhum extrato cobre são conferidos pelo saldo.
 from __future__ import annotations
 
 import copy
-
+import json
+import threading
 from collections import Counter
 from dataclasses import dataclass, field
 from datetime import date, datetime, timedelta
@@ -109,33 +110,95 @@ def consolidar(extratos: list[Extrato]) -> Consolidado:
 # Leitura de cada PDF guardada na memória enquanto o app está aberto: o Início e o Relatório
 # pedem os extratos a cada visita, e ler os PDFs de novo era o que fazia o Início demorar.
 # Muda o tamanho ou a data do arquivo: lê de novo. Quem usa recebe uma cópia (nada vaza entre leituras).
-_MEMORIA: dict[str, tuple[tuple[int, int], object]] = {}
+# Desde a 1.11.0 a leitura também fica num arquivo (`cache`), para a primeira abertura do dia
+# não precisar abrir os PDFs. Ele é descartável: estragado, de outra versão ou apagado, lê tudo.
+_MEMORIA: dict[str, tuple[tuple[int, int], Extrato]] = {}
+_TRAVA = threading.Lock()  # a leitura ao abrir o app (em segundo plano) e a da tela não se atropelam
+_CACHE_LIDO: set[str] = set()
+_CHAVES_SALVAS: dict[str, list[str]] = {}  # cache → PDFs que estão nele
+VERSAO_CACHE = 1  # mude quando a leitura do extrato mudar: o cache antigo é ignorado
 
 
-def _ler_guardado(arquivo: Path):
+def _para_dict(e: Extrato) -> dict:
+    return {
+        "arquivo": e.arquivo, "inicio": e.inicio.isoformat(), "fim": e.fim.isoformat(),
+        "solicitado_em": e.solicitado_em.isoformat(), "avisos": list(e.avisos),
+        "lancamentos": [[l.data.isoformat(), l.tipo, l.descricao, str(l.valor), str(l.saldo)] for l in e.lancamentos],
+    }
+
+
+def _de_dict(d: dict) -> Extrato:
+    return Extrato(
+        arquivo=d["arquivo"], inicio=date.fromisoformat(d["inicio"]), fim=date.fromisoformat(d["fim"]),
+        solicitado_em=datetime.fromisoformat(d["solicitado_em"]), avisos=list(d["avisos"]),
+        lancamentos=[Lancamento(date.fromisoformat(dt), tipo, desc, Decimal(v), Decimal(s))
+                     for dt, tipo, desc, v, s in d["lancamentos"]],
+    )
+
+
+def _carregar_cache(cache: Path) -> None:
+    """Põe na memória o que o arquivo tem (uma vez por arquivo de cache)."""
+    if str(cache) in _CACHE_LIDO:
+        return
+    _CACHE_LIDO.add(str(cache))
+    try:
+        dados = json.loads(cache.read_text(encoding="utf-8"))
+        if dados.get("versao") != VERSAO_CACHE:
+            return
+        for chave, item in dados.get("itens", {}).items():
+            _MEMORIA.setdefault(chave, (tuple(item["marca"]), _de_dict(item["extrato"])))
+        _CHAVES_SALVAS[str(cache)] = sorted(dados.get("itens", {}))
+    except (OSError, ValueError, KeyError, TypeError, ArithmeticError):
+        pass  # sem cache ou estragado: lê os PDFs
+
+
+def _salvar_cache(cache: Path, chaves: list[str]) -> None:
+    """Guarda só os PDFs que estão na pasta agora (o que saiu da pasta sai do cache)."""
+    itens = {c: {"marca": list(_MEMORIA[c][0]), "extrato": _para_dict(_MEMORIA[c][1])} for c in chaves if c in _MEMORIA}
+    try:
+        cache.parent.mkdir(parents=True, exist_ok=True)
+        tmp = cache.with_suffix(".tmp")
+        tmp.write_text(json.dumps({"versao": VERSAO_CACHE, "itens": itens}), encoding="utf-8")
+        tmp.replace(cache)
+        _CHAVES_SALVAS[str(cache)] = sorted(itens)
+    except OSError:
+        pass  # sem cache em disco o app funciona igual, só abre mais devagar
+
+
+def _ler_guardado(arquivo: Path) -> tuple[Extrato, bool]:
+    """O extrato (uma cópia) e se precisou abrir o PDF."""
     st = arquivo.stat()
     marca = (st.st_size, st.st_mtime_ns)
     chave = str(arquivo.resolve())
     guardado = _MEMORIA.get(chave)
-    if guardado is None or guardado[0] != marca:
+    lido = guardado is None or guardado[0] != marca
+    if lido:
         guardado = (marca, ler_extrato(arquivo))
         _MEMORIA[chave] = guardado
-    return copy.deepcopy(guardado[1])
+    return copy.deepcopy(guardado[1]), lido
 
 
-def varrer(pasta: Path) -> Consolidado:
+def varrer(pasta: Path, cache: Path | None = None) -> Consolidado:
     """Lê os PDFs que estão direto na pasta. Arquivo que não é extrato vira aviso."""
-    extratos, avisos = [], []
-    for arquivo in sorted(Path(pasta).glob("*")):
-        if arquivo.suffix.lower() != ".pdf" or not arquivo.is_file():
-            continue
-        try:
-            extratos.append(_ler_guardado(arquivo))
-        except ExtratoIlegivel as e:
-            avisos.append({"arquivo": arquivo.name, "mensagem": f"Ficou de fora: {e}."})
-        except (ValueError, ArithmeticError, OSError) as e:
-            # Data ou valor impossível no PDF: perde este arquivo, não a tela inteira.
-            avisos.append({"arquivo": arquivo.name, "mensagem": f"Ficou de fora: não consegui entender o PDF ({e})."})
+    with _TRAVA:
+        if cache is not None:
+            _carregar_cache(cache)
+        extratos, avisos, chaves, leu_algum = [], [], [], False
+        for arquivo in sorted(Path(pasta).glob("*")):
+            if arquivo.suffix.lower() != ".pdf" or not arquivo.is_file():
+                continue
+            try:
+                extrato, lido = _ler_guardado(arquivo)
+                extratos.append(extrato)
+                chaves.append(str(arquivo.resolve()))
+                leu_algum |= lido
+            except ExtratoIlegivel as e:
+                avisos.append({"arquivo": arquivo.name, "mensagem": f"Ficou de fora: {e}."})
+            except (ValueError, ArithmeticError, OSError) as e:
+                # Data ou valor impossível no PDF: perde este arquivo, não a tela inteira.
+                avisos.append({"arquivo": arquivo.name, "mensagem": f"Ficou de fora: não consegui entender o PDF ({e})."})
+        if cache is not None and (leu_algum or _CHAVES_SALVAS.get(str(cache)) != sorted(chaves)):
+            _salvar_cache(cache, chaves)
     c = consolidar(extratos)
     c.avisos = avisos
     return c
