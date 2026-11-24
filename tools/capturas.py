@@ -56,10 +56,12 @@ VARIANTES = [
     ("tratamentos-mensagem", "tratamentos", {"tema": "escuro", "visual": "bonito"}, {"agenda": "mensagem"}),
     ("atendimentos", "atendimentos", {"tema": "claro", "visual": "bonito"}, {"pag": "lista"}),
     ("atendimentos-atendimento", "atendimentos", {"tema": "escuro", "visual": "bonito"}, {"pag": "janela"}),
+    ("atendimentos-emitir", "atendimentos", {"tema": "claro", "visual": "bonito"}, {"pag": "emitir"}),
+    ("atendimentos-cobrar", "atendimentos", {"tema": "escuro", "visual": "bonito"}, {"pag": "cobrar"}),
     ("notas-avisos-minimizados", "relatorio", {"tema": "claro", "visual": "bonito", "avisos_recolhidos": ["notas"]}, {}),
     ("lembretes-livres", "lembretes", {"tema": "claro", "visual": "bonito"}, {"whats": "livres"}),
-    ("lembretes-comandos", "lembretes", {"tema": "claro", "visual": "bonito"}, {"whats": "comandos"}),
-    ("lembretes-comandos-escuro", "lembretes", {"tema": "escuro", "visual": "bonito"}, {"whats": "comandos"}),
+    ("textos", "textos", {"tema": "claro", "visual": "bonito"}, {}),
+    ("textos-escuro", "textos", {"tema": "escuro", "visual": "bonito"}, {}),
     ("lembretes-enviar-conta", "lembretes", {"tema": "escuro", "visual": "bonito"}, {"whats": "enviar-conta"}),
     ("config-whatsapp", "config", {"tema": "claro", "visual": "bonito"}, {"rolar": "#g-whats"}),
     ("relatorio-pesquisa", "relatorio", {"tema": "claro", "visual": "bonito"}, {"escolher": "pesquisa"}),
@@ -70,6 +72,8 @@ VARIANTES = [
     ("modelos-janela", "modelos", {"tema": "claro", "visual": "bonito"}, {"modelo": "janela"}),
     ("config-claro", "config", {"tema": "claro", "visual": "bonito"}, {}),
     ("config-escuro", "config", {"tema": "escuro", "visual": "bonito"}, {}),
+    # Por último: marca pacientes como feitos no mês, e os dados ficam assim para as seguintes.
+    ("tratamentos-feitos", "tratamentos", {"tema": "claro", "visual": "bonito"}, {"agenda": "feitos", "rolar_fim": "#ag-concluidos"}),
 ]
 
 
@@ -166,6 +170,11 @@ def _preparar_lembretes(api) -> None:
     api.comandos_salvar(pos["id"], {"nome": "Cuidados após extração",
                                     "texto": "Evite alimentos quentes nas primeiras 24 horas.\nNão faça bochechos hoje."})
     api.comandos_salvar_categoria("Orçamentos")
+    nota = api.comandos_salvar_categoria("Nota fiscal")["salva"]
+    api.comandos_salvar(nota["id"], {"nome": "Descrição do serviço",
+                                     "texto": "Tratamento odontológico: [tratamento], em [data-competencia]."})
+    api.comandos_salvar(nota["id"], {"nome": "Nome do PDF",
+                                     "texto": "NFS-e Nº [numero-nota] - [nome] - [data-hoje] - COMP [comp]"})
 
 
 def _preparar_modelos(api, pasta: Path) -> None:
@@ -179,6 +188,21 @@ def _preparar_modelos(api, pasta: Path) -> None:
                          ("ficha-anamnese.docx", "Ficha de anamnese")]:
         (pasta / nome).write_bytes(b"exemplo")
         api.modelos_salvar({"titulo": titulo or nome.rsplit(".", 1)[0].replace("_", " "), "caminho": str(pasta / nome)})
+
+
+def _preparar_feitos(api) -> None:
+    """Dois pacientes agendados e atendidos no mês; um deles já com o mês seguinte agendado."""
+    from datetime import date
+
+    from omac.tratamentos.orto import proximo_mes
+
+    hoje = date.today()
+    mes = hoje.isoformat()[:7]
+    ativos = api.tratamentos_listar()["ativos"]
+    for p in [p for p in ativos if p["agendado"]][:2]:
+        api.tratamentos_marcar_atendido(p["id"], mes, True)
+    feito = next(p for p in ativos if p["agendado"])
+    api.tratamentos_agendar_proximo(feito["id"], True, f"{proximo_mes(hoje)}-04")
 
 
 def _preparar_whatsapp(api, caso: str | None) -> None:
@@ -227,6 +251,8 @@ def main() -> None:
                 _preparar_whatsapp(api, extras.get("whats"))
                 _preparar_lembretes(api)
                 _preparar_modelos(api, Path(tmp) / "Documentos")
+                if extras.get("agenda") == "feitos":
+                    _preparar_feitos(api)
                 if not api._cfg["backup_ultimo"]:
                     api.backup_agora()
 
@@ -241,6 +267,8 @@ def main() -> None:
                 pagina.wait_for_selector("#painel-notas:not([hidden])")
                 # As notas e extratos de exemplo são de outubro/2026, seja qual for o dia de hoje.
                 pagina.evaluate("mudarMes(2026, 10)")
+                # Os dados são de exemplo: as capturas mostram os valores (o app abre com eles escondidos).
+                pagina.evaluate("mostrarValores(true)")
                 pagina.wait_for_timeout(300)
                 if "mes" in extras:
                     pagina.select_option("#sel-mes", str(extras["mes"]))
@@ -258,10 +286,10 @@ def main() -> None:
                     pagina.check('#tabela-corpo .rel-escolher[data-numero="803"]')
                     if extras["escolher"] == "enviar":
                         pagina.click('[data-acao="rel-enviar-lote"]')
-                        pagina.wait_for_selector("#rel-lote[open]")
-                        pagina.fill("#rel-lote-contato", "FERNANDA COSTA")
-                        pagina.dispatch_event("#rel-lote-contato", "change")
-                        pagina.wait_for_selector("#rel-lote-envio:not([hidden])")
+                        pagina.wait_for_selector("#msg[open]")
+                        pagina.fill("#msg-contato", "FERNANDA COSTA")
+                        pagina.dispatch_event("#msg-contato", "change")
+                        pagina.wait_for_selector("#msg-envio:not([hidden])")
                 if view == "modelos":
                     pagina.wait_for_selector(".md-cartao")
                     if extras.get("modelo") == "janela":
@@ -273,12 +301,14 @@ def main() -> None:
                         pagina.click('[data-acao="whats-aba"][data-aba="contas"]')
                     if extras["whats"] == "enviar-conta":
                         pagina.click('[data-acao="lb-lembrar-todas"]')
-                        pagina.wait_for_selector("#lb-envio-contas[open]")
-                    if extras["whats"] in ("livres", "comandos"):
+                        pagina.wait_for_selector("#msg[open]")
+                    if extras["whats"] == "livres":
                         pagina.click(f'[data-acao="whats-aba"][data-aba="{extras["whats"]}"]')
                     if extras["whats"] == "janela":
                         pagina.click('#whats-corpo [data-acao="whats-enviar"]')
-                        pagina.wait_for_selector("#envio[open]")
+                        pagina.wait_for_selector("#msg[open]")
+                if view == "textos":
+                    pagina.wait_for_selector("#lb-comandos li")
                 if view in ("inicio", "resumo"):
                     pagina.wait_for_selector(".ini-cartao" if view == "inicio" else "#rs-corpo tr")
                 if "ct" in extras:
@@ -296,9 +326,18 @@ def main() -> None:
                         pagina.wait_for_selector("#ag-hist-corpo tr")
                     if extras["agenda"] == "mensagem":
                         pagina.click('#ag-ativos-corpo tr:has-text("PEDRO") [data-acao="ag-mensagem"]')
-                        pagina.click('[data-acao="ag-tipo"][data-tipo="cobrar"]')
+                        pagina.wait_for_selector("#msg[open]")
+                        pagina.click('[data-acao="msg-tipo"][data-tipo="cobrar"]')
                 if "pag" in extras:
                     pagina.wait_for_selector("#pg-corpo tr")
+                    if extras["pag"] == "cobrar":
+                        pagina.click('#pg-corpo [data-acao="pg-cobrar"]')
+                        pagina.wait_for_selector("#msg[open]")
+                    if extras["pag"] == "emitir":
+                        pagina.click('#pg-corpo [data-acao="pg-emitir"]')
+                        pagina.wait_for_selector("#emitir[open]")
+                        pagina.select_option("#emitir-categoria", label="Nota fiscal")
+                        pagina.wait_for_selector("#emitir-comandos-lista li")
                     if extras["pag"] == "janela":
                         pagina.click('#pg-corpo tr:nth-child(3) [data-acao="pg-editar"]')
                         pagina.wait_for_selector("#pg-atendimento[open]")
@@ -306,6 +345,8 @@ def main() -> None:
                     pagina.wait_for_selector("#lembretes[open]")
                 if "rolar" in extras:
                     pagina.locator(extras["rolar"]).scroll_into_view_if_needed()
+                if "rolar_fim" in extras:
+                    pagina.locator(extras["rolar_fim"]).evaluate("e => e.scrollIntoView({block: 'end'})")
                 pagina.wait_for_timeout(400)
                 pagina.screenshot(path=str(saida / f"{nome}.png"))
                 pagina.close()
