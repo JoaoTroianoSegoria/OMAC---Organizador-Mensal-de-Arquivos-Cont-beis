@@ -56,6 +56,7 @@ VARIANTES = [
     ("tratamentos-mensagem", "tratamentos", {"tema": "escuro", "visual": "bonito"}, {"agenda": "mensagem"}),
     ("atendimentos", "atendimentos", {"tema": "claro", "visual": "bonito"}, {"pag": "lista"}),
     ("atendimentos-atendimento", "atendimentos", {"tema": "escuro", "visual": "bonito"}, {"pag": "janela"}),
+    ("atendimentos-emitir", "atendimentos", {"tema": "claro", "visual": "bonito"}, {"pag": "emitir"}),
     ("notas-avisos-minimizados", "relatorio", {"tema": "claro", "visual": "bonito", "avisos_recolhidos": ["notas"]}, {}),
     ("lembretes-livres", "lembretes", {"tema": "claro", "visual": "bonito"}, {"whats": "livres"}),
     ("lembretes-comandos", "lembretes", {"tema": "claro", "visual": "bonito"}, {"whats": "comandos"}),
@@ -166,6 +167,11 @@ def _preparar_lembretes(api) -> None:
     api.comandos_salvar(pos["id"], {"nome": "Cuidados após extração",
                                     "texto": "Evite alimentos quentes nas primeiras 24 horas.\nNão faça bochechos hoje."})
     api.comandos_salvar_categoria("Orçamentos")
+    nota = api.comandos_salvar_categoria("Nota fiscal")["salva"]
+    api.comandos_salvar(nota["id"], {"nome": "Descrição do serviço",
+                                     "texto": "Tratamento odontológico: [tratamento], em [data-competencia]."})
+    api.comandos_salvar(nota["id"], {"nome": "Nome do PDF",
+                                     "texto": "NFS-e Nº [numero-nota] - [nome] - [data-hoje] - COMP [comp]"})
 
 
 def _preparar_modelos(api, pasta: Path) -> None:
@@ -241,6 +247,8 @@ def main() -> None:
                 pagina.wait_for_selector("#painel-notas:not([hidden])")
                 # As notas e extratos de exemplo são de outubro/2026, seja qual for o dia de hoje.
                 pagina.evaluate("mudarMes(2026, 10)")
+                # Os dados são de exemplo: as capturas mostram os valores (o app abre com eles escondidos).
+                pagina.evaluate("mostrarValores(true)")
                 pagina.wait_for_timeout(300)
                 if "mes" in extras:
                     pagina.select_option("#sel-mes", str(extras["mes"]))
@@ -299,6 +307,11 @@ def main() -> None:
                         pagina.click('[data-acao="ag-tipo"][data-tipo="cobrar"]')
                 if "pag" in extras:
                     pagina.wait_for_selector("#pg-corpo tr")
+                    if extras["pag"] == "emitir":
+                        pagina.click('#pg-corpo [data-acao="pg-emitir"]')
+                        pagina.wait_for_selector("#emitir[open]")
+                        pagina.select_option("#emitir-categoria", label="Nota fiscal")
+                        pagina.wait_for_selector("#emitir-comandos-lista li")
                     if extras["pag"] == "janela":
                         pagina.click('#pg-corpo tr:nth-child(3) [data-acao="pg-editar"]')
                         pagina.wait_for_selector("#pg-atendimento[open]")
