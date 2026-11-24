@@ -174,6 +174,23 @@ def test_api_painel_tem_todos_os_widgets_mesmo_sem_pastas(api):
     assert r["data"] == date.today().isoformat()
 
 
+def test_api_painel_nao_calcula_os_escondidos(api, monkeypatch):
+    """1.11.0: escondido não é calculado, salvo o que o "Hoje" usa; o Personalizar pede todos."""
+    chamados = []
+    original = type(api)._widget_resumo
+    monkeypatch.setattr(type(api), "_widget_resumo", lambda self, hoje: chamados.append(1) or original(self, hoje))
+    escondidos = {"resumo", "modelos", "contatos"}
+    api._cfg.update(inicio_cartoes=[{"id": w, "visivel": w not in escondidos, "largo": False} for w in WIDGETS])
+    r = api.inicio_painel()
+    assert "resumo" not in r["widgets"] and "modelos" not in r["widgets"] and not chamados
+    assert "contatos" in r["widgets"]  # o "Hoje" mostra os contatos para conferir
+    assert set(api.inicio_painel(True)["widgets"]) == set(WIDGETS) and chamados
+
+    # Sem o "Hoje" na tela, o escondido dele também não é calculado.
+    api._cfg.update(inicio_cartoes=[{"id": w, "visivel": w == "relatorio", "largo": False} for w in WIDGETS])
+    assert set(api.inicio_painel()["widgets"]) == {"relatorio"}
+
+
 def test_api_painel_um_widget_com_erro_nao_derruba_os_outros(api, monkeypatch):
     monkeypatch.setattr(type(api), "_widget_tratamentos", lambda self, hoje: 1 / 0)
     r = api.inicio_painel()["widgets"]

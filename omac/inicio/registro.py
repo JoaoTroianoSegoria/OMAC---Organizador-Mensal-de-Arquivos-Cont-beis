@@ -17,18 +17,22 @@ class Widget:
     metodo: str
     ordem: int
     largo: bool
+    no_hoje: bool  # o "Hoje" junta as pendências deste widget, mesmo quando ele está escondido
 
 
 WIDGETS: dict[str, Widget] = {}
 
 
-def widget(id: str, titulo: str, ordem: int, largo: bool = False):
-    """Marca um método `(self, hoje) -> dict` da API como os dados de um widget."""
+def widget(id: str, titulo: str, ordem: int, largo: bool = False, no_hoje: bool = True):
+    """Marca um método `(self, hoje) -> dict` da API como os dados de um widget.
+
+    `no_hoje=False`: o "Hoje" não usa os dados dele, então escondido ele nem é calculado.
+    """
 
     def marcar(funcao):
         if id in WIDGETS and WIDGETS[id].metodo != funcao.__name__:
             raise ValueError(f"Dois widgets com o id “{id}”.")
-        WIDGETS[id] = Widget(id, titulo, funcao.__name__, ordem, largo)
+        WIDGETS[id] = Widget(id, titulo, funcao.__name__, ordem, largo, no_hoje)
         return funcao
 
     return marcar

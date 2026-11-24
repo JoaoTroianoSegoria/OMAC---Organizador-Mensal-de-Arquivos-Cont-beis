@@ -75,6 +75,11 @@ def caminho_cache() -> Path:
     return pasta_dados() / "cache-notas.json"
 
 
+def caminho_cache_extratos() -> Path:
+    """Leitura dos PDFs de extrato guardada (descartável, fora do backup, como o cache das notas)."""
+    return pasta_dados() / "cache-extratos.json"
+
+
 def caminho_regras() -> Path:
     return pasta_dados() / "regras-extrato.json"
 

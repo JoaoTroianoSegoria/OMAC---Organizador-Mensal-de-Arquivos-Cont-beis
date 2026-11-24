@@ -25,6 +25,8 @@
   box-shadow: 0 .8rem 2.2rem rgba(0, 0, 0, .22);
 }
 .rel-ilha[hidden] { display: none; }
+/* Presa embaixo, a sombra grande seria pintada de novo a cada rolagem. */
+[data-visual="otimizado"] .rel-ilha { background: var(--solido); box-shadow: none; }
 .rel-ilha-info { display: flex; flex-direction: column; align-items: flex-start; gap: .25rem; min-width: 10rem; }
 .rel-ilha-total { font-size: 1.15rem; font-weight: 700; font-variant-numeric: tabular-nums; }
 .rel-ilha-lista {

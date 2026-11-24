@@ -129,7 +129,7 @@ async function carregarAEnviar() {
   const r = await api().notas_a_enviar();
   if (r.erro) return mostrarToast(r.erro, { erro: true });
   whats.notas = r.notas ?? [];
-  desenharAEnviar(r);
+  desenharSeMudou("lb-enviar", r, () => desenharAEnviar(r));
 }
 
 function desenharAEnviar(r) {
@@ -666,7 +666,7 @@ function aplicarLivres(r) {
     padrao: r.padrao || "", nomes: r.nomes || [] };
   $("#livre-para-nomes").replaceChildren(...whats.livres.nomes.map((n) => new Option(n, n)));
   $("#livre-para").placeholder = whats.livres.padrao ? `${whats.livres.padrao} (quem recebe os lembretes)` : "Escolha um contato";
-  desenharLivres();
+  desenharSeMudou("lb-livres", r, desenharLivres);
 }
 
 /* "toda segunda · próximo: 24/11 · para Fulana" */
@@ -821,7 +821,7 @@ function aplicarComandos(r) {
   if (r.erro) return mostrarToast(r.erro, { erro: true });
   whats.categorias = r.categorias;
   if (!r.categorias.some((c) => c.id === whats.categoria)) whats.categoria = r.categorias.length ? r.categorias[0].id : "";
-  desenharComandos();
+  desenharSeMudou("lb-comandos", [r, whats.categoria], desenharComandos);
 }
 
 const categoriaAtual = () => whats.categorias.find((c) => c.id === whats.categoria) || null;

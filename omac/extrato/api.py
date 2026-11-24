@@ -21,7 +21,7 @@ class ExtratoApi(ApiBase):
             return {"sem_pasta": True}
         if not Path(pasta).is_dir():
             return {"erro": f"Não encontrei a pasta “{pasta}”. Ela foi movida ou renomeada?"}
-        return varrer(Path(pasta))
+        return varrer(Path(pasta), config.caminho_cache_extratos())
 
     @seguro
     def extrato_do_mes(self, ano: int, mes: int):

@@ -79,6 +79,7 @@
   font-size: .8rem; font-weight: 600; white-space: nowrap; box-shadow: 0 .3rem 1rem rgba(0, 0, 0, .15);
 }
 .rs-compacto .rs-dica { top: -1.9rem; }
+[data-visual="otimizado"] .rs-dica { box-shadow: none; }
 .rs-tabela tbody th { font-weight: 500; text-align: left; }
 
 [data-contraste="alto"] .rs-barra { background: var(--texto); }

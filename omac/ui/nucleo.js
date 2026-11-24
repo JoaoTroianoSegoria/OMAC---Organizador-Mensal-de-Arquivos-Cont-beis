@@ -276,6 +276,28 @@ function listaDeAvisos(itens) {
 
 /* ---------- Peças usadas por vários módulos ---------- */
 
+/* Voltar a uma tela quase sempre traz os mesmos dados: aí não desenha de novo (é o que fazia a
+ * lista "piscar" e gastava tempo em PC fraco). `chave` separa as listas; o olho entra na conta
+ * porque algumas dicas ao passar o mouse mostram o valor. Devolve true quando desenhou.
+ * Quem muda só o filtro, a aba ou a busca chama o desenhar direto, sem passar por aqui. */
+const ultimosDesenhos = new Map();
+function desenharSeMudou(chave, dados, desenhar) {
+  const json = JSON.stringify([dados, valores.visiveis]);
+  if (ultimosDesenhos.get(chave) === json) return false;
+  ultimosDesenhos.set(chave, json);
+  desenhar();
+  return true;
+}
+
+/* Espera a pessoa parar de digitar antes de fazer `fn` (pesquisas). */
+function depoisDeDigitar(fn, ms = 150) {
+  let espera = null;
+  return (...args) => {
+    clearTimeout(espera);
+    espera = setTimeout(() => fn(...args), ms);
+  };
+}
+
 function botaoIcone(acao, icone, rotulo, dados) {
   const b = document.createElement("button");
   b.type = "button";

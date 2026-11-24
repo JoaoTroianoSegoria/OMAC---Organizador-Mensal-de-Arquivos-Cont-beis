@@ -69,7 +69,8 @@ async function carregarAgenda() {
 function aplicarAgenda(r) {
   if (r.erro) return mostrarToast(r.erro, { erro: true });
   Object.assign(agenda, { ano: r.ano, mes: r.mes, ativos: r.ativos, altas: r.altas, finalizados: r.finalizados });
-  desenharAgenda();
+  // A aba entra na conta: o "ir para a aba" (antesDeMostrar) troca a aba antes de carregar.
+  if (!desenharSeMudou("agenda", [r, agenda.aba], desenharAgenda) && agenda.aba === "historico") carregarHistorico();
 }
 
 function desenharAgenda() {

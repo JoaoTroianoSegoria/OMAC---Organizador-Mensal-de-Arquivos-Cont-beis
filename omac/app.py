@@ -34,6 +34,20 @@ class Api(NotasApi, EnvioNotasApi, ExtratoApi, LembretesApi, ContatosApi, Tratam
           ModelosApi, ResumoApi, InicioApi, BackupApi, AtualizacaoApi):
     """Tudo o que a interface pode chamar. Módulo novo entra nesta lista de classes."""
 
+    def _ler_ao_abrir(self) -> None:
+        """Em segundo plano, logo ao abrir: lê as notas e os extratos (do cache, quase sempre),
+        para a primeira visita a cada tela já achar tudo pronto. Sem barra de progresso e sem
+        aviso de erro: se der problema, a tela lê de novo e mostra o erro como sempre."""
+        try:
+            if self._cfg["pasta_notas"]:
+                self._servico_notas.ler(avisar=False)
+        except Exception:  # noqa: BLE001
+            traceback.print_exc()
+        try:
+            self._ler_extratos()
+        except Exception:  # noqa: BLE001
+            traceback.print_exc()
+
 
 def autoteste(pasta: str, saida: str) -> int:
     """Lê uma pasta e gera as planilhas sem abrir janela (usado no GitHub Actions).
@@ -156,5 +170,6 @@ def main() -> int:
         background_color="#0E1522" if escuro else "#EEF2F7",
     )
     api._janela = janela
-    webview.start(http_server=True, debug=bool(os.environ.get("OMAC_DEBUG")))
+    # _ler_ao_abrir roda numa linha de execução própria, enquanto a janela abre.
+    webview.start(api._ler_ao_abrir, http_server=True, debug=bool(os.environ.get("OMAC_DEBUG")))
     return 0
