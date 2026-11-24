@@ -13,7 +13,6 @@ from ..dados import esquema
 from ..inicio.registro import widget
 from ..nucleo import ApiBase, seguro
 from ..texto import normalizar
-from ..whatsapp.mensagens import abrir_conversa, normalizar_telefone
 from . import mensagens as msg
 from . import orto
 
@@ -39,11 +38,16 @@ class TratamentosApi(ApiBase):
                                      for d in ct.destinos(lista_contatos, c)[1:]]}
 
         ordenados = sorted(tratamentos, key=lambda t: normalizar(contatos[t["contato_id"]]["nome"]))
+        mes, proximo = hoje.isoformat()[:7], orto.proximo_mes(hoje)
         na_situacao = lambda s: [t for t in ordenados if orto.situacao(t) == s]  # noqa: E731
         return {
             "ano": hoje.year,
             "mes": hoje.month,
-            "ativos": [{**vista(t), "agendado": orto.agendado_no_mes(t, hoje), "atendido": orto.atendido_no_mes(t, hoje)}
+            "proximo_mes": proximo,
+            "ativos": [{**vista(t), "agendado": orto.agendado_no_mes(t, hoje), "atendido": orto.atendido_no_mes(t, hoje),
+                        "agendado_antes": orto.agendado_antes(t, hoje), "consulta": orto.consulta_no_mes(t, mes),
+                        "proximo": {"agendado": t["agendado_para"] == proximo,
+                                    "consulta": orto.consulta_no_mes(t, proximo)}}
                        for t in na_situacao(orto.ATIVO)],
             # A alta que acaba primeiro aparece primeiro.
             "altas": [{**vista(t), "terminou": orto.alta_terminou(t, hoje)}
@@ -65,8 +69,16 @@ class TratamentosApi(ApiBase):
         return self._mudar_tratamento(tratamento_id, orto.voltar_ao_tratamento)
 
     @seguro
-    def tratamentos_marcar(self, tratamento_id: str, agendado: bool):
-        return self._mudar_tratamento(tratamento_id, lambda t: orto.marcar_agendado(t, bool(agendado), date.today()))
+    def tratamentos_marcar(self, tratamento_id: str, agendado: bool, dia: str = ""):
+        """O Agendado deste mês; `dia` (AAAA-MM-DD, opcional) é o dia da consulta."""
+        return self._mudar_tratamento(tratamento_id,
+                                      lambda t: orto.marcar_agendado(t, bool(agendado), date.today(), dia))
+
+    @seguro
+    def tratamentos_agendar_proximo(self, tratamento_id: str, agendado: bool, dia: str = ""):
+        """Deixa o mês seguinte já agendado: quando ele chegar, o Agendado vem marcado."""
+        return self._mudar_tratamento(tratamento_id,
+                                      lambda t: orto.agendar_proximo(t, bool(agendado), date.today(), dia))
 
     @seguro
     def tratamentos_marcar_atendido(self, tratamento_id: str, mes: str, atendido: bool):
@@ -114,26 +126,18 @@ class TratamentosApi(ApiBase):
         for d in ct.destinos(list(contatos.values()), paciente):
             responsavel = d["nome"] if d["papel"] else ""
             destinos.append({**d, "mensagens": msg.todas(self._cfg["assistente_nome"], paciente["nome"], hoje,
-                                                         t["valor_centavos"], self._cfg["chave_pix"], responsavel)})
+                                                         t["valor_centavos"], self._cfg["chave_pix"], responsavel,
+                                                         consulta=orto.proxima_consulta(t, hoje))})
         return {"id": t["id"], "nome": paciente["nome"], "destinos": destinos,
                 "escolhido": ct.destino_escolhido(list(contatos.values()), paciente)["contato_id"]}
 
     @seguro
     def tratamentos_enviar(self, tratamento_id: str, destino_id: str, telefone: str, mensagem: str):
         """Guarda o telefone no contato que recebe e lembra a escolha para a próxima vez."""
-        telefone = normalizar_telefone(telefone)
         tratamentos, _ = self._tratamentos_e_contatos()
         t = orto.buscar(tratamentos, tratamento_id)
-        with self._armazem.editar(esquema.CONTATOS) as d:
-            contatos = d["contatos"]
-            paciente = ct.buscar(contatos, t["contato_id"])
-            if destino_id != paciente["id"] and destino_id not in {r["contato_id"] for r in paciente["responsaveis"]}:
-                return {"erro": "Escolha para quem vai a mensagem."}
-            ct.buscar(contatos, destino_id)["telefone"] = telefone
-            paciente["envia_para"] = "" if destino_id == paciente["id"] else destino_id
-        lista = self._vista_tratamentos()
-        abrir_conversa(telefone, mensagem, self._cfg["whatsapp_destino"])
-        return lista
+        erro = self._mensagem_para(t["contato_id"], destino_id, telefone, mensagem)
+        return erro or self._vista_tratamentos()
 
     # --- Widget do Início --------------------------------------------------------------------
 
@@ -144,8 +148,12 @@ class TratamentosApi(ApiBase):
         ativos = [t for t in tratamentos if orto.situacao(t) == orto.ATIVO]
         altas = [t for t in tratamentos if orto.situacao(t) == orto.ALTA]
         semana = (hoje + timedelta(days=7)).isoformat()
+        hoje_iso = hoje.isoformat()
         return {
             "ativos": len(ativos),
+            # Quem tem consulta hoje e ainda não foi atendido no mês (quem já veio não precisa de aviso).
+            "consultas_hoje": [contatos[t["contato_id"]]["nome"] for t in ativos
+                               if t["consulta_em"] == hoje_iso and not orto.atendido_no_mes(t, hoje)],
             "agendados": sum(orto.agendado_no_mes(t, hoje) for t in ativos),
             "atendidos": sum(orto.atendido_no_mes(t, hoje) for t in ativos),
             "altas_terminadas": sum(orto.alta_terminou(t, hoje) for t in altas),
