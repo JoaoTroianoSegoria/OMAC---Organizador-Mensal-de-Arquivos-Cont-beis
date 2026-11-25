@@ -4,7 +4,7 @@
  * Promise. Erros do Python chegam como { erro: "mensagem" }.
  *
  * Cada módulo (notas.js, extrato.js…) se registra assim:
- *   modulos.nome = { aoMostrar() {}, carregar() {}, ligar() {}, aoIniciar() {}, aoAplicarConfig(cfg) {},
+ *   modulos.nome = { aoMostrar() {}, aoSair() {}, carregar() {}, ligar() {}, aoIniciar() {}, aoAplicarConfig(cfg) {},
  *                    antesDeMostrar(aba) {}, irParaAba(aba) {} };   // nome = data-view do menu
  *   Object.assign(acoes, { "minha-acao": (alvo) => {} }); // data-acao dos botões
  *   registrarWidget("id", { icone: "i-...", desenhar(corpo, dados, painel) {} }); // widget do Início
@@ -25,6 +25,7 @@ const estado = {
   ano: 0,
   mes: 0,
   view: "",
+  viewAnterior: "",
 };
 
 const modulos = {};
@@ -76,7 +77,7 @@ async function iniciar() {
   ligarEventos();
   ligarOlho();
   ligarMural($("#ini-grade"));
-  ligarMural($(".grade-config"));
+  ligarTabelasLargas();
   // "notas" é o valor antigo de quem abria nas Notas fiscais: hoje é o Relatório mensal.
   if (estado.cfg.abrir_em === "notas") irPara("relatorio", "notas");
   else mostrarView("inicio");
@@ -203,6 +204,7 @@ async function escolherPasta(chave) {
 /* ---------- Navegação ---------- */
 
 function mostrarView(nome) {
+  const anterior = estado.view;
   estado.view = nome;
   $$(".view").forEach((v) => {
     const ativa = v.id === `view-${nome}`;
@@ -218,6 +220,8 @@ function mostrarView(nome) {
     else b.removeAttribute("aria-current");
   });
   $("#conteudo").scrollTop = 0;
+  estado.viewAnterior = anterior; // as Configurações voltam para ela
+  if (anterior && anterior !== nome) modulos[anterior]?.aoSair?.();
   modulos[nome]?.aoMostrar?.();
 }
 
@@ -372,7 +376,7 @@ function mostrarValores(visiveis) {
   Object.values(modulos).forEach((m) => m.aoMudarValores?.(visiveis));
 }
 
-/* ---------- Mural (Início e Configurações) ----------
+/* ---------- Mural (Início) ----------
  *
  * Numa grade comum, cada linha tem a altura do bloco mais alto dela, e um bloco baixo ao lado
  * de um alto deixa um buraco embaixo. No mural, a grade tem linhas de 2px e cada bloco ocupa
@@ -413,6 +417,22 @@ function ligarMural(grade) {
   };
   new MutationObserver(vigiar).observe(grade, { childList: true });
   vigiar();
+}
+
+/* O cabeçalho das colunas gruda no topo ao descer a lista (estilo.css, .tabela-caixa). Só a tabela
+ * que não cabe na largura ganha rolagem para o lado (.larga): conferido quando a caixa ou a tabela
+ * muda de tamanho (janela, texto maior, linhas novas). */
+function ligarTabelasLargas() {
+  const conferir = (caixa) => {
+    const tabela = caixa?.querySelector("table");
+    if (tabela) caixa.classList.toggle("larga", tabela.offsetWidth > caixa.clientWidth + 1);
+  };
+  const observador = new ResizeObserver((itens) => itens.forEach((i) => conferir(i.target.closest(".tabela-caixa"))));
+  for (const caixa of $$(".tabela-caixa")) {
+    observador.observe(caixa);
+    const tabela = caixa.querySelector("table");
+    if (tabela) observador.observe(tabela);
+  }
 }
 
 function ligarOlho() {

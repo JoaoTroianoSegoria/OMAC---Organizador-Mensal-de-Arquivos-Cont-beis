@@ -8,6 +8,7 @@ from omac import config, sistema
 from omac.app import Api
 from omac.notas.leitor import Nota
 from omac.lembretes import contas as lb
+from omac.whatsapp import catalogo as cat
 from omac.whatsapp import mensagens as msg
 from omac.notas.envio import responsavel
 from omac.dados import esquema
@@ -49,26 +50,23 @@ def test_link_do_web():
 # --- Mensagens ---------------------------------------------------------------------
 
 
-def test_mensagem_da_nota():
-    assert msg.mensagem_da_nota("João", "FERNANDA COSTA", date(2026, 10, 30)) == (
-        "*Assistente João:* Olá, Fernanda.\n"
-        "Segue a nota fiscal referente ao tratamento odontológico realizado dia 30/10."
-    )
-
-
-def test_sem_nome_de_assistente_nao_assina():
-    assert msg.mensagem_da_nota("", "ANA", date(2026, 1, 2)).startswith("Olá, Ana.")
-
-
 def test_mensagem_de_lembrete():
     contas = [{"nome": "Aluguel", "situacao": "vence amanhã (05/11)"},
               {"nome": "Internet", "situacao": "vence hoje (04/11)"}]
-    assert msg.mensagem_de_lembrete("João", "Dra. Exemplo", contas) == (
+    assert cat.lembrete_contas({"assistente_nome": "João"}, "Dra. Exemplo", contas) == (
         "*Assistente João:* Olá, Dra. Exemplo.\n"
         "Lembrete de pagamento:\n"
         "• Aluguel: vence amanhã (05/11)\n"
         "• Internet: vence hoje (04/11)"
     )
+
+
+def test_lembretes_sem_nome_nem_observacao_ficam_limpos():
+    assert cat.lembrete_contas({}, "", [{"nome": "Aluguel", "situacao": "vence hoje"}]) == (
+        "Olá.\nLembrete de pagamento:\n• Aluguel: vence hoje")
+    assert cat.lembrete_livre({"assistente_nome": "João"}, "Dra. Exemplo", " Ligar ", "") == (
+        "*Assistente João:* Olá, Dra. Exemplo.\nLembrete: Ligar")
+    assert cat.lembrete_livre({}, "Ana", "Ligar", "Depois das 14h") == "Olá, Ana.\nLembrete: Ligar\nDepois das 14h"
 
 
 def test_nota_de_dependente_vai_para_o_responsavel():

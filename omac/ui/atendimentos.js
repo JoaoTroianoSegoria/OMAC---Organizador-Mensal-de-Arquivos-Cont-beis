@@ -223,7 +223,7 @@ async function abrirCobranca(id) {
     rotuloDestino: (d) => (d.papel ? `${d.nome} (${d.papel})` : `${d.nome} (paciente)`),
     texto: (d) => d.mensagem,
     falta: () => (r.sem_pix
-      ? { texto: "A mensagem de cobrança usa a chave Pix: preencha nas Configurações.", botao: "Abrir Configurações", acao: () => { mostrarView("config"); $("#cfg-pix").focus(); } }
+      ? { texto: "A mensagem de cobrança usa a chave Pix: preencha nas Configurações.", botao: "Abrir Configurações", acao: () => irPara("config", "cfg-pix") }
       : null),
     enviar: ({ destino, telefone, texto: mensagem }) => api().atendimentos_cobrar(r.id, destino.contato_id, telefone, mensagem),
   });

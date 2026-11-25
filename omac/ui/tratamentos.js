@@ -510,8 +510,7 @@ async function abrirMensagem(id) {
 }
 
 function abrirChavePix() {
-  mostrarView("config");
-  $("#cfg-pix").focus();
+  irPara("config", "cfg-pix");
 }
 
 /* ---------- Widget do Início ---------- */

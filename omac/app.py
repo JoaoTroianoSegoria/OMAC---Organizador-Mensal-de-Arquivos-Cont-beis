@@ -26,12 +26,13 @@ from .notas.envio import EnvioNotasApi
 from .notas.pasta import varrer
 from .resumo.api import ResumoApi
 from .tratamentos.api import TratamentosApi
+from .whatsapp.api import MensagensApi
 
 PASTA_EXTRATOS_TESTE = "Extratos"
 
 
 class Api(NotasApi, EnvioNotasApi, ExtratoApi, LembretesApi, ContatosApi, TratamentosApi, AtendimentosApi,
-          ModelosApi, ResumoApi, InicioApi, BackupApi, AtualizacaoApi):
+          ModelosApi, MensagensApi, ResumoApi, InicioApi, BackupApi, AtualizacaoApi):
     """Tudo o que a interface pode chamar. Módulo novo entra nesta lista de classes."""
 
     def _ler_ao_abrir(self) -> None:

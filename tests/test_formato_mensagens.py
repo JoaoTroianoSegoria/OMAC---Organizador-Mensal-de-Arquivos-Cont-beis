@@ -10,7 +10,7 @@ from omac import sistema
 from omac.app import Api
 from omac.notas import leitor as lt
 from omac.notas.leitor import Regras
-from omac.whatsapp import mensagens as msg
+from omac.whatsapp import catalogo as cat
 from omac.whatsapp import variaveis as vr
 from tests.fabrica import criar_nota, criar_pasta_exemplo
 
@@ -140,8 +140,10 @@ def _nota(numero, paciente, dia, valor="180.00"):
 
 def test_modelo_padrao_e_o_texto_de_sempre():
     nota = _nota(836, "LUCAS COSTA RIBEIRO", 30)
-    texto = vr.preencher(vr.MODELO_NOTA, vr.valores("João", "FERNANDA COSTA", [nota]))
-    assert texto == msg.mensagem_da_nota("João", "FERNANDA COSTA", date(2026, 10, 30))
+    for papel in ("", "mãe"):
+        assert cat.nota({"assistente_nome": "João"}, "FERNANDA COSTA", papel, [nota]) == (
+            "*Assistente João:* Olá, Fernanda.\n"
+            "Segue a nota fiscal referente ao tratamento odontológico realizado dia 30/10.")
 
 
 def test_todas_as_variaveis():
@@ -163,34 +165,57 @@ def test_preencher_deixa_o_que_nao_e_variavel():
 
 
 def test_validar_modelo():
-    assert vr.validar("  Oi [nome-do-responsavel]\r\n ", vr.NOTA) == "Oi [nome-do-responsavel]"
+    assert cat.validar("  Oi [nome-do-responsavel]\r\n ", cat.NOTA) == "Oi [nome-do-responsavel]"
     with pytest.raises(vr.ModeloInvalido, match="vazia"):
-        vr.validar("  ", vr.NOTA)
+        cat.validar("  ", cat.NOTA)
     with pytest.raises(vr.ModeloInvalido, match=r"\[nome\]"):
-        vr.validar("Oi [nome]", vr.NOTA)
+        cat.validar("Oi [nome]", cat.NOTA)
     with pytest.raises(vr.ModeloInvalido, match="lista-das-notas"):
-        vr.validar("[lista-das-notas]", vr.NOTA)  # só existe na de várias notas
-    assert vr.validar("[lista-das-notas]", vr.NOTAS) == "[lista-das-notas]"
+        cat.validar("[lista-das-notas]", cat.NOTA)  # só existe na de várias notas
+    assert cat.validar("[lista-das-notas]", cat.NOTAS) == "[lista-das-notas]"
+
+
+def _versao(r, tipo, versao):
+    m = next(m for g in r["grupos"] for m in g["mensagens"] if m["tipo"] == tipo)
+    return next(v for v in m["versoes"] if v["versao"] == versao), m
 
 
 def test_api_modelos_previa_salvar_e_padrao(api):
     r = api.mensagens_modelos()
-    assert r["nota"]["modelo"] == vr.MODELO_NOTA and "lista-das-notas" in [v["nome"] for v in r["notas"]["variaveis"]]
-    p = api.mensagens_previa("nota", "Oi [primeiro-nome-do-responsavel], nota [numero-da-nota] [nada]")
+    assert [g["nome"] for g in r["grupos"]] == ["Tratamentos", "Atendimentos", "Notas fiscais", "Lembretes"]
+    v, m = _versao(r, "nota", "paciente")
+    assert v["modelo"] == v["padrao"] and not v["mudada"] and v["rotulo"] == "Para quem está na nota"
+    assert "lista-das-notas" in [x["nome"] for x in _versao(r, "notas", "paciente")[1]["variaveis"]]
+    p = api.mensagens_previa("nota", "responsavel", "Oi [primeiro-nome-do-responsavel], nota [numero-da-nota] [nada]")
     assert p["texto"] == "Oi Fernanda, nota 836 [nada]" and p["desconhecidas"] == ["nada"]
-    assert "Não conheço [nada]" in api.mensagens_salvar("nota", "Oi [nada]")["erro"]
-    r = api.mensagens_salvar("nota", "Bom dia, [nome-do-responsavel]! Nota nº [numero-da-nota] de [mes-competencia].")
-    assert r["config"]["mensagem_nota"].startswith("Bom dia")
-    # Salvar igual ao padrão guarda vazio.
-    assert api.mensagens_salvar("notas", vr.MODELO_NOTAS)["config"]["mensagem_notas"] == ""
-    assert api.mensagens_padrao("nota")["config"]["mensagem_nota"] == ""
+    assert "Não conheço [nada]" in api.mensagens_salvar("nota", "paciente", "Oi [nada]")["erro"]
+    assert "erro" in api.mensagens_salvar("nota", "unico", "Oi")  # nota não tem versão única
+    assert "erro" in api.mensagens_salvar("inventada", "paciente", "Oi")
+    r = api.mensagens_salvar("nota", "paciente", "Bom dia, [nome-do-responsavel]! Nota nº [numero-da-nota].")
+    assert r["config"]["mensagens"]["nota"]["paciente"].startswith("Bom dia")
+    assert _versao(r, "nota", "paciente")[0]["mudada"] and not _versao(r, "nota", "responsavel")[0]["mudada"]
+    # Salvar igual ao padrão guarda vazio (o config só guarda o que mudou).
+    padrao = _versao(r, "notas", "paciente")[0]["padrao"]
+    assert "notas" not in api.mensagens_salvar("notas", "paciente", padrao)["config"]["mensagens"]
+    assert "nota" not in api.mensagens_padrao("nota", "paciente")["config"]["mensagens"]
+
+
+def test_config_antigo_vale_para_as_duas_versoes():
+    from omac import config
+    cfg = config.normalizar({"mensagem_nota": "Oi [nome-do-responsavel]", "mensagem_cobranca": " "})
+    assert cfg["mensagens"] == {"nota": {"paciente": "Oi [nome-do-responsavel]", "responsavel": "Oi [nome-do-responsavel]"}}
+    assert "mensagem_nota" not in cfg
+    # Depois da 1.13.0 a chave nova manda (o antigo não volta).
+    assert config.normalizar({"mensagens": {}, "mensagem_nota": "Oi"})["mensagens"] == {}
+    assert config.normalizar({"mensagens": {"nota": {"paciente": 3, "responsavel": "x"}, "y": "z"}})["mensagens"] == {
+        "nota": {"responsavel": "x"}}
 
 
 def test_envio_usa_o_modelo(api):
-    api.mensagens_salvar("nota", "Bom dia, [nome-do-responsavel]! Nota nº [numero-da-nota] de [mes-competencia].")
+    api.mensagens_salvar("nota", "paciente", "Bom dia, [nome-do-responsavel]! Nota nº [numero-da-nota] de [mes-competencia].")
     r = api.notas_preparar_lote([803])
     assert r["destinos"][0]["mensagem"] == "Bom dia, Fernanda Costa! Nota nº 803 de outubro."
-    api.mensagens_salvar("notas", "[quantidade-de-notas] notas para [primeiro-nome-do-responsavel]:\n[lista-das-notas]")
+    api.mensagens_salvar("notas", "paciente", "[quantidade-de-notas] notas para [primeiro-nome-do-responsavel]:\n[lista-das-notas]")
     r = api.notas_preparar_lote([801, 802], "", "Fulana de Tal")
     assert r["destinos"][0]["mensagem"] == ("2 notas para Fulana:\n• Ana Beatriz Moreira: 01/10\n"
                                             "• Carlos Eduardo Lima: 03/10")

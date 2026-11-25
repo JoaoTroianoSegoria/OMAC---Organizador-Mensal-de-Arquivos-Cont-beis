@@ -35,9 +35,9 @@ PADRAO = {
     # Como os arquivos das notas são nomeados; do nome só saem o número e quem recebe a nota.
     "formato_arquivo": "NFS-e Nº [numero-da-nota] - [nome-do-paciente] - [data-de-emissao]",
     "servico_esperado": "tratamento odontológico",  # a descrição da nota deve ter isso; "" = não avisa
-    "mensagem_nota": "",  # modelo da mensagem de uma nota, com [variáveis]; "" = o padrão
-    "mensagem_notas": "",  # modelo para várias notas juntas; "" = o padrão
-    "mensagem_cobranca": "",  # modelo da cobrança de um atendimento (1.12.0); "" = o padrão
+    # Textos das mensagens com [variáveis] (whatsapp/catalogo.py): {"agendar": {"paciente": "", "responsavel": ""}}.
+    # "" = o padrão. Antes da 1.13.0 eram mensagem_nota, mensagem_notas e mensagem_cobranca (um texto só).
+    "mensagens": {},
     "emissao_categoria": "",  # id da categoria de Comandos que aparece na janela Emitir
     "ocultar_valores_minutos": 5,  # esconde os valores de novo depois de X minutos parado; 0 = não
     "abrir_em": "inicio",  # tela ao abrir: "inicio" | "notas"
@@ -118,7 +118,7 @@ def normalizar(cfg: dict) -> dict:
         limpo[chave] = bool(limpo[chave])
     for chave in ("pasta_notas", "pasta_extratos", "pasta_saida",
                   "assistente_nome", "chave_pix", "atualizacao_adiada_em", "site_nota",
-                  "formato_arquivo", "servico_esperado", "mensagem_nota", "mensagem_notas", "mensagem_cobranca",
+                  "formato_arquivo", "servico_esperado",
                   "emissao_categoria",
                   "backup_pasta", "backup_ultimo", "backup_erro"):
         limpo[chave] = str(limpo[chave] or "")
@@ -134,8 +134,31 @@ def normalizar(cfg: dict) -> dict:
     limpo["tratamentos"] = _lista_de_nomes(limpo["tratamentos"], PADRAO["tratamentos"])
     limpo["inicio_cartoes"] = _cartoes(limpo["inicio_cartoes"])
     limpo["menu"] = _menu(limpo["menu"])
+    limpo["mensagens"] = _mensagens(cfg)
     recolhidos = limpo["avisos_recolhidos"]
     limpo["avisos_recolhidos"] = [str(r) for r in recolhidos] if isinstance(recolhidos, list) else []
+    return limpo
+
+
+_MENSAGENS_ANTIGAS = {"mensagem_nota": "nota", "mensagem_notas": "notas", "mensagem_cobranca": "cobranca"}
+
+
+def _mensagens(cfg: dict) -> dict:
+    """{tipo: {versão: texto}} só com textos. Config de antes da 1.13.0: o texto único que a pessoa
+    tinha mudado passa a valer para as duas versões (paciente e responsável), como antes."""
+    valor = cfg.get("mensagens")
+    if not isinstance(valor, dict):
+        valor = {}
+        for antiga, tipo in _MENSAGENS_ANTIGAS.items():
+            texto = str(cfg.get(antiga) or "").strip()
+            if texto:
+                valor[tipo] = {"paciente": texto, "responsavel": texto}
+    limpo = {}
+    for tipo, versoes in valor.items():
+        if isinstance(versoes, dict):
+            textos = {str(v): str(t) for v, t in versoes.items() if isinstance(t, str) and t.strip()}
+            if textos:
+                limpo[str(tipo)] = textos
     return limpo
 
 

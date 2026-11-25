@@ -1,7 +1,6 @@
-"""Mensagem da nota com variáveis: a pessoa escreve o texto do jeito dela e põe [variáveis] no meio.
+"""As [variáveis] das mensagens: o que cada uma quer dizer, os valores de cada uma e a troca no texto.
 
-Três modelos (Configurações → WhatsApp): uma nota, várias notas juntas e a cobrança de um
-atendimento (1.12.0). Vazio nas Configurações quer dizer o padrão.
+Os textos (padrões e os da pessoa) ficam no catálogo (catalogo.py).
 """
 
 from __future__ import annotations
@@ -13,21 +12,6 @@ from decimal import Decimal
 
 from ..planilha import MESES
 from .mensagens import assinatura
-
-NOTA, NOTAS, COBRANCA = "nota", "notas", "cobranca"
-CHAVES = {NOTA: "mensagem_nota", NOTAS: "mensagem_notas", COBRANCA: "mensagem_cobranca"}
-
-MODELO_NOTA = ("[assinatura]Olá, [primeiro-nome-do-responsavel].\n"
-               "Segue a nota fiscal referente ao tratamento odontológico realizado dia [data-competencia].")
-MODELO_NOTAS = ("[assinatura]Olá, [primeiro-nome-do-responsavel].\n"
-                "Seguem as [quantidade-de-notas] notas fiscais referentes ao tratamento odontológico:\n"
-                "[lista-das-notas]")
-MODELO_COBRANCA = ("[assinatura]Olá, [primeiro-nome-do-responsavel].\n"
-                   "Passando para lembrar do pagamento do atendimento de [primeiro-nome-do-paciente] "
-                   "em [data-do-atendimento] ([tratamento]), no valor de [valor].\n"
-                   "Segue a chave Pix: [chave-pix]\n"
-                   "Depois me envie o comprovante, por favor.")
-PADROES = {NOTA: MODELO_NOTA, NOTAS: MODELO_NOTAS, COBRANCA: MODELO_COBRANCA}
 
 # nome → o que é (aparece nos botões e na ajuda da tela). A ordem é a dos botões.
 VARIAVEIS = {
@@ -57,6 +41,29 @@ VARIAVEIS_SO_DE_VARIAS = {
     "quantidade-de-notas": "Quantas notas vão juntas",
     "lista-das-notas": "Uma linha por paciente, com as datas",
 }
+VARIAVEIS_DO_TRATAMENTO = {
+    "nome-do-responsavel": "Nome de quem recebe a mensagem",
+    "primeiro-nome-do-responsavel": "Só o primeiro nome de quem recebe",
+    "nome-do-paciente": "Nome do paciente",
+    "primeiro-nome-do-paciente": "Só o primeiro nome do paciente",
+    "mes-atual": "O mês de hoje (novembro)",
+    "assinatura": "*Assistente Fulano:* (o nome das Configurações)",
+}
+VARIAVEIS_DA_CONSULTA = {"dia-da-consulta": "O dia marcado (sexta-feira, 04/12)"}
+VARIAVEIS_DO_PIX = {
+    "valor": "Valor da manutenção (R$ 180,00)",
+    "chave-pix": "A chave Pix das Configurações",
+}
+VARIAVEIS_DO_LEMBRETE = {
+    "nome-de-quem-recebe": "Nome de quem recebe o lembrete",
+    "primeiro-nome-de-quem-recebe": "Só o primeiro nome",
+    "assinatura": "*Assistente Fulano:* (o nome das Configurações)",
+}
+VARIAVEIS_DAS_CONTAS = {"lista-das-contas": "Uma linha por conta, com o vencimento"}
+VARIAVEIS_DO_LEMBRETE_LIVRE = {
+    "titulo": "O que lembrar",
+    "observacao": "A observação do lembrete (se tiver)",
+}
 
 _RE_VARIAVEL = re.compile(r"\[([^\[\]\n]{1,40})\]")
 _MINUSCULAS = {"da", "de", "do", "das", "dos", "e"}
@@ -77,43 +84,6 @@ class NotaDaMensagem:
     valor: Decimal
 
 
-def tipo_certo(tipo: str) -> str:
-    return tipo if tipo in PADROES else NOTA
-
-
-def variaveis_do(tipo: str) -> dict[str, str]:
-    if tipo == COBRANCA:
-        return dict(VARIAVEIS_DA_COBRANCA)
-    return {**VARIAVEIS, **VARIAVEIS_SO_DE_VARIAS} if tipo == NOTAS else dict(VARIAVEIS)
-
-
-def modelo(cfg: dict, tipo: str) -> str:
-    """O modelo das Configurações, ou o padrão."""
-    return cfg.get(CHAVES[tipo]) or PADROES[tipo]
-
-
-def desconhecidas(texto: str, tipo: str) -> list[str]:
-    conhecidas = variaveis_do(tipo)
-    vistas = []
-    for m in _RE_VARIAVEL.finditer(texto):
-        nome = m.group(1).strip().lower()
-        if nome not in conhecidas and nome not in vistas:
-            vistas.append(nome)
-    return vistas
-
-
-def validar(texto: str, tipo: str) -> str:
-    """O modelo como vai ser guardado. Variável escrita errada não deixa salvar."""
-    texto = str(texto or "").replace("\r\n", "\n").strip()
-    if not texto:
-        raise ModeloInvalido("A mensagem não pode ficar vazia. Para voltar ao texto de antes, use “Voltar ao padrão”.")
-    erradas = desconhecidas(texto, tipo)
-    if erradas:
-        lista = ", ".join(f"[{v}]" for v in erradas)
-        raise ModeloInvalido(f"Não conheço {lista}. Use os botões para pôr as variáveis certas.")
-    return texto
-
-
 def preencher(texto: str, valores: dict[str, str]) -> str:
     """Troca cada [variável] pelo valor. O que não for variável conhecida fica como está."""
     def trocar(m: re.Match) -> str:
@@ -121,6 +91,16 @@ def preencher(texto: str, valores: dict[str, str]) -> str:
         return valores[nome] if nome in valores else m.group(0)
 
     return _RE_VARIAVEL.sub(trocar, texto)
+
+
+def desconhecidas(texto: str, conhecidas) -> list[str]:
+    """As [variáveis] do texto que não estão em `conhecidas`, sem repetir."""
+    vistas = []
+    for m in _RE_VARIAVEL.finditer(str(texto or "")):
+        nome = m.group(1).strip().lower()
+        if nome not in conhecidas and nome not in vistas:
+            vistas.append(nome)
+    return vistas
 
 
 # --- Os valores ------------------------------------------------------------------------
@@ -181,32 +161,6 @@ def valores(assistente: str, destinatario: str, notas: list[NotaDaMensagem]) -> 
     }
 
 
-def mensagem(cfg: dict, destinatario: str, notas: list) -> str:
-    """A mensagem pronta: uma nota usa o modelo de uma nota; mais de uma, o de várias."""
-    tipo = NOTA if len(notas) == 1 else NOTAS
-    lista = [NotaDaMensagem(n.numero, n.paciente, n.competencia, n.emissao, n.valor) for n in notas]
-    return preencher(modelo(cfg, tipo), valores(cfg.get("assistente_nome", ""), destinatario, lista)).strip()
-
-
-# Exemplo da prévia (inventado: nenhum dado real aparece na tela de Configurações).
-EXEMPLO_RESPONSAVEL = "FERNANDA COSTA"
-EXEMPLO = {
-    NOTA: [NotaDaMensagem(836, "LUCAS COSTA RIBEIRO", date(2026, 10, 30), date(2026, 10, 30), Decimal("180.00"))],
-    NOTAS: [NotaDaMensagem(836, "LUCAS COSTA RIBEIRO", date(2026, 10, 2), date(2026, 10, 2), Decimal("180.00")),
-            NotaDaMensagem(837, "LUCAS COSTA RIBEIRO", date(2026, 10, 16), date(2026, 10, 16), Decimal("180.00")),
-            NotaDaMensagem(838, "SOFIA COSTA RIBEIRO", date(2026, 10, 16), date(2026, 10, 17), Decimal("250.00"))],
-}
-
-
-def previa(texto: str, tipo: str, assistente: str) -> dict:
-    if tipo == COBRANCA:
-        exemplo = valores_cobranca(assistente, EXEMPLO_RESPONSAVEL, "LUCAS COSTA RIBEIRO", date(2026, 10, 30),
-                                   "Manutenção", 18000, "chave@exemplo.com")
-        return {"texto": _limpar(preencher(str(texto or ""), exemplo)), "desconhecidas": desconhecidas(str(texto or ""), tipo)}
-    return {"texto": preencher(str(texto or ""), valores(assistente, EXEMPLO_RESPONSAVEL, EXEMPLO[tipo])),
-            "desconhecidas": desconhecidas(str(texto or ""), tipo)}
-
-
 # --- Cobrança de um atendimento (Atendimentos → botão de cobrar) -----------------------
 
 
@@ -225,15 +179,51 @@ def valores_cobranca(assistente: str, destinatario: str, paciente: str, dia: dat
     }
 
 
-def _limpar(texto: str) -> str:
-    """O que sobra quando um dado falta: "()" sem tratamento, ", no valor de ." sem valor."""
+def limpar(texto: str) -> str:
+    """O que sobra quando um dado falta: "()" sem tratamento, ", no valor de ." sem valor,
+    "Olá, ." sem nome e linhas vazias no fim (observação em branco)."""
     texto = re.sub(r"\s*\(\s*\)", "", texto)
-    texto = re.sub(r",?\s*no valor de\s*(?=[.,\n]|$)", "", texto)
+    texto = re.sub(r",?\s*no valor de\s*(?=[.,:\n]|$)", "", texto)
+    texto = re.sub(r",[ \t]*(?=[.!?])", "", texto)
     return texto.strip()
 
 
-def mensagem_cobranca(cfg: dict, destinatario: str, paciente: str, dia: date, tratamento: str,
-                      valor_centavos: int | None) -> str:
-    v = valores_cobranca(cfg.get("assistente_nome", ""), destinatario, paciente, dia, tratamento, valor_centavos,
-                         cfg.get("chave_pix", ""))
-    return _limpar(preencher(modelo(cfg, COBRANCA), v))
+# --- Tratamentos (ortodontia) e lembretes ----------------------------------------------
+
+
+DIAS_DA_SEMANA = ["segunda-feira", "terça-feira", "quarta-feira", "quinta-feira", "sexta-feira", "sábado", "domingo"]
+
+
+def data_da_consulta(dia: str) -> str:
+    """"2026-12-04" → "sexta-feira, 04/12"."""
+    d = date.fromisoformat(dia)
+    return f"{DIAS_DA_SEMANA[d.weekday()]}, {d:%d/%m}"
+
+
+def valores_tratamento(assistente: str, destinatario: str, paciente: str, hoje: date, consulta: str = "",
+                       valor_centavos: int | None = None, chave_pix: str = "") -> dict[str, str]:
+    return {
+        "assinatura": assinatura(assistente),
+        "nome-do-responsavel": nome_bonito(destinatario),
+        "primeiro-nome-do-responsavel": _primeiro(destinatario),
+        "nome-do-paciente": nome_bonito(paciente),
+        "primeiro-nome-do-paciente": _primeiro(paciente),
+        "mes-atual": MESES[hoje.month - 1].lower(),
+        "dia-da-consulta": data_da_consulta(consulta) if consulta else "",
+        "valor": _reais(Decimal(valor_centavos) / 100) if valor_centavos else "",
+        "chave-pix": " ".join(str(chave_pix or "").split()),
+    }
+
+
+def valores_lembrete(assistente: str, destinatario: str, contas: list[dict] | None = None,
+                     titulo: str = "", observacao: str = "") -> dict[str, str]:
+    """O nome vai como está no contato (pode ser "Dra. Fulana")."""
+    nome = " ".join(str(destinatario or "").split())
+    return {
+        "assinatura": assinatura(assistente),
+        "nome-de-quem-recebe": nome,
+        "primeiro-nome-de-quem-recebe": nome.split(" ")[0] if nome else "",
+        "lista-das-contas": "\n".join(f"• {c['nome']}: {c['situacao']}" for c in contas or []),
+        "titulo": str(titulo or "").strip(),
+        "observacao": str(observacao or "").strip(),
+    }

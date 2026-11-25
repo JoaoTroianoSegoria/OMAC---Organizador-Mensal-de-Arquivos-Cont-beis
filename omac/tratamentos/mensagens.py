@@ -1,85 +1,32 @@
 """As três mensagens que podem ser mandadas para o paciente ou para o responsável.
 
-Com `responsavel`, a conversa é com ele e o paciente é citado pelo primeiro nome.
+Os textos ficam no catálogo (Configurações → Mensagens): cada um tem a versão para o próprio
+paciente e a versão para o responsável (que cita o paciente pelo primeiro nome).
 """
 
 from __future__ import annotations
 
 from datetime import date
 
-from ..planilha import MESES
-from ..whatsapp.mensagens import assinatura, primeiro_nome
+from ..whatsapp import catalogo as cat
+from ..whatsapp import variaveis as vr
 
+# As opções da janela de mensagem de Tratamentos
 AGENDAR = "agendar"
 COBRAR = "cobrar"
 RETORNO = "retorno"
 
 
-def reais(centavos: int) -> str:
-    inteiro, resto = divmod(centavos, 100)
-    return f"R$ {inteiro:,}".replace(",", ".") + f",{resto:02d}"
-
-
-def _inicio(assistente: str, nome: str, responsavel: str) -> str:
-    return f"{assinatura(assistente)}Olá, {primeiro_nome(responsavel or nome)}.\n"
-
-
-def _mes(hoje: date) -> str:
-    return MESES[hoje.month - 1].lower()
-
-
-DIAS_DA_SEMANA = ["segunda-feira", "terça-feira", "quarta-feira", "quinta-feira", "sexta-feira", "sábado", "domingo"]
-
-
-def data_da_consulta(dia: str) -> str:
-    """"2026-12-04" → "sexta-feira, 04/12"."""
-    d = date.fromisoformat(dia)
-    return f"{DIAS_DA_SEMANA[d.weekday()]}, {d:%d/%m}"
-
-
-def agendar(assistente: str, nome: str, hoje: date, responsavel: str = "", consulta: str = "") -> str:
-    """Com o dia da consulta já marcado, a mensagem confirma o dia em vez de pedir um."""
-    o_que = f"a manutenção do aparelho de {primeiro_nome(nome)}" if responsavel else "a sua manutenção do aparelho"
-    if consulta:
-        return (
-            f"{_inicio(assistente, nome, responsavel)}"
-            f"Passando para confirmar {o_que} na {data_da_consulta(consulta)}. Está tudo certo para esse dia?"
-        )
-    return (
-        f"{_inicio(assistente, nome, responsavel)}"
-        f"Vamos agendar {o_que} para {_mes(hoje)}? "
-        "Me diga qual dia e horário ficam melhores para você."
-    )
-
-
-def cobrar(assistente: str, nome: str, hoje: date, valor_centavos: int | None, chave_pix: str,
-           responsavel: str = "") -> str:
-    """Sem chave Pix não há o que mandar: devolve vazio para a tela pedir a chave."""
-    chave = chave_pix.strip()
-    if not chave:
-        return ""
-    de_quem = f" de {primeiro_nome(nome)}, referente a {_mes(hoje)}" if responsavel else f" de {_mes(hoje)}"
-    valor = f", no valor de {reais(valor_centavos)}" if valor_centavos else ""
-    return (
-        f"{_inicio(assistente, nome, responsavel)}"
-        f"Segue a chave Pix para o pagamento da manutenção{de_quem}{valor}:\n\n"
-        f"{chave}\n\n"
-        "Depois me envie o comprovante, por favor."
-    )
-
-
-def retorno(assistente: str, nome: str, responsavel: str = "") -> str:
-    o_que = f"o retorno de {primeiro_nome(nome)}" if responsavel else "o seu retorno"
-    return (
-        f"{_inicio(assistente, nome, responsavel)}"
-        f"Está na hora de agendar {o_que}. Me diga qual dia e horário ficam melhores para você."
-    )
-
-
-def todas(assistente: str, nome: str, hoje: date, valor_centavos: int | None, chave_pix: str,
-          responsavel: str = "", consulta: str = "") -> dict[str, str]:
+def todas(cfg: dict, nome: str, hoje: date, valor_centavos: int | None, responsavel: str = "",
+          consulta: str = "") -> dict[str, str]:
+    """Com o dia da consulta já marcado, "agendar" confirma o dia em vez de pedir um.
+    Sem chave Pix (e com o texto pedindo a chave), "cobrar" vem vazio para a tela pedir a chave."""
+    versao = cat.RESPONSAVEL if responsavel else cat.PACIENTE
+    v = vr.valores_tratamento(cfg.get("assistente_nome", ""), responsavel or nome, nome, hoje, consulta,
+                              valor_centavos, cfg.get("chave_pix", ""))
+    sem_pix = not v["chave-pix"] and cat.usa(cfg, cat.PIX_MANUTENCAO, versao, "chave-pix")
     return {
-        AGENDAR: agendar(assistente, nome, hoje, responsavel, consulta),
-        COBRAR: cobrar(assistente, nome, hoje, valor_centavos, chave_pix, responsavel),
-        RETORNO: retorno(assistente, nome, responsavel),
+        AGENDAR: cat.montar(cfg, cat.CONFIRMAR if consulta else cat.AGENDAR, versao, v),
+        COBRAR: "" if sem_pix else cat.montar(cfg, cat.PIX_MANUTENCAO, versao, v),
+        RETORNO: cat.montar(cfg, cat.RETORNO, versao, v),
     }

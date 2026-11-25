@@ -1,15 +1,11 @@
-"""Telefones, links do WhatsApp e o texto das mensagens."""
+"""Telefones, links do WhatsApp e a assinatura. Os textos das mensagens ficam no catálogo."""
 
 from __future__ import annotations
 
 import re
-from datetime import date
 from urllib.parse import quote
 
 from .. import sistema
-
-SERVICO_PADRAO = "tratamento odontológico"
-
 
 class TelefoneInvalido(ValueError):
     """O telefone não tem o tamanho de um número brasileiro com DDD."""
@@ -49,49 +45,3 @@ def abrir_conversa(telefone: str, texto: str, destino: str) -> None:
 def assinatura(assistente: str) -> str:
     assistente = assistente.strip()
     return f"*Assistente {assistente}:* " if assistente else ""
-
-
-def primeiro_nome(nome: str) -> str:
-    partes = nome.split()
-    return partes[0].title() if partes else ""
-
-
-def mensagem_da_nota(assistente: str, nome: str, competencia: date, servico: str = SERVICO_PADRAO) -> str:
-    return (
-        f"{assinatura(assistente)}Olá, {primeiro_nome(nome)}.\n"
-        f"Segue a nota fiscal referente ao {servico} realizado dia {competencia:%d/%m}."
-    )
-
-
-def _dias(datas: list[date]) -> str:
-    dias = [f"{d:%d/%m}" for d in sorted(set(datas))]
-    return dias[0] if len(dias) == 1 else f"{', '.join(dias[:-1])} e {dias[-1]}"
-
-
-def mensagem_das_notas(assistente: str, nome: str, notas: list[tuple[str, date]],
-                       servico: str = SERVICO_PADRAO) -> str:
-    """Várias notas numa mensagem só. notas = [(paciente, competência), ...]."""
-    if len(notas) == 1:
-        return mensagem_da_nota(assistente, nome, notas[0][1], servico)
-    inicio = f"{assinatura(assistente)}Olá, {primeiro_nome(nome)}.\n"
-    pacientes = {p for p, _ in notas}
-    if len(pacientes) == 1:
-        datas = [d for _, d in notas]
-        palavra = "dia" if len(set(datas)) == 1 else "nos dias"
-        return f"{inicio}Seguem as {len(notas)} notas fiscais referentes ao {servico} realizado {palavra} {_dias(datas)}."
-    linhas = [f"• {p.title()}: {_dias([d for q, d in notas if q == p])}" for p in sorted(pacientes)]
-    return "\n".join([f"{inicio}Seguem as {len(notas)} notas fiscais referentes ao {servico}:", *linhas])
-
-
-def mensagem_de_lembrete_livre(assistente: str, destinatario: str, titulo: str, observacao: str = "") -> str:
-    saudacao = f"Olá, {destinatario.strip()}." if destinatario.strip() else "Olá."
-    linhas = [f"{assinatura(assistente)}{saudacao}", f"Lembrete: {titulo.strip()}"]
-    if observacao.strip():
-        linhas.append(observacao.strip())
-    return "\n".join(linhas)
-
-
-def mensagem_de_lembrete(assistente: str, destinatario: str, contas: list[dict]) -> str:
-    saudacao = f"Olá, {destinatario.strip()}." if destinatario.strip() else "Olá."
-    linhas = [f"• {c['nome']}: {c['situacao']}" for c in contas]
-    return "\n".join([f"{assinatura(assistente)}{saudacao}", "Lembrete de pagamento:", *linhas])

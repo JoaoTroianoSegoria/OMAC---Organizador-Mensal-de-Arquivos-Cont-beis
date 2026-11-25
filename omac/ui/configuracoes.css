@@ -31,3 +31,131 @@
   background: var(--vidro-forte); overflow-wrap: anywhere; user-select: all;
 }
 .cfg-link-botoes { display: flex; flex-wrap: wrap; gap: .5rem; }
+
+/* ---------- Categorias (1.13.0) ----------
+ * O conteúdo de uma categoria por vez, numa coluna; o menu delas fica na cortina (cfg-menu.js). */
+#view-config { max-width: 50rem; }
+.cfg-caminho { color: var(--texto-3); font-size: .78rem; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }
+.cfg-categoria { display: flex; flex-direction: column; gap: 1rem; }
+.cfg-categoria .grupo, .cfg-categoria .opcao, .cfg-categoria .campo, .cfg-categoria fieldset { scroll-margin-top: 1rem; }
+.cfg-destaque { animation: cfg-destaque 1.6s ease-out; }
+@keyframes cfg-destaque {
+  0%, 35% { box-shadow: 0 0 0 3px var(--acento); border-radius: var(--raio-p); }
+  100% { box-shadow: 0 0 0 3px transparent; }
+}
+/* Sem animação, o destaque fica parado enquanto a classe está lá (1,6 s). */
+[data-visual="otimizado"] .cfg-destaque,
+[data-movimento="reduzido"] .cfg-destaque { box-shadow: 0 0 0 3px var(--acento); border-radius: var(--raio-p); }
+
+/* ---------- Mensagens ---------- */
+.cfg-msg-ajuda { margin: 0 .25rem; }
+.cfg-msg-lista { display: flex; flex-direction: column; gap: 1rem; }
+.cfg-msg-grupo {
+  margin: .75rem .25rem -.25rem; color: var(--texto-3);
+  font-size: .78rem; font-weight: 700; letter-spacing: .08em; text-transform: uppercase;
+}
+.cfg-msg h3 { margin: 0; font-size: 1.05rem; }
+.cfg-msg > .dica { margin: -.4rem 0 0; }
+.cfg-abas {
+  display: flex; flex-wrap: wrap; gap: .25rem; align-self: flex-start;
+  padding: .25rem; border-radius: 99px; background: var(--vidro-forte);
+}
+.cfg-aba {
+  display: inline-flex; align-items: baseline; gap: .4rem;
+  border: 0; border-radius: 99px; padding: .4rem .9rem;
+  background: transparent; color: var(--texto-2); font-weight: 600;
+}
+.cfg-aba:hover { color: var(--texto); }
+.cfg-aba[aria-selected="true"] { background: var(--acento); color: var(--acento-texto); }
+.cfg-aba-marca { font-size: .72rem; font-weight: 600; opacity: .85; }
+.cfg-aba-marca:empty { display: none; }
+[data-visual="otimizado"] .cfg-abas { background: var(--solido-2); }
+
+/* ---------- Cortina no menu lateral ----------
+ * Fica por cima do menu normal (a lateral inteira). Abre com data-config-aberta="1"; ao fechar,
+ * "fechando" mantém a cortina enquanto ela desce e o menu normal volta a aparecer. */
+.cfg-cortina {
+  position: absolute; inset: 0; z-index: 3;
+  display: none; flex-direction: column; gap: .5rem;
+  padding: 1.1rem .75rem;
+  border-radius: inherit;
+  overflow: hidden; /* quem rola é a lista (categorias ou resultados): o Voltar fica sempre à vista */
+  background: var(--vidro-forte);
+  -webkit-backdrop-filter: blur(1.5rem) saturate(180%);
+  backdrop-filter: blur(1.5rem) saturate(180%);
+}
+[data-config-aberta] .cfg-cortina { display: flex; }
+[data-config-aberta] .lateral { overflow: hidden; }
+#menu, .lateral-rodape, .marca { transition: opacity .3s ease; }
+[data-config-aberta="1"] #menu,
+[data-config-aberta="1"] .lateral-rodape,
+[data-config-aberta="1"] .marca { opacity: 0; }
+[data-visual="otimizado"] .cfg-cortina,
+[data-contraste="alto"] .cfg-cortina { background: var(--solido); -webkit-backdrop-filter: none; backdrop-filter: none; }
+/* Menu só com ícones (janela estreita): enquanto a cortina está aberta, ele alarga para caber os nomes. */
+[data-trilho="1"][data-config-aberta] .app { grid-template-columns: 15rem 1fr; }
+
+.cfg-cortina-titulo {
+  display: flex; align-items: center; gap: .75rem; flex: none;
+  min-height: 2.75rem; padding: .55rem .8rem;
+  border-radius: var(--raio-m); background: var(--vidro-forte);
+  font-weight: 700; color: var(--texto);
+  box-shadow: inset 0 1px 0 var(--vidro-brilho), 0 .25rem .9rem rgba(0, 0, 0, .08);
+}
+.cfg-cortina-titulo .ic { color: var(--acento); }
+[data-visual="otimizado"] .cfg-cortina-titulo { background: var(--solido-2); box-shadow: none; }
+
+.cfg-busca {
+  display: flex; align-items: center; gap: .5rem; flex: none;
+  padding: .1rem .7rem; border-radius: var(--raio-m);
+  border: 1px solid var(--linha); background: var(--vidro-forte);
+}
+.cfg-busca:focus-within { outline: 3px solid var(--foco); outline-offset: 1px; }
+.cfg-busca .ic { color: var(--texto-3); flex: none; }
+.cfg-busca input { flex: 1; min-width: 0; border: 0; background: transparent; padding: .5rem 0; outline: none; }
+[data-visual="otimizado"] .cfg-busca { background: var(--solido-2); }
+
+.cfg-categorias, .cfg-resultados {
+  display: flex; flex-direction: column; gap: .2rem;
+  flex: 1 1 auto; min-height: 0; overflow-y: auto;
+}
+.cfg-categorias[hidden], .cfg-resultados[hidden] { display: none; }
+.cfg-cat {
+  display: flex; align-items: center; gap: .75rem; flex: none;
+  width: 100%; min-height: 2.6rem; padding: .5rem .8rem;
+  border: 0; border-radius: var(--raio-m); background: transparent;
+  color: var(--texto-2); text-align: left; font-weight: 500;
+  transition: background-color .18s, color .18s;
+}
+.cfg-cat:hover { background: var(--acento-suave); color: var(--texto); }
+.cfg-cat[aria-current="page"] { color: var(--texto); background: var(--acento-suave); font-weight: 700; }
+.cfg-cat[aria-current="page"] .ic { color: var(--acento); }
+.cfg-voltar { margin-top: auto; }
+[data-menu-compacto="1"] .cfg-cat { min-height: 2.2rem; padding-block: .3rem; }
+
+/* Atalhos das mensagens, embaixo de "Mensagens" */
+.cfg-sub {
+  display: flex; flex-direction: column; gap: .1rem;
+  margin: .1rem 0 .3rem 1.6rem; padding-left: .6rem; border-left: 2px solid var(--linha);
+}
+.cfg-sub-grupo {
+  padding: .45rem .5rem .1rem; color: var(--texto-3);
+  font-size: .68rem; font-weight: 700; letter-spacing: .08em; text-transform: uppercase;
+}
+.cfg-atalho {
+  border: 0; border-radius: .6rem; background: transparent; color: var(--texto-2);
+  padding: .3rem .5rem; text-align: left; font-size: .85rem;
+}
+.cfg-atalho:hover { background: var(--acento-suave); color: var(--texto); }
+.cfg-atalho[aria-current="true"] { color: var(--acento); font-weight: 700; }
+
+/* Resultados da procura */
+.cfg-resultado {
+  display: flex; flex-direction: column; align-items: flex-start; gap: .1rem;
+  border: 0; border-radius: var(--raio-m); background: transparent;
+  padding: .45rem .7rem; text-align: left; color: var(--texto);
+}
+.cfg-resultado:hover, .cfg-resultado:focus-visible { background: var(--acento-suave); }
+.cfg-resultado strong { font-size: .88rem; font-weight: 600; overflow-wrap: anywhere; }
+.cfg-resultado small { font-size: .75rem; color: var(--texto-3); }
+.cfg-nada { margin: .5rem .7rem; color: var(--texto-3); font-size: .88rem; }

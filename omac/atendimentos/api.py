@@ -11,7 +11,7 @@ from ..inicio.registro import widget
 from ..nucleo import ApiBase, seguro
 from ..texto import normalizar
 from ..tratamentos import orto
-from ..whatsapp import variaveis as vr
+from ..whatsapp import catalogo as cat
 from . import exportar as exp
 from . import ficha as fc
 
@@ -123,10 +123,10 @@ class AtendimentosApi(ApiBase):
         contatos = self._lista_de_contatos()
         paciente = ct.buscar(contatos, a["contato_id"])
         dia = date.fromisoformat(a["data"])
-        destinos = [{**d, "mensagem": vr.mensagem_cobranca(self._cfg, d["nome"], paciente["nome"], dia,
-                                                            a.get("tratamento", ""), a.get("valor_centavos"))}
+        destinos = [{**d, "mensagem": cat.cobranca(self._cfg, d["nome"], d["papel"], paciente["nome"], dia,
+                                                    a.get("tratamento", ""), a.get("valor_centavos"))}
                     for d in ct.destinos(contatos, paciente)]
-        precisa_pix = "[chave-pix]" in vr.modelo(self._cfg, vr.COBRANCA).replace(" ", "").lower()
+        precisa_pix = any(cat.usa(self._cfg, cat.COBRANCA, v, "chave-pix") for v in (cat.PACIENTE, cat.RESPONSAVEL))
         return {"id": a["id"], "nome": paciente["nome"], "data": a["data"], "tratamento": a.get("tratamento", ""),
                 "valor_centavos": a.get("valor_centavos"), "destinos": destinos,
                 "escolhido": ct.destino_escolhido(contatos, paciente)["contato_id"],

@@ -32,7 +32,7 @@ VARIANTES = [
     ("contatos-escuro", "contatos", {"tema": "escuro", "visual": "bonito"}, {"ct": "lista"}),
     ("contatos-janela", "contatos", {"tema": "claro", "visual": "bonito"}, {"ct": "janela"}),
     ("tratamentos-paciente", "tratamentos", {"tema": "escuro", "visual": "bonito"}, {"agenda": "paciente"}),
-    ("config-backup", "config", {"tema": "claro", "visual": "bonito", "backup_automatico": True}, {"rolar": "#g-backup"}),
+    ("config-backup", "config", {"tema": "claro", "visual": "bonito", "backup_automatico": True}, {"cfg": "backup"}),
     # arquivo, view, configurações, extras ("pasta": "vazia" | "mes": n)
     ("notas-claro", "relatorio", {"tema": "claro", "visual": "bonito"}, {}),
     ("notas-escuro", "relatorio", {"tema": "escuro", "visual": "bonito"}, {}),
@@ -63,7 +63,9 @@ VARIANTES = [
     ("textos", "textos", {"tema": "claro", "visual": "bonito"}, {}),
     ("textos-escuro", "textos", {"tema": "escuro", "visual": "bonito"}, {}),
     ("lembretes-enviar-conta", "lembretes", {"tema": "escuro", "visual": "bonito"}, {"whats": "enviar-conta"}),
-    ("config-whatsapp", "config", {"tema": "claro", "visual": "bonito"}, {"rolar": "#g-whats"}),
+    ("config-whatsapp", "config", {"tema": "claro", "visual": "bonito"}, {"cfg": "whatsapp"}),
+    ("config-mensagens", "config", {"tema": "claro", "visual": "bonito"}, {"cfg": "mensagens"}),
+    ("config-procura", "config", {"tema": "escuro", "visual": "bonito"}, {"procura": "piix"}),
     ("relatorio-pesquisa", "relatorio", {"tema": "claro", "visual": "bonito"}, {"escolher": "pesquisa"}),
     ("relatorio-envio-lote", "relatorio", {"tema": "claro", "visual": "bonito"}, {"escolher": "enviar"}),
     ("relatorio-escuro", "relatorio", {"tema": "escuro", "visual": "bonito"}, {"escolher": "pesquisa"}),
@@ -343,6 +345,14 @@ def main() -> None:
                         pagina.wait_for_selector("#pg-atendimento[open]")
                 if extras.get("whats") == "lembretes":
                     pagina.wait_for_selector("#lembretes[open]")
+                if view == "config":
+                    pagina.wait_for_timeout(600)  # a cortina sobe no menu lateral
+                if "cfg" in extras:
+                    pagina.evaluate(f'irPara("config", "{extras["cfg"]}")')
+                    pagina.wait_for_timeout(400)
+                if "procura" in extras:
+                    pagina.fill("#cfg-busca", extras["procura"])
+                    pagina.wait_for_timeout(200)
                 if "rolar" in extras:
                     pagina.locator(extras["rolar"]).scroll_into_view_if_needed()
                 if "rolar_fim" in extras:

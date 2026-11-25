@@ -125,9 +125,8 @@ class TratamentosApi(ApiBase):
         destinos = []
         for d in ct.destinos(list(contatos.values()), paciente):
             responsavel = d["nome"] if d["papel"] else ""
-            destinos.append({**d, "mensagens": msg.todas(self._cfg["assistente_nome"], paciente["nome"], hoje,
-                                                         t["valor_centavos"], self._cfg["chave_pix"], responsavel,
-                                                         consulta=orto.proxima_consulta(t, hoje))})
+            destinos.append({**d, "mensagens": msg.todas(self._cfg, paciente["nome"], hoje, t["valor_centavos"],
+                                                         responsavel, consulta=orto.proxima_consulta(t, hoje))})
         return {"id": t["id"], "nome": paciente["nome"], "destinos": destinos,
                 "escolhido": ct.destino_escolhido(list(contatos.values()), paciente)["contato_id"]}
 
