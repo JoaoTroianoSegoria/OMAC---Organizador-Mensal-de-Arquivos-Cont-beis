@@ -14,13 +14,17 @@ from ..tratamentos import orto
 from ..whatsapp import catalogo as cat
 from . import exportar as exp
 from . import ficha as fc
+from . import listas as lst
 
 
 class AtendimentosApi(ApiBase):
     def _atendimentos(self) -> list[dict]:
         return self._armazem.ler(esquema.ATENDIMENTOS)["atendimentos"]
 
-    def _vista_ficha(self, atendimentos: list[dict], ano: int, mes: int, notas: list | None) -> list[dict]:
+    def _vista_ficha(self, atendimentos: list[dict], ano: int, mes: int, notas: list | None,
+                     da_lista=None) -> list[dict]:
+        """Os atendimentos do mês prontos para a tela. As notas são ligadas olhando o mês inteiro
+        (todas as listas), como antes das listas; `da_lista(a)` escolhe quais vão para a tela."""
         hoje = date.today()
         nomes = ct.nomes(self._armazem.ler(esquema.CONTATOS)["contatos"])
         do_mes = fc.do_mes(atendimentos, ano, mes)
@@ -29,6 +33,8 @@ class AtendimentosApi(ApiBase):
         valores = {n.numero: int(round(n.valor * 100)) for n in notas or []}
         lista = []
         for a in do_mes:
+            if da_lista and not da_lista(a):
+                continue
             nome = nomes.get(a["contato_id"], "(contato apagado)")
             numero = ligadas.get(a["id"])
             lista.append({
@@ -43,19 +49,26 @@ class AtendimentosApi(ApiBase):
         lista.sort(key=lambda a: (a["data"], normalizar(a["nome"])))
         return lista
 
-    def _lista_ficha(self, ano: int, mes: int) -> dict:
-        atendimentos = self._atendimentos()
+    def _lista_ficha(self, ano: int, mes: int, lista_id: str = "") -> dict:
+        dados = self._armazem.ler(esquema.ATENDIMENTOS)
+        atendimentos = dados["atendimentos"]
+        listas = lst.todas(dados)
+        lista_id = lst.certa(lista_id, listas)
         notas = self._servico_notas.do_mes(ano, mes)
-        lista = self._vista_ficha(atendimentos, ano, mes, notas)
+        lista = self._vista_ficha(atendimentos, ano, mes, notas, lambda a: lst.da(a, listas) == lista_id)
+        do_mes = fc.do_mes(atendimentos, ano, mes)
         contatos = self._armazem.ler(esquema.CONTATOS)["contatos"]
         nomes = ct.nomes(contatos)
         tratamentos = self._armazem.ler(esquema.TRATAMENTOS)["tratamentos"]
         return {
             "ano": ano,
             "mes": mes,
+            "lista_id": lista_id,
+            "listas": [{**item, "qtd": len(lst.filtrar(do_mes, listas, item["id"])),
+                        "total": len(lst.filtrar(atendimentos, listas, item["id"]))} for item in listas],
             "atendimentos": lista,
             "totais": fc.totais(lista),
-            "meses": fc.meses(atendimentos),
+            "meses": fc.meses(lst.filtrar(atendimentos, listas, lista_id)),
             "nomes": sorted(nomes.values(), key=normalizar),
             # Paciente de orto em tratamento escolhido no campo já vem com a manutenção e o valor.
             "orto": {nomes[t["contato_id"]]: t["valor_centavos"] for t in tratamentos
@@ -70,7 +83,28 @@ class AtendimentosApi(ApiBase):
             mudar(atendimentos)
 
     @seguro
-    def atendimentos_listar(self, ano: int, mes: int):
+    def atendimentos_listar(self, ano: int, mes: int, lista_id: str = ""):
+        return self._lista_ficha(int(ano), int(mes), lista_id)
+
+    # --- Listas (Brasília, São Paulo…) -----------------------------------------------------
+
+    def _mudar_listas(self, mudar) -> str:
+        with self._armazem.editar(esquema.ATENDIMENTOS) as d:
+            return mudar(d)
+
+    @seguro
+    def atendimentos_lista_criar(self, nome: str, ano: int, mes: int):
+        nova = self._mudar_listas(lambda d: lst.criar(d, nome)["id"])
+        return self._lista_ficha(int(ano), int(mes), nova)
+
+    @seguro
+    def atendimentos_lista_renomear(self, lista_id: str, nome: str, ano: int, mes: int):
+        self._mudar_listas(lambda d: lst.renomear(d, lista_id, nome))
+        return self._lista_ficha(int(ano), int(mes), lista_id)
+
+    @seguro
+    def atendimentos_lista_apagar(self, lista_id: str, ano: int, mes: int):
+        self._mudar_listas(lambda d: lst.apagar(d, lista_id))
         return self._lista_ficha(int(ano), int(mes))
 
     @seguro
@@ -88,15 +122,18 @@ class AtendimentosApi(ApiBase):
             contatos = d["contatos"]
             contato = ct.obter(contatos, dados.get("nome"), "", hoje)
 
-        def mudar(atendimentos):
+        with self._armazem.editar(esquema.ATENDIMENTOS) as d:
+            atendimentos, listas = d["atendimentos"], lst.todas(d)
             if atendimento_id:
-                salvo.update(fc.alterar(atendimentos, atendimento_id, contato["id"], dados, hoje))
+                atendimento = fc.alterar(atendimentos, atendimento_id, contato["id"], dados, hoje)
             else:
-                salvo.update(fc.adicionar(atendimentos, contato["id"], dados, hoje))
-
-        self._editar_ficha(mudar)
+                atendimento = fc.adicionar(atendimentos, contato["id"], dados, hoje)
+            # Sem "lista_id" (uma tela antiga), o alterado fica onde estava e o novo vai para a primeira.
+            if "lista_id" in dados or not atendimento_id:
+                atendimento["lista_id"] = lst.certa(dados.get("lista_id"), listas)
+            salvo.update(atendimento, lista_id=lst.da(atendimento, listas))
         marcado = self._atendido_pela_ficha(contato["id"], salvo, hoje)
-        return {**self._lista_ficha(int(salvo["data"][:4]), int(salvo["data"][5:7])),
+        return {**self._lista_ficha(int(salvo["data"][:4]), int(salvo["data"][5:7]), salvo["lista_id"]),
                 "atendido_marcado": contato["nome"] if marcado else ""}
 
     def _atendido_pela_ficha(self, contato_id: str, atendimento: dict, hoje: date) -> bool:
@@ -138,12 +175,12 @@ class AtendimentosApi(ApiBase):
         return self._mensagem_para(a["contato_id"], destino_id, telefone, mensagem) or {}
 
     @seguro
-    def atendimentos_marcar_pago(self, atendimento_id: str, pago: bool, ano: int, mes: int):
+    def atendimentos_marcar_pago(self, atendimento_id: str, pago: bool, ano: int, mes: int, lista_id: str = ""):
         self._editar_ficha(lambda lista: fc.marcar_pago(fc.buscar(lista, atendimento_id), bool(pago), date.today()))
-        return self._lista_ficha(int(ano), int(mes))
+        return self._lista_ficha(int(ano), int(mes), lista_id)
 
     @seguro
-    def atendimentos_apagar(self, atendimento_id: str, ano: int, mes: int):
+    def atendimentos_apagar(self, atendimento_id: str, ano: int, mes: int, lista_id: str = ""):
         apagado = {}
 
         def mudar(lista):
@@ -153,22 +190,29 @@ class AtendimentosApi(ApiBase):
 
         self._editar_ficha(mudar)
         nome = self._nomes_dos_contatos().get(apagado["contato_id"], "")
-        return {**self._lista_ficha(int(ano), int(mes)), "apagado": apagado, "apagado_nome": nome}
+        return {**self._lista_ficha(int(ano), int(mes), lista_id), "apagado": apagado, "apagado_nome": nome}
 
     @seguro
-    def atendimentos_restaurar(self, atendimento: dict, ano: int, mes: int):
+    def atendimentos_restaurar(self, atendimento: dict, ano: int, mes: int, lista_id: str = ""):
         self._editar_ficha(lambda lista: fc.restaurar(lista, atendimento))
-        return self._lista_ficha(int(ano), int(mes))
+        return self._lista_ficha(int(ano), int(mes), lista_id)
 
     @seguro
-    def atendimentos_exportar(self, ano: int, mes: int):
+    def atendimentos_exportar(self, ano: int, mes: int, lista_id: str = ""):
+        """A planilha (para imprimir) é da lista aberta. Com mais de uma lista, o nome dela vai no
+        nome do arquivo e no alto da folha impressa."""
         ano, mes = int(ano), int(mes)
-        lista = self._vista_ficha(self._atendimentos(), ano, mes, self._servico_notas.do_mes(ano, mes))
-        destino = self._dialogo_salvar(exp.nome_sugerido(ano, mes), "xlsx", "Planilha do Excel")
+        dados = self._armazem.ler(esquema.ATENDIMENTOS)
+        listas = lst.todas(dados)
+        lista_id = lst.certa(lista_id, listas)
+        lista = self._vista_ficha(dados["atendimentos"], ano, mes, self._servico_notas.do_mes(ano, mes),
+                                  lambda a: lst.da(a, listas) == lista_id)
+        nome_lista = lst.nome_de(listas, lista_id) if len(listas) > 1 else ""
+        destino = self._dialogo_salvar(exp.nome_sugerido(ano, mes, nome_lista), "xlsx", "Planilha do Excel")
         if destino is None:
             return {"cancelado": True}
         try:
-            salvo = exp.exportar(lista, destino, ano, mes)
+            salvo = exp.exportar(lista, destino, ano, mes, nome_lista)
         except PermissionError:
             return {"erro": "Não consegui salvar: o arquivo está aberto no Excel? Feche e tente de novo."}
         self._cfg = config.salvar({**self._cfg, "pasta_saida": str(salvo.parent)})

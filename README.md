@@ -164,6 +164,7 @@ Notas fiscais, extrato bancário e as regras do extrato em abas de uma tela só,
 </p>
 
 - **A ficha de papel, dentro do app:** paciente, tratamento, data, valor, forma de pagamento (Pix PJ, Pix PF, dinheiro, débito ou crédito), em quantas vezes no crédito, pago e nota.
+- **Várias listas** (por exemplo, **Brasília** e **São Paulo**): abas entre o mês e os totais, com **Nova lista**, renomear e apagar (só lista vazia). Os totais, o filtro de meses e a planilha para imprimir são da lista aberta, com o nome dela no arquivo e no alto da folha. Na janela do atendimento dá para escolher ou mudar a lista. Notas ligadas sozinhas, cobrança e Tratamentos funcionam igual em todas, e o Início, o Resumo do ano, as notas e o extrato continuam somando tudo.
 - **Pago sem esforço:** fica em branco enquanto espera; se o mês acabar sem marcar, aparece como **não pago**. Pagou depois, é só marcar. Na lista, marcar e desmarcar o pago perguntam antes (*“Marcar o atendimento de Fulano (21/11 · R$ 180,00) como pago?”*), e Enter confirma.
 - **Cobrar:** quem ainda não pagou tem o botão do WhatsApp na linha, com a mensagem de cobrança pronta (data, tratamento, valor e a chave Pix) para o paciente ou um responsável. O texto fica em Configurações → Mensagens, com variáveis.
 - **Nota em três situações:** **ok** (achada sozinha na pasta, ou marcada como emitida), **falta emitir** e **não precisa**. Dinheiro e Pix PF já sugerem "não precisa", e dá para trocar.
@@ -321,6 +322,7 @@ Para criar um módulo: uma pasta em `omac/` com a classe da API (herdando de `Ap
 - [x] **Lembretes e Comandos** (1.7.0).
 - [x] **Relatório mensal**, pesquisa de notas, envio de várias notas de uma vez e **Modelos** para imprimir (1.8.0).
 - [x] **CPF nos contatos** com a janela **Emitir**, **valores escondidos** e **lembretes que repetem** (1.9.0).
+- [x] **Várias listas em Atendimentos** (ex.: Brasília e São Paulo), com totais e planilha por lista (1.14.0).
 - [x] **Configurações por categoria** com a cortina no menu lateral e procura que aceita erro de digitação, **todas as mensagens editáveis** com texto para o paciente e para o responsável, e o **cabeçalho das listas grudado** no topo (1.13.0).
 - [x] **Uma janela só para o WhatsApp**, **cobrar** em Atendimentos, **Textos prontos** no menu, em Tratamentos o **próximo mês já agendado** com o **dia da consulta**, valor nos finalizados, dia que veio no histórico e manutenção da ficha marcando o atendido (1.12.0).
 - [x] **Desempenho** sem mudar nada do que a tela faz: listas que só redesenham quando algo mudou, pesquisas que esperam parar de digitar, Início calculando só os cartões que aparecem, tela junta no `.exe`, cache do extrato e leitura das notas e extratos enquanto a janela abre (1.11.0).

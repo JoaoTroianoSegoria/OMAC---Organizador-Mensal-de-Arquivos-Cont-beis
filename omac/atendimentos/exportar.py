@@ -14,8 +14,15 @@ PAGO_POR_EXTENSO = {fc.PAGO: "Sim", fc.AGUARDANDO: "", fc.NAO_PAGO: "Não"}
 NOTA_POR_EXTENSO = {fc.NOTA_OK: "ok", fc.NOTA_NAO_PRECISA: "não precisa", fc.FALTA: ""}
 
 
-def nome_sugerido(ano: int, mes: int) -> str:
-    return f"Atendimentos - {MESES[mes - 1]} {ano}.xlsx"
+def nome_sugerido(ano: int, mes: int, lista: str = "") -> str:
+    """Com mais de uma lista, o nome dela vai junto: "Atendimentos - Novembro 2026 - Brasília.xlsx"."""
+    fim = f" - {_sem_proibidos(lista)}" if lista.strip() else ""
+    return f"Atendimentos - {MESES[mes - 1]} {ano}{fim}.xlsx"
+
+
+def _sem_proibidos(nome: str) -> str:
+    """Tira o que o Windows não aceita em nome de arquivo."""
+    return "".join(c for c in nome if c not in '\\/:*?"<>|').strip()
 
 
 def _dividido(a: dict) -> str:
@@ -24,8 +31,9 @@ def _dividido(a: dict) -> str:
     return f"{a['parcelas']}x" if a["parcelas"] > 1 else "à vista"
 
 
-def exportar(lista: list[dict], destino: Path, ano: int, mes: int) -> Path:
-    """`lista` vem da API: cada atendimento já tem "nome", "situacao" e "nota_situacao"."""
+def exportar(lista: list[dict], destino: Path, ano: int, mes: int, nome_lista: str = "") -> Path:
+    """`lista` vem da API: cada atendimento já tem "nome", "situacao" e "nota_situacao".
+    `nome_lista` (com mais de uma lista) sai no alto de cada folha impressa."""
     from openpyxl import Workbook
     from openpyxl.styles import Alignment
 
@@ -62,6 +70,9 @@ def exportar(lista: list[dict], destino: Path, ano: int, mes: int) -> Path:
     ws.page_setup.fitToHeight = 0
     ws.sheet_properties.pageSetUpPr.fitToPage = True
     ws.print_title_rows = "1:1"
+    if nome_lista.strip():
+        # "&" é código no cabeçalho do Excel: "&&" escreve um "&".
+        ws.oddHeader.center.text = f"Atendimentos de {MESES[mes - 1]} de {ano} - {nome_lista.strip()}".replace("&", "&&")
     destino = Path(destino).with_suffix(".xlsx")
     wb.save(destino)
     return destino

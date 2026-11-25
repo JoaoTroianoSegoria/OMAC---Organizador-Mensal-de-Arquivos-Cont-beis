@@ -955,6 +955,12 @@
           <p class="dica pg-barra-dica">Sem marcar até o fim do mês, o pagamento aparece como <strong>não pago</strong>.</p>
         </div>
 
+        <div class="pg-listas" id="pg-listas">
+          <div class="escolhas pg-listas-abas" id="pg-listas-abas" role="tablist" aria-label="Listas de atendimentos"></div>
+          <button class="btn-linha" type="button" data-acao="pg-lista-editar" id="pg-lista-editar" title="Renomear ou apagar esta lista" aria-label="Renomear ou apagar esta lista"><svg class="ic"><use href="#i-lapis"/></svg></button>
+          <button class="btn btn-peq" type="button" data-acao="pg-lista-nova"><svg class="ic"><use href="#i-mais"/></svg><span>Nova lista</span></button>
+        </div>
+
         <div class="resumo" id="pg-resumo">
           <div class="cartao vidro">
             <span class="cartao-rotulo">Recebido</span>
@@ -1855,6 +1861,24 @@
     </form>
   </dialog>
 
+  <!-- Lista de atendimentos: nova, renomear ou apagar (1.14.0) -->
+  <dialog class="modal vidro modal-confirmar" id="pg-lista-janela" aria-labelledby="pg-lista-titulo">
+    <form id="form-pg-lista" class="modal-corpo">
+      <h2 id="pg-lista-titulo"></h2>
+      <div class="campo campo-texto">
+        <label class="rotulo-campo" for="pg-lista-nome">Nome da lista</label>
+        <input id="pg-lista-nome" type="text" autocomplete="off" maxlength="30" placeholder="Ex.: São Paulo" required>
+        <p class="dica" id="pg-lista-dica">A lista só separa os atendimentos: os totais e a planilha de cada uma ficam separados. Notas, extrato, Início e Resumo continuam somando todas.</p>
+      </div>
+      <p class="modal-erro" id="pg-lista-erro" role="alert" hidden></p>
+      <div class="modal-acoes">
+        <button class="btn btn-perigo" type="button" id="pg-lista-apagar" data-acao="pg-lista-apagar"><svg class="ic"><use href="#i-lixeira"/></svg><span>Apagar lista</span></button>
+        <button class="btn" type="button" data-acao="pg-lista-fechar">Cancelar</button>
+        <button class="btn btn-primario" type="submit">Salvar</button>
+      </div>
+    </form>
+  </dialog>
+
   <!-- Novo atendimento / alterar atendimento -->
   <dialog class="modal vidro" id="pg-atendimento" aria-labelledby="pg-atendimento-titulo">
     <form id="form-atendimento" class="modal-corpo">
@@ -1864,6 +1888,10 @@
         <input id="pg-nome" type="text" autocomplete="off" list="pg-nomes" required>
         <datalist id="pg-nomes"></datalist>
         <p class="dica pg-contato-novo" id="pg-contato-novo" hidden><svg class="ic"><use href="#i-mais"/></svg><span>Contato novo: entra em Contatos quando você salvar.</span></p>
+      </div>
+      <div class="campo" id="pg-lista-campo" hidden>
+        <label class="rotulo-campo" for="pg-lista-sel">Lista</label>
+        <span class="select"><select id="pg-lista-sel"></select></span>
       </div>
       <div class="form-conta-campos">
         <div class="campo campo-texto">
