@@ -347,6 +347,7 @@ def main() -> None:
                     pagina.wait_for_selector("#lembretes[open]")
                 if view == "config":
                     pagina.wait_for_timeout(600)  # a cortina sobe no menu lateral
+                    pagina.mouse.move(700, 5)  # o Voltar fica onde foi o clique: sem o mouse em cima dele
                 if "cfg" in extras:
                     pagina.evaluate(f'irPara("config", "{extras["cfg"]}")')
                     pagina.wait_for_timeout(400)

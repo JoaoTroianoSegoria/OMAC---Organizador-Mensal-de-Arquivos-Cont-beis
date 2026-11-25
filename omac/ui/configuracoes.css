@@ -73,16 +73,20 @@
 
 /* ---------- Cortina no menu lateral ----------
  * Fica por cima do menu normal (a lateral inteira). Abre com data-config-aberta="1"; ao fechar,
- * "fechando" mantém a cortina enquanto ela desce e o menu normal volta a aparecer. */
+ * "fechando" mantém a cortina enquanto ela desce e o menu normal volta a aparecer.
+ * Parada, ela é transparente: o menu normal some (opacity 0) e aparece o mesmo vidro da lateral.
+ * Só enquanto sobe ou desce ela tem fundo (--cortina-fundo, na animação em cfg-menu.js), para
+ * cobrir o menu que está saindo. O espaço embaixo do Voltar é medido (ajustarVoltar), para ele
+ * ficar no lugar exato do botão Configurações. */
 .cfg-cortina {
+  --cortina-fundo: var(--vidro-forte);
+  --cortina-vidro: blur(1.5rem) saturate(180%);
   position: absolute; inset: 0; z-index: 3;
   display: none; flex-direction: column; gap: .5rem;
   padding: 1.1rem .75rem;
   border-radius: inherit;
   overflow: hidden; /* quem rola é a lista (categorias ou resultados): o Voltar fica sempre à vista */
-  background: var(--vidro-forte);
-  -webkit-backdrop-filter: blur(1.5rem) saturate(180%);
-  backdrop-filter: blur(1.5rem) saturate(180%);
+  background: transparent;
 }
 [data-config-aberta] .cfg-cortina { display: flex; }
 [data-config-aberta] .lateral { overflow: hidden; }
@@ -91,7 +95,7 @@
 [data-config-aberta="1"] .lateral-rodape,
 [data-config-aberta="1"] .marca { opacity: 0; }
 [data-visual="otimizado"] .cfg-cortina,
-[data-contraste="alto"] .cfg-cortina { background: var(--solido); -webkit-backdrop-filter: none; backdrop-filter: none; }
+[data-contraste="alto"] .cfg-cortina { --cortina-fundo: var(--solido); --cortina-vidro: none; }
 /* Menu só com ícones (janela estreita): enquanto a cortina está aberta, ele alarga para caber os nomes. */
 [data-trilho="1"][data-config-aberta] .app { grid-template-columns: 15rem 1fr; }
 
@@ -130,8 +134,10 @@
 .cfg-cat:hover { background: var(--acento-suave); color: var(--texto); }
 .cfg-cat[aria-current="page"] { color: var(--texto); background: var(--acento-suave); font-weight: 700; }
 .cfg-cat[aria-current="page"] .ic { color: var(--acento); }
-.cfg-voltar { margin-top: auto; }
+/* Mesmo tamanho do botão Configurações (.menu-item), que ele substitui. */
+.cfg-voltar { margin-top: auto; min-height: 2.75rem; padding-block: .55rem; }
 [data-menu-compacto="1"] .cfg-cat { min-height: 2.2rem; padding-block: .3rem; }
+[data-menu-compacto="1"] .cfg-voltar { min-height: 2.3rem; padding-block: .35rem; }
 
 /* Atalhos das mensagens, embaixo de "Mensagens" */
 .cfg-sub {

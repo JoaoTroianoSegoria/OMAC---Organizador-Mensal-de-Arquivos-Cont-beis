@@ -9,7 +9,7 @@
  */
 "use strict";
 
-const cfgMenu = { voltarPara: "inicio", categoria: "geral", indice: null, animacao: null, quadro: 0 };
+const cfgMenu = { voltarPara: "inicio", categoria: "geral", indice: null, animacao: null, animacaoFundo: null, quadro: 0 };
 
 /* As Configurações não são um módulo: o que elas precisam carregar ao aparecer fica aqui. */
 modulos.config = {
@@ -48,6 +48,10 @@ modulos.cfgMenu = {
       if (cfgMenu.categoria !== "mensagens" || cfgMenu.quadro) return;
       cfgMenu.quadro = requestAnimationFrame(() => { cfgMenu.quadro = 0; marcarMensagemVisivel(); });
     }, { passive: true });
+    // Janela que muda de tamanho ou menu compacto ligado com a cortina aberta: o Voltar acompanha.
+    new ResizeObserver(() => {
+      if (document.documentElement.dataset.configAberta === "1") ajustarVoltar();
+    }).observe($(".lateral-rodape"));
   },
 };
 
@@ -82,6 +86,40 @@ function distanciaDaCortina() {
   return botaoDasConfiguracoes().getBoundingClientRect().top - $(".cfg-cortina-titulo").getBoundingClientRect().top;
 }
 
+/* O Voltar fica exatamente onde estava o botão Configurações (que tem a linha da versão embaixo). */
+function ajustarVoltar() {
+  const cortina = $("#cfg-cortina");
+  // Onde a cortina termina parada (getBoundingClientRect dela mudaria no meio da animação).
+  const lateral = cortina.offsetParent;
+  const fim = lateral.getBoundingClientRect().top + lateral.clientTop + cortina.offsetTop + cortina.offsetHeight;
+  const espaco = fim - botaoDasConfiguracoes().getBoundingClientRect().bottom;
+  cortina.style.paddingBottom = espaco > 0 ? `${espaco}px` : "";
+}
+
+/* Sobe (ou desce) a cortina. Enquanto anda, ela tem fundo para cobrir o menu normal; parada, é
+ * transparente. O fundo tem o seu próprio tempo: some no fim da subida e volta logo no começo da
+ * descida (quando o menu normal já está reaparecendo por baixo). */
+function animarCortina(subindo) {
+  const cortina = $("#cfg-cortina");
+  const fundo = getComputedStyle(cortina).getPropertyValue("--cortina-fundo").trim();
+  const longe = `translateY(${distanciaDaCortina()}px)`;
+  // Com o vidro desfocado (como a lateral), o menu que está por baixo não aparece através dela.
+  const vidro = getComputedStyle(cortina).getPropertyValue("--cortina-vidro").trim() || "none";
+  const com = { backgroundColor: fundo, backdropFilter: vidro };
+  const sem = { backgroundColor: "rgba(255, 255, 255, 0)", backdropFilter: vidro === "none" ? "none" : "blur(0px) saturate(100%)" };
+  const duracao = subindo ? 420 : 340;
+  cfgMenu.animacaoFundo = cortina.animate(
+    subindo ? [com, { ...com, offset: .45 }, sem] : [sem, { ...com, offset: .1 }, com],
+    { duration: duracao, easing: "linear" });
+  return cortina.animate(subindo ? [{ transform: longe }, { transform: "none" }] : [{ transform: "none" }, { transform: longe }],
+    { duration: duracao, easing: subindo ? "cubic-bezier(.2, .8, .2, 1)" : "cubic-bezier(.4, 0, .7, .2)" });
+}
+
+function pararCortina() {
+  cfgMenu.animacaoFundo?.cancel();
+  cfgMenu.animacao?.cancel();
+}
+
 function travarMenuNormal(travar) {
   $("#cfg-cortina").inert = !travar;
   $("#menu").inert = travar;
@@ -91,20 +129,19 @@ function travarMenuNormal(travar) {
 function abrirCortina() {
   const html = document.documentElement;
   if (html.dataset.configAberta === "1") return;
-  cfgMenu.animacao?.cancel();
+  pararCortina();
   html.dataset.configAberta = "1";
   travarMenuNormal(true);
+  ajustarVoltar();
   if (semAnimacao()) return;
   // O título começa onde está o botão e sobe, trazendo as categorias por baixo.
-  cfgMenu.animacao = $("#cfg-cortina").animate(
-    [{ transform: `translateY(${distanciaDaCortina()}px)` }, { transform: "none" }],
-    { duration: 420, easing: "cubic-bezier(.2, .8, .2, 1)" });
+  cfgMenu.animacao = animarCortina(true);
 }
 
 function fecharCortina() {
   const html = document.documentElement;
   if (html.dataset.configAberta !== "1") return;
-  cfgMenu.animacao?.cancel();
+  pararCortina();
   travarMenuNormal(false);
   const fim = () => {
     delete html.dataset.configAberta;
@@ -112,9 +149,7 @@ function fecharCortina() {
   };
   if (semAnimacao()) return fim();
   html.dataset.configAberta = "fechando"; // o menu normal reaparece enquanto a cortina desce
-  cfgMenu.animacao = $("#cfg-cortina").animate(
-    [{ transform: "none" }, { transform: `translateY(${distanciaDaCortina()}px)` }],
-    { duration: 340, easing: "cubic-bezier(.4, 0, .7, .2)" });
+  cfgMenu.animacao = animarCortina(false);
   cfgMenu.animacao.onfinish = fim;
   cfgMenu.animacao.oncancel = fim;
 }

@@ -438,8 +438,10 @@ button { cursor: pointer; }
 /* ---------- Tabela ---------- */
 /* "clip" corta sem virar caixa de rolagem: assim o cabeçalho das colunas gruda no topo da tela
  * ao descer a lista. Só a tabela que não cabe na largura ganha rolagem para o lado (.larga, nucleo.js),
- * e aí o cabeçalho deixa de grudar (o navegador não deixa os dois juntos). */
-.tabela-caixa { overflow-x: clip; }
+ * e aí o cabeçalho deixa de grudar (o navegador não deixa os dois juntos).
+ * Cortar nas duas direções segue os cantos redondos do cartão: o cabeçalho (quadrado) fica redondo
+ * só no topo do cartão, e a última linha com o mouse em cima fica redonda embaixo. */
+.tabela-caixa { overflow: clip; }
 .tabela-caixa.larga { overflow-x: auto; overflow-y: hidden; }
 .tabela {
   width: 100%;
@@ -459,8 +461,6 @@ button { cursor: pointer; }
 }
 /* Na tela, gruda na borda de cima mesmo (sem a margem de .5rem do .conteudo, onde as linhas apareceriam). */
 .conteudo .tabela thead th { top: -.5rem; }
-.tabela thead th:first-child { border-top-left-radius: var(--raio); }
-.tabela thead th:last-child { border-top-right-radius: var(--raio); }
 .tabela tbody td { border-bottom: 1px solid var(--linha); }
 .tabela tbody tr { transition: background-color .12s; }
 .tabela tbody tr:hover { background: var(--acento-suave); }
