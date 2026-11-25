@@ -10,6 +10,7 @@ from ..inicio.registro import widget
 from ..nucleo import ApiBase, seguro
 from ..texto import normalizar
 from ..tratamentos import orto
+from ..whatsapp.mensagens import abrir_conversa, normalizar_telefone
 from . import contatos as ct
 from . import cpf as cpfs
 
@@ -189,6 +190,22 @@ class ContatosApi(ApiBase):
             d["a_conferir"] = [i for i in d["a_conferir"]
                                if not (i.get("tipo") == ct.TELEFONE and i.get("id") == contato_id)]
         return self._vista_contatos()
+
+    # --- Mensagem pelo WhatsApp para o paciente ou um responsável ------------------------------
+
+    def _mensagem_para(self, paciente_id: str, destino_id: str, telefone: str, mensagem: str) -> dict | None:
+        """Guarda o telefone em quem recebe, lembra a escolha (envia_para) e abre a conversa.
+        Usado por Tratamentos e pela cobrança de Atendimentos. Devolve um erro, ou None."""
+        telefone = normalizar_telefone(telefone)
+        with self._armazem.editar(esquema.CONTATOS) as d:
+            contatos = d["contatos"]
+            paciente = ct.buscar(contatos, paciente_id)
+            if destino_id != paciente["id"] and destino_id not in {r["contato_id"] for r in paciente["responsaveis"]}:
+                return {"erro": "Escolha para quem vai a mensagem."}
+            ct.buscar(contatos, destino_id)["telefone"] = telefone
+            paciente["envia_para"] = "" if destino_id == paciente["id"] else destino_id
+        abrir_conversa(telefone, mensagem, self._cfg["whatsapp_destino"])
+        return None
 
     # --- CPF e a janela "Emitir nota" -------------------------------------------------------
 

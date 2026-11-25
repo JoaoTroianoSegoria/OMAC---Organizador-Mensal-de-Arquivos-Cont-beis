@@ -63,34 +63,6 @@ class EnvioNotasApi(ApiBase):
             return {"numeros": [int(n) for n in d["enviadas"]]}
 
     @seguro
-    def notas_preparar_envio(self, numero: int):
-        nota = self._nota(numero)
-        nome = responsavel(nota)
-        contato = ct.por_nome(self._lista_de_contatos(), nome) or {}
-        return {
-            "numero": nota.numero,
-            "nome": nome,
-            "telefone": contato.get("telefone", ""),
-            "mensagem": vr.mensagem(self._cfg, nome, [nota]),
-        }
-
-    @seguro
-    def notas_enviar(self, numero: int, telefone: str, mensagem: str):
-        nota = self._nota(numero)
-        telefone = msg.normalizar_telefone(telefone)
-        nome = responsavel(nota)
-        caminho = Path(self._cfg["pasta_notas"]) / nota.arquivo
-        # Quem recebe a nota vira contato (ou ganha o telefone que acabou de ser usado).
-        with self._armazem.editar(esquema.CONTATOS) as d:
-            ct.obter(d["contatos"], nome)["telefone"] = telefone
-
-        copiado = sistema.copiar_arquivo(caminho)
-        msg.abrir_conversa(telefone, mensagem, self._cfg["whatsapp_destino"])
-        if not copiado:
-            sistema.mostrar_na_pasta(caminho)
-        return {"pdf_copiado": copiado}
-
-    @seguro
     def notas_marcar_enviada(self, numero: int, enviada: bool = True):
         with self._enviadas() as d:
             if enviada:
@@ -200,7 +172,7 @@ class EnvioNotasApi(ApiBase):
     def _vista_mensagens(self) -> dict:
         return {tipo: {"modelo": vr.modelo(self._cfg, tipo), "padrao": vr.PADROES[tipo],
                        "variaveis": [{"nome": k, "descricao": v} for k, v in vr.variaveis_do(tipo).items()]}
-                for tipo in (vr.NOTA, vr.NOTAS)}
+                for tipo in (vr.NOTA, vr.NOTAS, vr.COBRANCA)}
 
     @seguro
     def mensagens_modelos(self):
@@ -209,23 +181,19 @@ class EnvioNotasApi(ApiBase):
     @seguro
     def mensagens_previa(self, tipo: str, texto: str):
         """Como a mensagem fica com uma nota de exemplo (inventada), e as variáveis que não existem."""
-        tipo = vr.NOTAS if tipo == vr.NOTAS else vr.NOTA
-        return vr.previa(texto, tipo, self._cfg["assistente_nome"])
+        return vr.previa(texto, vr.tipo_certo(tipo), self._cfg["assistente_nome"])
 
     @seguro
     def mensagens_salvar(self, tipo: str, texto: str):
         """Guarda o modelo. Igual ao padrão (ou "voltar ao padrão") guarda vazio: segue o padrão."""
-        tipo = vr.NOTAS if tipo == vr.NOTAS else vr.NOTA
+        tipo = vr.tipo_certo(tipo)
         texto = vr.validar(texto, tipo)
-        chave = "mensagem_notas" if tipo == vr.NOTAS else "mensagem_nota"
-        self._cfg = config.salvar({**self._cfg, chave: "" if texto == vr.PADROES[tipo] else texto})
+        self._cfg = config.salvar({**self._cfg, vr.CHAVES[tipo]: "" if texto == vr.PADROES[tipo] else texto})
         return {**self._vista_mensagens(), "config": self._cfg}
 
     @seguro
     def mensagens_padrao(self, tipo: str):
-        tipo = vr.NOTAS if tipo == vr.NOTAS else vr.NOTA
-        chave = "mensagem_notas" if tipo == vr.NOTAS else "mensagem_nota"
-        self._cfg = config.salvar({**self._cfg, chave: ""})
+        self._cfg = config.salvar({**self._cfg, vr.CHAVES[vr.tipo_certo(tipo)]: ""})
         return {**self._vista_mensagens(), "config": self._cfg}
 
     def _colar_e_avisar(self) -> None:

@@ -11,7 +11,7 @@
 const MENU_PADRAO = [
   { nome: "Financeiro", itens: ["relatorio", "resumo"] },
   { nome: "Atendimento", itens: ["atendimentos", "tratamentos", "contatos"] },
-  { nome: "Outros", itens: ["lembretes", "modelos"] },
+  { nome: "Outros", itens: ["lembretes", "modelos", "textos"] },
 ];
 const menuLateral = { editando: false, arrastando: null, desenhado: "" };
 

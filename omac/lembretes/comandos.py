@@ -36,7 +36,7 @@ def buscar_comando(categoria: dict, comando_id: str) -> dict:
     for c in categoria["comandos"]:
         if c["id"] == comando_id:
             return c
-    raise ComandoInvalido("Não encontrei esse comando. Ele pode ter sido apagado.")
+    raise ComandoInvalido("Não encontrei esse texto. Ele pode ter sido apagado.")
 
 
 def _nome_livre(lista: list[dict], nome: str, ignorar: str | None, o_que: str) -> None:
@@ -62,10 +62,10 @@ def salvar_comando(categoria: dict, dados: dict, comando_id: str | None = None) 
     nome = nome_limpo(dados.get("nome"))
     texto = texto_limpo(dados.get("texto"))
     if not nome:
-        raise ComandoInvalido("Diga o nome do comando.")
+        raise ComandoInvalido("Diga o nome do texto.")
     if not texto:
         raise ComandoInvalido("Escreva o texto que vai ser copiado.")
-    _nome_livre(categoria["comandos"], nome, comando_id, "o comando")
+    _nome_livre(categoria["comandos"], nome, comando_id, "o texto")
     if comando_id:
         comando = buscar_comando(categoria, comando_id)
         comando.update(nome=nome, texto=texto)

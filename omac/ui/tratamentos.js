@@ -12,8 +12,8 @@ const agenda = {
   ativos: [],
   altas: [],
   finalizados: [],
-  mensagem: null, // dados da janela de mensagem
-  destino: "", // contato que vai receber a mensagem aberta
+  proximoMes: "", // "AAAA-MM" do mês seguinte (o "agendar o próximo mês")
+  agendando: null, // {id, qual} da janela de agendar
   histFim: null, // [ano, mês] da última coluna do histórico (null = mês atual)
   historico: null,
 };
@@ -29,7 +29,7 @@ modulos.tratamentos = {
   carregar: carregarAgenda,
   antesDeMostrar(aba) { agenda.aba = aba; }, // a aba vale já no carregamento, que vem ao mostrar a tela
   ligar() {
-    $("#form-ag-mensagem").addEventListener("submit", enviarMensagem);
+    $("#form-ag-agendar").addEventListener("submit", (e) => { e.preventDefault(); salvarAgendar(true); });
   },
 };
 
@@ -49,15 +49,10 @@ Object.assign(acoes, {
   "ag-editar": (alvo) => abrirContatoPorId(pacienteAgenda(alvo).contato_id),
   "ag-voltar": voltarAoTratamento,
   "ag-marcar": marcarAgendado,
+  "ag-agendar-proximo": (alvo) => { const p = pacienteAgenda(alvo); if (p) abrirAgendar(p, "proximo"); },
+  "ag-agendar-fechar": () => $("#ag-agendar").close(),
+  "ag-agendar-tirar": () => salvarAgendar(false),
   "ag-mensagem": (alvo) => abrirMensagem(alvo.dataset.id),
-  "ag-tipo": (alvo) => escolherMensagem(alvo.dataset.tipo),
-  "ag-destino": (alvo) => escolherDestino(alvo.dataset.id),
-  "ag-fechar-mensagem": () => $("#ag-mensagem").close(),
-  "ag-abrir-config": () => {
-    $("#ag-mensagem").close();
-    mostrarView("config");
-    $("#cfg-pix").focus();
-  },
 });
 
 /* ---------- Lista ---------- */
@@ -68,7 +63,8 @@ async function carregarAgenda() {
 
 function aplicarAgenda(r) {
   if (r.erro) return mostrarToast(r.erro, { erro: true });
-  Object.assign(agenda, { ano: r.ano, mes: r.mes, ativos: r.ativos, altas: r.altas, finalizados: r.finalizados });
+  Object.assign(agenda, { ano: r.ano, mes: r.mes, ativos: r.ativos, altas: r.altas, finalizados: r.finalizados,
+    proximoMes: r.proximo_mes });
   // A aba entra na conta: o "ir para a aba" (antesDeMostrar) troca a aba antes de carregar.
   if (!desenharSeMudou("agenda", [r, agenda.aba], desenharAgenda) && agenda.aba === "historico") carregarHistorico();
 }
@@ -121,16 +117,76 @@ function celulaAcoes(p, ...extras) {
   return td;
 }
 
+const nomeDoMes = (chave) => MESES[Number(chave.slice(5, 7)) - 1].toLowerCase();
+const diaMes = (iso) => dataBR(iso).slice(0, 5);
+// Agendado e atendido no mês: vai para a parte de baixo ("Feitos em novembro").
+const feitoNoMes = (p) => p.agendado && p.atendido;
+
+function caixaDaAgenda(acao, p, marcada, rotulo) {
+  const td = Object.assign(document.createElement("td"), { className: "c-confere" });
+  const caixa = Object.assign(document.createElement("input"), { type: "checkbox", className: "confere", checked: marcada });
+  caixa.dataset.acao = acao;
+  caixa.dataset.id = p.id;
+  caixa.setAttribute("aria-label", rotulo);
+  td.append(caixa);
+  return td;
+}
+
+/* O paciente com o que vale para o mês: a consulta marcada e se o agendado veio do mês anterior. */
+function celulaPacienteDoMes(p) {
+  const td = celulaPaciente(p);
+  const caixa = td.querySelector(".paciente");
+  if (p.consulta) caixa.append(texto("span", `consulta ${diaMes(p.consulta)}`, "etiqueta etiqueta-acento ag-consulta"));
+  if (p.agendado_antes) {
+    const anterior = MESES[(agenda.mes + 10) % 12].toLowerCase();
+    caixa.append(texto("span", `agendado em ${anterior}`, "etiqueta ag-veio-antes"));
+  }
+  return td;
+}
+
+/* `comTelefone`: a lista de cima mostra; a de "feitos" não (lá a coluna é o próximo mês). */
+function linhaAtiva(p, comTelefone = true) {
+  const tr = document.createElement("tr");
+  tr.append(
+    caixaDaAgenda("ag-marcar", p, p.agendado, `${p.nome} já tem a manutenção agendada neste mês`),
+    caixaDaAgenda("ag-atendido", p, p.atendido, `${p.nome} já foi atendido neste mês`),
+    celulaPacienteDoMes(p),
+  );
+  if (comTelefone) tr.append(celulaTelefone(p));
+  tr.append(p.valor_centavos == null ? celula("Sem valor", "c-valor ag-sem-dado") : celula(dinheiro(p.valor_centavos), "c-valor"));
+  return tr;
+}
+
+function botaoProximoMes(p) {
+  const nome = nomeDoMes(agenda.proximoMes);
+  const b = Object.assign(document.createElement("button"), { type: "button", className: "btn btn-peq ag-proximo" });
+  b.dataset.acao = "ag-agendar-proximo";
+  b.dataset.id = p.id;
+  if (p.proximo.agendado) {
+    b.classList.add("ag-proximo-feito");
+    b.innerHTML = '<svg class="ic"><use href="#i-ok"/></svg>';
+    // A coluna já diz o mês: o botão fica curto ("Agendado · 04/12").
+    b.append(`Agendado${p.proximo.consulta ? ` · ${diaMes(p.proximo.consulta)}` : ""}`);
+    b.title = `Mudar o dia ou tirar o agendado de ${nome}`;
+    b.setAttribute("aria-label", `${p.nome}: ${nome} agendado. Mudar o dia ou tirar`);
+  } else {
+    b.textContent = "Agendar";
+    b.title = `Deixar ${nome} já agendado para ${p.nome}`;
+    b.setAttribute("aria-label", `Agendar ${nome} para ${p.nome}`);
+  }
+  return b;
+}
+
 function desenharAtivos() {
-  const feitos = agenda.ativos.filter((p) => p.agendado).length;
+  const agendados = agenda.ativos.filter((p) => p.agendado).length;
   const vazio = agenda.ativos.length === 0;
   const terminadas = agenda.altas.filter((p) => p.terminou).length;
   $("#ag-altas-terminadas").hidden = terminadas === 0;
   $("#ag-altas-terminadas-texto").textContent = terminadas === 1
     ? "1 alta temporária já terminou."
     : `${terminadas} altas temporárias já terminaram.`;
-  $("#ag-feitos").textContent = String(feitos);
-  $("#ag-faltam").textContent = String(agenda.ativos.length - feitos);
+  $("#ag-feitos").textContent = String(agendados);
+  $("#ag-faltam").textContent = String(agenda.ativos.length - agendados);
   $("#ag-atendidos").textContent = `${agenda.ativos.filter((p) => p.atendido).length} de ${agenda.ativos.length}`;
   $("#ag-resumo").hidden = vazio;
   $("#ag-filtros").hidden = vazio;
@@ -145,38 +201,39 @@ function desenharAtivos() {
     agendados: (p) => p.agendado,
     nao_atendidos: (p) => !p.atendido,
   };
-  const visiveis = agenda.ativos.filter(filtros[agenda.filtro] || filtros.todos);
+  const pendentes = agenda.ativos.filter((p) => !feitoNoMes(p));
+  const visiveis = pendentes.filter(filtros[agenda.filtro] || filtros.todos);
   if (visiveis.length === 0) {
     const tr = document.createElement("tr");
-    const td = celula({
-      pendentes: "Todos os pacientes já estão agendados neste mês.",
-      agendados: "Nenhum paciente marcado como agendado neste mês.",
-      nao_atendidos: "Todos os pacientes já foram atendidos neste mês.",
-    }[agenda.filtro], "ag-nada");
+    const td = celula(pendentes.length === 0 && agenda.ativos.length
+      ? "Todos já foram agendados e atendidos neste mês. Eles estão logo abaixo."
+      : {
+        pendentes: "Todos os pacientes já estão agendados neste mês.",
+        agendados: "Nenhum paciente marcado como agendado neste mês.",
+        nao_atendidos: "Todos os pacientes já foram atendidos neste mês.",
+        todos: "Nenhum paciente.",
+      }[agenda.filtro], "ag-nada");
     td.colSpan = 6;
     tr.append(td);
     $("#ag-ativos-corpo").replaceChildren(tr);
-    return;
+  } else {
+    $("#ag-ativos-corpo").replaceChildren(...visiveis.map((p) => {
+      const tr = linhaAtiva(p);
+      tr.append(celulaAcoes(p));
+      return tr;
+    }));
   }
-  $("#ag-ativos-corpo").replaceChildren(...visiveis.map((p) => {
-    const tr = document.createElement("tr");
-    const tdConfere = document.createElement("td");
-    tdConfere.className = "c-confere";
-    const caixa = Object.assign(document.createElement("input"), { type: "checkbox", className: "confere", checked: p.agendado });
-    caixa.dataset.acao = "ag-marcar";
-    caixa.dataset.id = p.id;
-    caixa.setAttribute("aria-label", `${p.nome} já tem a manutenção agendada neste mês`);
-    tdConfere.append(caixa);
-    const tdAtendido = document.createElement("td");
-    tdAtendido.className = "c-confere";
-    const atendido = Object.assign(document.createElement("input"), { type: "checkbox", className: "confere", checked: p.atendido });
-    atendido.dataset.acao = "ag-atendido";
-    atendido.dataset.id = p.id;
-    atendido.setAttribute("aria-label", `${p.nome} já foi atendido neste mês`);
-    tdAtendido.append(atendido);
-    tr.append(tdConfere, tdAtendido, celulaPaciente(p), celulaTelefone(p),
-      p.valor_centavos == null ? celula("Sem valor", "c-valor ag-sem-dado") : celula(dinheiro(p.valor_centavos), "c-valor"),
-      celulaAcoes(p));
+
+  // Feitos no mês: com o botão de já deixar o próximo mês agendado.
+  const feitos = agenda.ativos.filter(feitoNoMes);
+  $("#ag-concluidos").hidden = feitos.length === 0;
+  $("#ag-concluidos-titulo").textContent = `Feitos em ${MESES[agenda.mes - 1].toLowerCase()} (${feitos.length})`;
+  $("#ag-th-proximo").textContent = `${nomeDoMes(agenda.proximoMes)[0].toUpperCase()}${nomeDoMes(agenda.proximoMes).slice(1)}`;
+  $("#ag-concluidos-corpo").replaceChildren(...feitos.map((p) => {
+    const tr = linhaAtiva(p, false);
+    const td = Object.assign(document.createElement("td"), { className: "ag-c-proximo" });
+    td.append(botaoProximoMes(p));
+    tr.append(td, celulaAcoes(p));
     return tr;
   }));
 }
@@ -204,7 +261,9 @@ function desenharFinalizados() {
   $("#ag-finalizados-vazio").hidden = !vazio;
   $("#ag-finalizados-corpo").replaceChildren(...agenda.finalizados.map((p) => {
     const tr = document.createElement("tr");
-    tr.append(celulaPaciente(p), celulaTelefone(p), celula(dataBR(p.finalizado_em), "c-data"), celulaAcoes(p));
+    tr.append(celulaPaciente(p), celulaTelefone(p),
+      p.valor_centavos == null ? celula("Sem valor", "c-valor ag-sem-dado") : celula(dinheiro(p.valor_centavos), "c-valor"),
+      celula(dataBR(p.finalizado_em), "c-data"), celulaAcoes(p));
     return tr;
   }));
 }
@@ -227,10 +286,60 @@ function marcarAgendado(caixa) {
   const p = pacienteAgenda(caixa);
   if (!p) return;
   const mes = MESES[agenda.mes - 1].toLowerCase();
+  if (caixa.checked) {
+    // Marcar abre a janela com o dia da consulta (opcional); a caixa só fica marcada se salvar.
+    caixa.checked = false;
+    return abrirAgendar(p, "mes");
+  }
   return marcarNaAgenda(caixa, {
-    marcar: [`${p.nome} já tem a manutenção de ${mes} agendada?`, "Marcar como agendado"],
+    marcar: ["", ""],
     desmarcar: [`Tirar o agendado de ${p.nome} em ${mes}?`, "Tirar o agendado"],
   }, (marcar) => api().tratamentos_marcar(p.id, marcar));
+}
+
+/* ---------- Janela "agendar" (este mês ou o próximo), com o dia da consulta ---------- */
+
+function limitesDoMes(chave) {
+  const [a, m] = chave.split("-").map(Number);
+  const ultimo = new Date(a, m, 0).getDate();
+  return [`${chave}-01`, `${chave}-${String(ultimo).padStart(2, "0")}`];
+}
+
+/* `qual`: "mes" (o Agendado deste mês) ou "proximo" (deixar o mês seguinte agendado). */
+function abrirAgendar(p, qual) {
+  const chave = qual === "mes" ? mesAtualDaAgenda() : agenda.proximoMes;
+  const nome = nomeDoMes(chave);
+  const jaTem = qual === "proximo" && p.proximo.agendado;
+  agenda.agendando = { id: p.id, qual };
+  $("#ag-agendar-titulo").textContent = qual === "mes" ? `Agendado em ${nome}` : `Agendar ${nome}`;
+  $("#ag-agendar-texto").textContent = qual === "mes"
+    ? `${p.nome} já tem a manutenção de ${nome} agendada?`
+    : jaTem ? `A manutenção de ${p.nome} em ${nome} já está agendada.`
+      : `A manutenção de ${p.nome} em ${nome} já está agendada? Quando ${nome} chegar, ele já aparece como agendado.`;
+  const dia = $("#ag-agendar-dia");
+  [dia.min, dia.max] = limitesDoMes(chave);
+  dia.value = (qual === "mes" ? p.consulta : p.proximo.consulta) || "";
+  $("#ag-agendar-sim").textContent = jaTem ? "Salvar o dia" : qual === "mes" ? "Marcar como agendado" : `Marcar ${nome} como agendado`;
+  $("#ag-agendar-tirar").hidden = !jaTem;
+  $("#ag-agendar-erro").hidden = true;
+  $("#ag-agendar").showModal();
+  dia.focus();
+}
+
+async function salvarAgendar(agendado) {
+  const { id, qual } = agenda.agendando || {};
+  if (!id) return;
+  const dia = agendado ? $("#ag-agendar-dia").value : "";
+  const r = qual === "mes"
+    ? await api().tratamentos_marcar(id, agendado, dia)
+    : await api().tratamentos_agendar_proximo(id, agendado, dia);
+  if (r.erro) {
+    $("#ag-agendar-erro").textContent = r.erro;
+    $("#ag-agendar-erro").hidden = false;
+    return;
+  }
+  $("#ag-agendar").close();
+  aplicarAgenda(r);
 }
 
 function marcarAtendido(caixa) {
@@ -356,7 +465,11 @@ async function abrirHistoricoDoPaciente(id) {
     const li = document.createElement("li");
     li.append(marcaDoMes(m.situacao),
       Object.assign(document.createElement("span"), { textContent: `${MESES[m.mes - 1]} de ${m.ano}` }),
-      Object.assign(document.createElement("span"), { className: "ag-hist-texto", textContent: SITUACAO_NO_MES[m.situacao] }));
+      Object.assign(document.createElement("span"), {
+        className: "ag-hist-texto",
+        // Quem veio mostra o dia (quando se sabe: um mês marcado depois fica só "veio").
+        textContent: m.situacao === "veio" && m.dia ? `veio em ${dataBR(m.dia)}` : SITUACAO_NO_MES[m.situacao],
+      }));
     return li;
   }));
   $("#ag-hist-paciente").showModal();
@@ -375,61 +488,30 @@ async function voltarAoTratamento(alvo) {
 async function abrirMensagem(id) {
   const r = await api().tratamentos_preparar_mensagens(id);
   if (r.erro) return mostrarToast(r.erro, { erro: true });
-  agenda.mensagem = r;
-  agenda.tipo = "agendar";
   // Para quem vai: o próprio paciente ou um responsável. Começa na última escolha.
-  $("#ag-destinos").replaceChildren(...r.destinos.map((d) => {
-    const b = Object.assign(document.createElement("button"), { type: "button", className: "escolha" });
-    b.dataset.acao = "ag-destino";
-    b.dataset.id = d.contato_id;
-    b.textContent = d.papel ? `${d.nome} (${d.papel})` : `${d.nome} (paciente)`;
-    return b;
-  }));
-  $("#ag-destinos-campo").hidden = r.destinos.length < 2;
-  $("#ag-mensagem-erro").hidden = true;
-  escolherDestino(r.escolhido);
-  $("#ag-mensagem").showModal();
-  ($("#ag-msg-telefone").value ? $("#ag-msg-texto") : $("#ag-msg-telefone")).focus();
+  abrirJanelaMensagem({
+    titulo: (d) => (d.papel ? `Mensagem para ${d.nome} (${d.papel} de ${r.nome})` : `Mensagem para ${r.nome}`),
+    destinos: r.destinos,
+    escolhido: r.escolhido,
+    rotuloDestino: (d) => (d.papel ? `${d.nome} (${d.papel})` : `${d.nome} (paciente)`),
+    tipos: [
+      { id: "agendar", rotulo: "Agendar manutenção" },
+      { id: "cobrar", rotulo: "Cobrar manutenção" },
+      { id: "retorno", rotulo: "Agendar retorno" },
+    ],
+    texto: (d, tipo) => d.mensagens[tipo],
+    // Sem chave Pix não há cobrança para mandar.
+    falta: (d, tipo) => (d && d.mensagens[tipo] === ""
+      ? { texto: "Para cobrar, preencha a chave Pix nas Configurações.", botao: "Abrir Configurações", acao: abrirChavePix }
+      : null),
+    enviar: ({ destino, telefone, texto }) => api().tratamentos_enviar(r.id, destino.contato_id, telefone, texto),
+    aoEnviar: aplicarAgenda,
+  });
 }
 
-function destinoAtual() {
-  return agenda.mensagem.destinos.find((d) => d.contato_id === agenda.destino) || agenda.mensagem.destinos[0];
-}
-
-function escolherDestino(id) {
-  agenda.destino = id;
-  const d = destinoAtual();
-  $$("#ag-destinos .escolha").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.id === d.contato_id)));
-  $("#ag-mensagem-titulo").textContent = d.papel
-    ? `Mensagem para ${d.nome} (${d.papel} de ${agenda.mensagem.nome})`
-    : `Mensagem para ${agenda.mensagem.nome}`;
-  $("#ag-msg-telefone").value = d.telefone ? telefoneBR(d.telefone) : "";
-  escolherMensagem(agenda.tipo);
-}
-
-function escolherMensagem(tipo) {
-  agenda.tipo = tipo;
-  const textoDela = destinoAtual().mensagens[tipo];
-  $$(".ag-tipos .escolha").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.tipo === tipo)));
-  $("#ag-msg-texto").value = textoDela;
-  // Sem chave Pix não há cobrança para mandar.
-  $("#ag-sem-pix").hidden = textoDela !== "";
-  $("#ag-msg-texto-campo").hidden = textoDela === "";
-  $("#ag-enviar").disabled = textoDela === "";
-}
-
-async function enviarMensagem(e) {
-  e.preventDefault();
-  const r = await api().tratamentos_enviar(agenda.mensagem.id, destinoAtual().contato_id,
-    $("#ag-msg-telefone").value, $("#ag-msg-texto").value);
-  if (r.erro) {
-    $("#ag-mensagem-erro").textContent = r.erro;
-    $("#ag-mensagem-erro").hidden = false;
-    return;
-  }
-  $("#ag-mensagem").close();
-  aplicarAgenda(r);
-  mostrarToast("Conversa aberta no WhatsApp. É só conferir e enviar.");
+function abrirChavePix() {
+  mostrarView("config");
+  $("#cfg-pix").focus();
 }
 
 /* ---------- Widget do Início ---------- */

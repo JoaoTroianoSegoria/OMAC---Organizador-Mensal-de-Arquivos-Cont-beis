@@ -15,6 +15,7 @@ from datetime import date
 
 from .. import texto as tx
 from ..dados import esquema
+from ..planilha import MESES
 
 ATIVO = "ativo"
 ALTA = "alta"
@@ -132,11 +133,72 @@ def restaurar(tratamentos: list[dict], tratamento: dict) -> None:
 
 
 def agendado_no_mes(paciente: dict, hoje: date) -> bool:
-    return paciente["agendado_em"][:7] == hoje.isoformat()[:7]
+    """Marcado neste mês, ou agendado no mês anterior para este (o "agendar o próximo mês")."""
+    mes = hoje.isoformat()[:7]
+    return paciente["agendado_em"][:7] == mes or paciente["agendado_para"] == mes
 
 
-def marcar_agendado(paciente: dict, agendado: bool, hoje: date) -> None:
-    paciente["agendado_em"] = hoje.isoformat() if agendado else ""
+def agendado_antes(paciente: dict, hoje: date) -> bool:
+    """Este mês veio agendado do mês anterior (a tela diz "agendado em outubro")."""
+    return paciente["agendado_para"] == hoje.isoformat()[:7] and paciente["agendado_em"][:7] != hoje.isoformat()[:7]
+
+
+def proximo_mes(hoje: date) -> str:
+    return chave_do_mes(hoje.year + (hoje.month == 12), hoje.month % 12 + 1)
+
+
+def _dia_da_consulta(texto, mes: str) -> str:
+    """O dia da consulta é opcional; se vier, precisa cair no mês que está sendo agendado."""
+    texto = str(texto or "").strip()
+    if not texto:
+        return ""
+    try:
+        dia = date.fromisoformat(texto)
+    except ValueError as e:
+        raise PacienteInvalido("Confira o dia da consulta: essa data não existe.") from e
+    if dia.isoformat()[:7] != mes:
+        nome = MESES[int(mes[5:7]) - 1].lower()
+        raise PacienteInvalido(f"O dia da consulta precisa ser em {nome}.")
+    return dia.isoformat()
+
+
+def proxima_consulta(paciente: dict, hoje: date) -> str:
+    """O dia da consulta marcada, se ainda não passou ("" se não tem)."""
+    return paciente["consulta_em"] if paciente["consulta_em"] >= hoje.isoformat() else ""
+
+
+def consulta_no_mes(paciente: dict, mes: str) -> str:
+    return paciente["consulta_em"] if paciente["consulta_em"][:7] == mes else ""
+
+
+def marcar_agendado(paciente: dict, agendado: bool, hoje: date, dia: str = "") -> None:
+    """O Agendado deste mês. Desmarcar também desfaz o que veio agendado do mês anterior."""
+    mes = hoje.isoformat()[:7]
+    if agendado:
+        consulta = _dia_da_consulta(dia, mes)
+        paciente["agendado_em"] = hoje.isoformat()
+        if consulta:
+            paciente["consulta_em"] = consulta
+        return
+    paciente["agendado_em"] = ""
+    if paciente["agendado_para"] == mes:
+        paciente["agendado_para"] = ""
+    if consulta_no_mes(paciente, mes):
+        paciente["consulta_em"] = ""
+
+
+def agendar_proximo(paciente: dict, agendado: bool, hoje: date, dia: str = "") -> None:
+    """Já deixa o mês seguinte agendado (com o dia da consulta, se souber)."""
+    mes = proximo_mes(hoje)
+    if agendado:
+        consulta = _dia_da_consulta(dia, mes)
+        paciente["agendado_para"] = mes
+        paciente["consulta_em"] = consulta
+        return
+    if paciente["agendado_para"] == mes:
+        paciente["agendado_para"] = ""
+    if consulta_no_mes(paciente, mes):
+        paciente["consulta_em"] = ""
 
 
 # --- Atendido e histórico ----------------------------------------------------------------
@@ -162,10 +224,19 @@ def marcar_atendido(paciente: dict, mes: str, atendido: bool, hoje: date) -> Non
         raise PacienteInvalido("Esse mês ainda não chegou.")
     atendidos = {**paciente["atendidos"]}
     if atendido:
-        atendidos[mes] = hoje.isoformat()
+        # Marcou depois do dia da consulta (no mesmo mês): o dia que ele veio é o da consulta.
+        consulta = consulta_no_mes(paciente, mes)
+        atendidos[mes] = consulta if consulta and consulta <= hoje.isoformat() else hoje.isoformat()
     else:
         atendidos.pop(mes, None)
     paciente["atendidos"] = atendidos
+
+
+def dia_que_veio(paciente: dict, mes: str) -> str:
+    """O dia guardado quando o Atendido foi marcado, se ele cai no próprio mês ("" se não veio,
+    ou se o mês foi marcado depois, quando esqueceram na hora: aí não se sabe o dia)."""
+    dia = paciente["atendidos"].get(mes, "")
+    return dia if dia[:7] == mes else ""
 
 
 def _inicio_do_historico(paciente: dict) -> str:
@@ -203,7 +274,8 @@ def historico_do_paciente(paciente: dict, hoje: date) -> dict:
     inicio = _inicio_do_historico(paciente) or hoje.isoformat()[:7]
     ano, mes = int(inicio[:4]), int(inicio[5:7])
     quantos = (hoje.year * 12 + hoje.month) - (ano * 12 + mes) + 1
-    meses = [{"ano": a, "mes": m, "situacao": situacao_no_mes(paciente, a, m, hoje)}
+    meses = [{"ano": a, "mes": m, "situacao": situacao_no_mes(paciente, a, m, hoje),
+              "dia": dia_que_veio(paciente, chave_do_mes(a, m))}
              for a, m in meses_ate(hoje.year, hoje.month, max(quantos, 1))]
     meses = [m for m in meses if m["situacao"] != FORA or m["mes"] == hoje.month and m["ano"] == hoje.year]
     contados = [m for m in meses if m["situacao"] in (VEIO, NAO_VEIO)]

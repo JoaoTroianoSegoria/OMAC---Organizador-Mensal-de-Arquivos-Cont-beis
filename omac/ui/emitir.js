@@ -278,9 +278,9 @@ function desenharComandosDaEmissao() {
   const lista = $("#emitir-comandos-lista");
   const vazio = $("#emitir-comandos-vazio");
   vazio.hidden = !!(categoria && categoria.comandos.length);
-  vazio.textContent = !emissao.categorias.length ? "Nenhum comando ainda. Crie em Lembretes → Comandos."
+  vazio.textContent = !emissao.categorias.length ? "Nenhum texto pronto ainda. Crie em Textos prontos, no menu."
     : !categoria ? "Escolha a categoria com os textos que você usa para emitir a nota."
-      : "Essa categoria não tem comandos. Crie em Lembretes → Comandos.";
+      : "Essa categoria não tem textos. Crie em Textos prontos, no menu.";
   if (!categoria) return lista.replaceChildren();
   lista.replaceChildren(...categoria.comandos.map((c) => {
     const { pronto, faltam, semDependente } = preencherComando(c.texto);

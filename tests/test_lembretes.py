@@ -168,6 +168,7 @@ def api(tmp_path, monkeypatch):
     abertos = []
     monkeypatch.setattr(sistema, "abrir_link", abertos.append)
     monkeypatch.setattr(sistema, "copiar_arquivo", lambda c: True)
+    monkeypatch.setattr(sistema, "copiar_arquivos", lambda c: True)
     monkeypatch.setattr(sistema, "mostrar_na_pasta", lambda c: None)
     a = Api()
     a.abertos = abertos
@@ -196,17 +197,24 @@ def test_a_enviar_tira_a_enviada_e_desfaz(api):
     assert api.notas_enviadas()["numeros"] == []
 
 
+def _uma_nota(api, numero):
+    """1.12.0: uma nota vai pelo mesmo caminho de várias (a janela única de mensagem)."""
+    r = api.notas_preparar_lote([numero])
+    return r, r["destinos"][0]
+
+
 def test_enviar_nota_guarda_o_contato_pelo_responsavel(api):
-    preparada = api.notas_preparar_envio(803)  # nota de dependente
+    r, preparada = _uma_nota(api, 803)  # nota de dependente
     assert preparada["nome"] == "FERNANDA COSTA"
     assert preparada["telefone"] == ""
     assert "Olá, Fernanda." in preparada["mensagem"]
     assert "*Assistente João:*" in preparada["mensagem"]
 
-    r = api.notas_enviar(803, "(61) 90000-0000", preparada["mensagem"])
-    assert r == {"pdf_copiado": True}
+    enviada = api.notas_enviar_lote([803], r["contato_id"], preparada["contato_id"], preparada["nome"],
+                                    "(61) 90000-0000", preparada["mensagem"])
+    assert enviada["pdf_copiado"] is True
     assert api.abertos[0].startswith(f"whatsapp://send?phone={TEL}")
-    assert api.notas_preparar_envio(803)["telefone"] == TEL
+    assert _uma_nota(api, 803)[1]["telefone"] == TEL
     # Quem recebe a nota vira contato.
     [contato] = api.contatos_listar()["contatos"]
     assert (contato["nome"], contato["telefone"]) == ("FERNANDA COSTA", TEL)
@@ -216,11 +224,11 @@ def test_enviar_nota_guarda_o_contato_pelo_responsavel(api):
 
 def test_contato_ja_cadastrado_da_o_telefone_da_nota(api):
     api.contatos_salvar({"nome": "Fernanda Costa", "telefone": "(61) 90000-0000"})
-    assert api.notas_preparar_envio(803)["telefone"] == TEL
+    assert _uma_nota(api, 803)[1]["telefone"] == TEL
 
 
 def test_telefone_invalido_nao_abre_nem_guarda(api):
-    r = api.notas_enviar(801, "123", "oi")
+    r = api.notas_enviar_lote([801], "", "", "ANA BEATRIZ MOREIRA", "123", "oi")
     assert "telefone" in r["erro"]
     assert api.abertos == []
     assert api.contatos_listar()["contatos"] == []
@@ -228,7 +236,7 @@ def test_telefone_invalido_nao_abre_nem_guarda(api):
 
 def test_web_abre_o_site(api):
     api._cfg["whatsapp_destino"] = "web"
-    api.notas_enviar(801, "61900000000", "oi")
+    api.notas_enviar_lote([801], "", "", "ANA BEATRIZ MOREIRA", "61900000000", "oi")
     assert api.abertos[0].startswith("https://web.whatsapp.com/")
 
 
@@ -241,15 +249,16 @@ def test_aplicativo_ausente_cai_no_site(api, monkeypatch):
         abertos.append(url)
 
     monkeypatch.setattr(sistema, "abrir_link", abrir)
-    assert "erro" not in api.notas_enviar(801, "61900000000", "oi")
+    assert "erro" not in api.notas_enviar_lote([801], "", "", "ANA BEATRIZ MOREIRA", "61900000000", "oi")
     assert abertos[0].startswith("https://wa.me/")
 
 
 def test_sem_copiar_o_pdf_mostra_na_pasta(api, monkeypatch):
     mostrados = []
-    monkeypatch.setattr(sistema, "copiar_arquivo", lambda c: False)
+    monkeypatch.setattr(sistema, "copiar_arquivos", lambda c: False)
     monkeypatch.setattr(sistema, "mostrar_na_pasta", mostrados.append)
-    assert api.notas_enviar(801, "61900000000", "oi") == {"pdf_copiado": False}
+    r = api.notas_enviar_lote([801], "", "", "ANA BEATRIZ MOREIRA", "61900000000", "oi")
+    assert r["pdf_copiado"] is False
     assert mostrados[0].name.startswith("NFS-e Nº 000000801")
 
 

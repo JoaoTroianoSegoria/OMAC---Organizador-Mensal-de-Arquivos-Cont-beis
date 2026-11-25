@@ -7,7 +7,7 @@
 "use strict";
 
 const ajustes = {
-  editado: { leitura: false, nota: false, notas: false }, // a pessoa mexeu e ainda não salvou
+  editado: { leitura: false, nota: false, notas: false, cobranca: false }, // a pessoa mexeu e ainda não salvou
   modelos: null, // {nota: {modelo, padrao, variaveis}, notas: {...}}
   timers: {},
 };
@@ -132,7 +132,7 @@ async function leituraPadrao() {
 
 function aplicarModelosDeMensagem(r) {
   ajustes.modelos = r;
-  for (const tipo of ["nota", "notas"]) {
+  for (const tipo of ["nota", "notas", "cobranca"]) {
     const m = r[tipo];
     $(`#cfg-msg-${tipo}-variaveis`).replaceChildren(...m.variaveis.map((v) => {
       const b = Object.assign(document.createElement("button"), { type: "button", className: "btn btn-peq", textContent: `[${v.nome}]` });

@@ -28,8 +28,23 @@ def _mes(hoje: date) -> str:
     return MESES[hoje.month - 1].lower()
 
 
-def agendar(assistente: str, nome: str, hoje: date, responsavel: str = "") -> str:
+DIAS_DA_SEMANA = ["segunda-feira", "terça-feira", "quarta-feira", "quinta-feira", "sexta-feira", "sábado", "domingo"]
+
+
+def data_da_consulta(dia: str) -> str:
+    """"2026-12-04" → "sexta-feira, 04/12"."""
+    d = date.fromisoformat(dia)
+    return f"{DIAS_DA_SEMANA[d.weekday()]}, {d:%d/%m}"
+
+
+def agendar(assistente: str, nome: str, hoje: date, responsavel: str = "", consulta: str = "") -> str:
+    """Com o dia da consulta já marcado, a mensagem confirma o dia em vez de pedir um."""
     o_que = f"a manutenção do aparelho de {primeiro_nome(nome)}" if responsavel else "a sua manutenção do aparelho"
+    if consulta:
+        return (
+            f"{_inicio(assistente, nome, responsavel)}"
+            f"Passando para confirmar {o_que} na {data_da_consulta(consulta)}. Está tudo certo para esse dia?"
+        )
     return (
         f"{_inicio(assistente, nome, responsavel)}"
         f"Vamos agendar {o_que} para {_mes(hoje)}? "
@@ -62,9 +77,9 @@ def retorno(assistente: str, nome: str, responsavel: str = "") -> str:
 
 
 def todas(assistente: str, nome: str, hoje: date, valor_centavos: int | None, chave_pix: str,
-          responsavel: str = "") -> dict[str, str]:
+          responsavel: str = "", consulta: str = "") -> dict[str, str]:
     return {
-        AGENDAR: agendar(assistente, nome, hoje, responsavel),
+        AGENDAR: agendar(assistente, nome, hoje, responsavel, consulta),
         COBRAR: cobrar(assistente, nome, hoje, valor_centavos, chave_pix, responsavel),
         RETORNO: retorno(assistente, nome, responsavel),
     }

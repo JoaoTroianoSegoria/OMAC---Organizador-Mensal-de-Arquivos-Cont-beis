@@ -41,7 +41,7 @@ const api = () => window.pywebview.api;
 
 /* Um script vazio ou cortado não gera erro nenhum: sem esta conferência, a tela fica muda. */
 const MODULOS_ESPERADOS = ["inicio", "relatorio", "notas", "extrato", "lembretes", "modelos", "contatos", "tratamentos", "atendimentos",
-  "backup", "resumo", "atualizacao", "configuracoes", "emitir", "menu"];
+  "backup", "resumo", "atualizacao", "configuracoes", "emitir", "menu", "mensagem", "textos"];
 
 async function conferirModulos() {
   for (const nome of MODULOS_ESPERADOS.filter((m) => !modulos[m])) {
@@ -275,6 +275,24 @@ function listaDeAvisos(itens) {
 }
 
 /* ---------- Peças usadas por vários módulos ---------- */
+
+/* Copia exatamente o texto guardado. O jeito do navegador primeiro; se ele não deixar,
+ * o jeito antigo (uma caixa de texto escondida). */
+async function copiarTexto(textoDele) {
+  try {
+    await navigator.clipboard.writeText(textoDele);
+    return true;
+  } catch {
+    const area = Object.assign(document.createElement("textarea"), { value: textoDele });
+    area.setAttribute("readonly", "");
+    area.style.cssText = "position:fixed;top:-100px;opacity:0";
+    document.body.append(area);
+    area.select();
+    const ok = document.execCommand("copy");
+    area.remove();
+    return ok;
+  }
+}
 
 /* Voltar a uma tela quase sempre traz os mesmos dados: aí não desenha de novo (é o que fazia a
  * lista "piscar" e gastava tempo em PC fraco). `chave` separa as listas; o olho entra na conta

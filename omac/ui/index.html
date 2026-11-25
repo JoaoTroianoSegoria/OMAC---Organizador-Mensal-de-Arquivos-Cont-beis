@@ -55,7 +55,7 @@
      * muitos juntos. Quem precisa de todos carregados usa omacQuandoPronto(fn). */
     const OMAC_SCRIPTS = ["nucleo.js", "relatorio.js", "notas.js", "extrato.js", "lembretes.js", "modelos.js",
       "contatos.js", "tratamentos.js", "atendimentos.js", "backup.js", "resumo.js", "inicio.js", "atualizacao.js",
-      "configuracoes.js", "emitir.js", "menu.js"];
+      "configuracoes.js", "emitir.js", "menu.js", "mensagem.js", "textos.js"];
     const OMAC_TENTATIVAS = 4;
     window.omacScriptsProntos = false;
     function omacQuandoPronto(fn) {
@@ -173,6 +173,9 @@
         </button>
         <button class="menu-item" data-view="modelos">
           <svg class="ic"><use href="#i-impressora"/></svg><span class="rotulo">Modelos</span>
+        </button>
+        <button class="menu-item" data-view="textos">
+          <svg class="ic"><use href="#i-copiar"/></svg><span class="rotulo">Textos prontos</span>
         </button>
       </nav>
 
@@ -541,7 +544,7 @@
         <header class="topo">
           <div>
             <h1 id="t-whats">Lembretes</h1>
-            <p class="sub">Notas a enviar, contas, lembretes e textos prontos. No WhatsApp, quem aperta enviar é <strong>você</strong></p>
+            <p class="sub">Notas a enviar, contas e lembretes. No WhatsApp, quem aperta enviar é <strong>você</strong></p>
           </div>
           <div class="topo-acoes">
             <button class="btn olho" type="button" data-acao="olho" aria-pressed="false" aria-label="Mostrar os valores" title="Mostrar os valores"><svg class="ic"><use href="#i-olho-fechado"/></svg><span>Valores</span></button>
@@ -552,7 +555,6 @@
           <button class="escolha" data-acao="whats-aba" data-aba="enviar" aria-pressed="true">Notas a enviar <span class="ag-qtd" id="whats-qtd"></span></button>
           <button class="escolha" data-acao="whats-aba" data-aba="contas" aria-pressed="false">Contas <span class="ag-qtd" id="lb-qtd-contas"></span></button>
           <button class="escolha" data-acao="whats-aba" data-aba="livres" aria-pressed="false">Lembretes <span class="ag-qtd" id="lb-qtd-livres"></span></button>
-          <button class="escolha" data-acao="whats-aba" data-aba="comandos" aria-pressed="false">Comandos</button>
         </div>
 
         <!-- Notas a enviar -->
@@ -692,8 +694,18 @@
           </details>
         </div>
 
-        <!-- Comandos -->
-        <div class="painel-coluna" id="whats-comandos" hidden>
+      </section>
+
+      <!-- ============ TEXTOS PRONTOS (antes Comandos, em Lembretes) ============ -->
+      <section class="view" id="view-textos" aria-labelledby="t-textos" hidden>
+        <header class="topo">
+          <div>
+            <h1 id="t-textos">Textos prontos</h1>
+            <p class="sub">Textos que você manda sempre, separados por categoria. Na janela <strong>Emitir</strong> as [variáveis] saem preenchidas</p>
+          </div>
+        </header>
+
+        <div class="painel-coluna" id="whats-comandos">
           <div class="barra vidro lb-categorias-barra">
             <div class="escolhas lb-categorias" id="lb-categorias" role="group" aria-label="Categorias"></div>
             <div class="lb-categorias-acoes">
@@ -703,11 +715,11 @@
           <div class="lb-categoria-cab" id="lb-categoria-cab" hidden>
             <h2 id="lb-categoria-nome"></h2>
             <div class="lb-categoria-ferramentas">
-              <button class="btn btn-primario btn-peq" type="button" data-acao="lb-comando-novo"><svg class="ic"><use href="#i-mais"/></svg><span>Novo comando</span></button>
+              <button class="btn btn-primario btn-peq" type="button" data-acao="lb-comando-novo"><svg class="ic"><use href="#i-mais"/></svg><span>Novo texto</span></button>
               <span id="lb-categoria-botoes"></span>
             </div>
           </div>
-          <ul class="lb-comandos" id="lb-comandos" aria-label="Comandos da categoria"></ul>
+          <ul class="lb-comandos" id="lb-comandos" aria-label="Textos da categoria"></ul>
           <p class="dica" id="lb-comandos-dica" hidden>O botão <strong>Copiar</strong> copia o texto exatamente como está, sem espaço ou linha a mais. Depois é só colar com <kbd>Ctrl</kbd> + <kbd>V</kbd>.</p>
           <div class="vazio vidro" id="lb-comandos-vazio" hidden>
             <span class="vazio-icone"><svg class="ic"><use href="#i-copiar"/></svg></span>
@@ -785,6 +797,28 @@
           </div>
           <p class="dica" id="ag-dica">O agendado e o atendido recomeçam sozinhos todo dia 1. O atendido de cada mês fica guardado na aba <strong>Histórico</strong>.</p>
 
+          <!-- Agendados e atendidos no mês: saem da lista de cima e ganham o "agendar o próximo mês" -->
+          <section class="ag-concluidos" id="ag-concluidos" aria-labelledby="ag-concluidos-titulo" hidden>
+            <h2 class="ag-concluidos-titulo" id="ag-concluidos-titulo"></h2>
+            <p class="dica">Já agendados e atendidos neste mês. Quando a próxima manutenção for marcada, deixe o mês seguinte agendado: ele já começa com o Agendado marcado.</p>
+            <div class="tabela-caixa vidro">
+              <table class="tabela">
+                <caption class="so-leitor">Pacientes já agendados e atendidos neste mês</caption>
+                <thead>
+                  <tr>
+                    <th scope="col" class="c-confere">Agendado</th>
+                    <th scope="col" class="c-confere">Atendido</th>
+                    <th scope="col">Paciente</th>
+                    <th scope="col" class="c-valor">Manutenção</th>
+                    <th scope="col" id="ag-th-proximo">Próximo mês</th>
+                    <th scope="col" class="c-acoes-regra"><span class="so-leitor">Ações</span></th>
+                  </tr>
+                </thead>
+                <tbody id="ag-concluidos-corpo"></tbody>
+              </table>
+            </div>
+          </section>
+
           <div class="vazio vidro" id="ag-ativos-vazio" hidden>
             <span class="vazio-icone"><svg class="ic"><use href="#i-agenda"/></svg></span>
             <h2>Nenhum paciente em tratamento</h2>
@@ -826,6 +860,7 @@
                 <tr>
                   <th scope="col">Paciente</th>
                   <th scope="col" class="c-telefone">Telefone</th>
+                  <th scope="col" class="c-valor">Manutenção</th>
                   <th scope="col" class="c-data">Finalizado em</th>
                   <th scope="col" class="c-acoes-regra"><span class="so-leitor">Ações</span></th>
                 </tr>
@@ -1297,6 +1332,23 @@
                 <button class="btn" type="button" data-acao="cfg-msg-padrao" data-tipo="notas">Voltar ao padrão</button>
               </div>
             </form>
+            <form class="cfg-mensagem" data-tipo="cobranca" id="form-cfg-msg-cobranca">
+              <div class="campo campo-texto">
+                <label class="rotulo-campo" for="cfg-msg-cobranca">Mensagem para cobrar um atendimento</label>
+                <div class="cfg-variaveis" id="cfg-msg-cobranca-variaveis" data-alvo="cfg-msg-cobranca"></div>
+                <textarea id="cfg-msg-cobranca" rows="5" spellcheck="true"></textarea>
+                <p class="dica">Vai pelo botão do WhatsApp em Atendimentos, nas linhas que ainda não foram pagas.</p>
+              </div>
+              <div class="cfg-previa">
+                <span class="cfg-previa-rotulo">Como fica (com um exemplo inventado)</span>
+                <p class="cfg-previa-texto" id="cfg-msg-cobranca-previa"></p>
+              </div>
+              <p class="modal-erro" id="cfg-msg-cobranca-erro" role="alert" hidden></p>
+              <div class="form-acoes">
+                <button class="btn btn-primario" type="submit">Salvar mensagem</button>
+                <button class="btn" type="button" data-acao="cfg-msg-padrao" data-tipo="cobranca">Voltar ao padrão</button>
+              </div>
+            </form>
             <div class="campo">
               <label class="rotulo-campo" for="cfg-fechamento">Lembrar de gerar o fechamento</label>
               <span class="select"><select id="cfg-fechamento" data-config-campo="lembrete_fechamento_dia" data-tipo="numero"></select></span>
@@ -1449,80 +1501,56 @@
     </main>
   </div>
 
-  <!-- Enviar uma nota pelo WhatsApp -->
-  <dialog class="modal vidro" id="envio" aria-labelledby="envio-titulo">
-    <form id="form-envio" method="dialog" class="modal-corpo">
-      <h2 id="envio-titulo"></h2>
-      <div class="campo campo-texto">
-        <label class="rotulo-campo" for="envio-telefone">Telefone com DDD</label>
-        <input id="envio-telefone" type="tel" autocomplete="off" placeholder="(61) 90000-0000">
+  <!-- Mensagem pelo WhatsApp: a mesma janela para notas, Tratamentos, cobrança e lembretes (mensagem.js) -->
+  <dialog class="modal vidro" id="msg" aria-labelledby="msg-titulo">
+    <form id="form-msg" class="modal-corpo">
+      <h2 id="msg-titulo"></h2>
+      <ul class="lista-simples rel-lote-notas" id="msg-itens" hidden></ul>
+      <div class="campo campo-texto" id="msg-busca-campo" hidden>
+        <label class="rotulo-campo" for="msg-contato">Contato que vai receber</label>
+        <span class="ct-busca-caixa"><svg class="ic"><use href="#i-busca"/></svg><input id="msg-contato" type="search" autocomplete="off" list="msg-contatos" placeholder="Digite o nome do contato"></span>
+        <datalist id="msg-contatos"></datalist>
+        <p class="dica" id="msg-busca-dica"></p>
       </div>
-      <div class="campo campo-texto">
-        <label class="rotulo-campo" for="envio-mensagem">Mensagem</label>
-        <textarea id="envio-mensagem" rows="5"></textarea>
-      </div>
-      <p class="modal-erro" id="envio-erro" role="alert" hidden></p>
-      <div class="faixa faixa-info" id="envio-passo" hidden>
-        <svg class="ic"><use href="#i-whats"/></svg>
-        <div id="envio-passo-texto"></div>
-      </div>
-      <div class="modal-acoes" id="envio-acoes-1">
-        <button class="btn" type="button" data-acao="whats-fechar-envio">Cancelar</button>
-        <button class="btn btn-primario" type="button" data-acao="whats-abrir-conversa"><svg class="ic"><use href="#i-whats"/></svg><span>Copiar o PDF e abrir o WhatsApp</span></button>
-      </div>
-      <div class="modal-acoes" id="envio-acoes-2" hidden>
-        <button class="btn" type="button" data-acao="whats-fechar-envio">Fechar sem marcar</button>
-        <button class="btn" type="button" data-acao="whats-marcar-fechar"><svg class="ic"><use href="#i-ok"/></svg><span>Já enviei</span></button>
-        <button class="btn btn-primario" type="button" id="envio-proxima" data-acao="whats-proxima"><span>Já enviei, próxima nota</span></button>
-      </div>
-    </form>
-  </dialog>
-
-  <!-- Enviar várias notas de uma vez -->
-  <dialog class="modal vidro modal-largo" id="rel-lote" aria-labelledby="rel-lote-titulo">
-    <form id="form-rel-lote" class="modal-corpo">
-      <h2 id="rel-lote-titulo"></h2>
-      <ul class="lista-simples rel-lote-notas" id="rel-lote-notas"></ul>
-      <div class="campo campo-texto" id="rel-lote-contato-campo">
-        <label class="rotulo-campo" for="rel-lote-contato">Contato que vai receber</label>
-        <span class="ct-busca-caixa"><svg class="ic"><use href="#i-busca"/></svg><input id="rel-lote-contato" type="search" autocomplete="off" list="rel-lote-contatos" placeholder="Digite o nome do contato"></span>
-        <datalist id="rel-lote-contatos"></datalist>
-        <p class="dica" id="rel-lote-contato-dica"></p>
-      </div>
-      <fieldset class="opcao" id="rel-lote-destinos-campo" hidden>
+      <fieldset class="opcao" id="msg-destinos-campo" hidden>
         <legend>Enviar para</legend>
-        <div class="escolhas ag-destinos" id="rel-lote-destinos"></div>
+        <div class="escolhas ag-destinos" id="msg-destinos"></div>
       </fieldset>
-      <div class="rel-lote-envio" id="rel-lote-envio" hidden>
-        <div class="campo campo-texto">
-          <label class="rotulo-campo" for="rel-lote-telefone">Telefone com DDD</label>
-          <input id="rel-lote-telefone" type="tel" autocomplete="off" placeholder="(61) 90000-0000">
+      <div class="escolhas ag-tipos" id="msg-tipos" role="group" aria-label="Qual mensagem" hidden></div>
+      <div class="msg-envio" id="msg-envio">
+        <div class="campo campo-texto" id="msg-telefone-campo">
+          <label class="rotulo-campo" for="msg-telefone">Telefone com DDD</label>
+          <input id="msg-telefone" type="tel" autocomplete="off" placeholder="(61) 90000-0000">
         </div>
-        <div class="campo campo-texto">
-          <label class="rotulo-campo" for="rel-lote-mensagem">Mensagem</label>
-          <textarea id="rel-lote-mensagem" rows="5"></textarea>
+        <div class="campo campo-texto" id="msg-texto-campo">
+          <label class="rotulo-campo" for="msg-texto">Mensagem</label>
+          <textarea id="msg-texto" rows="6"></textarea>
         </div>
-        <div class="rel-lote-colar" id="rel-lote-colar-campo" hidden>
+        <div class="rel-lote-colar" id="msg-colar-campo" hidden>
           <label class="ag-caixa">
-            <input type="checkbox" class="confere" id="rel-lote-colar">
+            <input type="checkbox" class="confere" id="msg-colar">
             <span>Colar os PDFs sozinho na conversa <span class="etiqueta">experimental</span></span>
           </label>
           <p class="dica">Só no WhatsApp do computador: o OMAC espera a conversa abrir e aperta Ctrl + V por você. Se não der certo, é só apertar Ctrl + V. O Enter é sempre seu.</p>
         </div>
       </div>
-      <p class="modal-erro" id="rel-lote-erro" role="alert" hidden></p>
-      <div class="faixa faixa-info" id="rel-lote-passo" hidden>
+      <div class="faixa faixa-aviso" id="msg-falta" hidden>
+        <svg class="ic"><use href="#i-alerta"/></svg>
+        <div class="ag-sem-pix-corpo">
+          <span id="msg-falta-texto"></span>
+          <button class="btn btn-peq" type="button" id="msg-falta-botao" data-acao="msg-falta"></button>
+        </div>
+      </div>
+      <p class="modal-erro" id="msg-erro" role="alert" hidden></p>
+      <div class="faixa faixa-info" id="msg-passo" hidden>
         <svg class="ic"><use href="#i-whats"/></svg>
-        <div id="rel-lote-passo-texto"></div>
+        <div id="msg-passo-texto"></div>
       </div>
-      <div class="modal-acoes" id="rel-lote-acoes-1">
-        <button class="btn" type="button" data-acao="rel-lote-fechar">Cancelar</button>
-        <button class="btn btn-primario" type="submit" id="rel-lote-abrir"><svg class="ic"><use href="#i-whats"/></svg><span>Copiar os PDFs e abrir o WhatsApp</span></button>
+      <div class="modal-acoes" id="msg-acoes-1">
+        <button class="btn" type="button" data-acao="msg-fechar">Cancelar</button>
+        <button class="btn btn-primario" type="submit" id="msg-enviar"><svg class="ic"><use href="#i-whats"/></svg><span id="msg-enviar-texto">Abrir o WhatsApp</span></button>
       </div>
-      <div class="modal-acoes" id="rel-lote-acoes-2" hidden>
-        <button class="btn" type="button" data-acao="rel-lote-fechar">Agora não</button>
-        <button class="btn btn-primario" type="button" id="rel-lote-marcar" data-acao="rel-lote-marcar"><svg class="ic"><use href="#i-ok"/></svg><span id="rel-lote-marcar-texto"></span></button>
-      </div>
+      <div class="modal-acoes" id="msg-acoes-2" hidden></div>
     </form>
   </dialog>
 
@@ -1544,29 +1572,6 @@
     </div>
   </dialog>
 
-  <!-- Enviar lembrete de contas, a qualquer momento -->
-  <dialog class="modal vidro" id="lb-envio-contas" aria-labelledby="lb-envio-titulo">
-    <form id="form-lb-envio" class="modal-corpo">
-      <h2 id="lb-envio-titulo"></h2>
-      <ul class="lista-simples lembretes-lista" id="lb-envio-lista"></ul>
-      <div class="campo campo-texto" id="lb-envio-texto-campo">
-        <label class="rotulo-campo" for="lb-envio-texto">Mensagem</label>
-        <textarea id="lb-envio-texto" rows="6"></textarea>
-      </div>
-      <div class="faixa faixa-aviso" id="lb-envio-sem-contato" hidden>
-        <svg class="ic"><use href="#i-alerta"/></svg>
-        <div class="ag-sem-pix-corpo">
-          <span id="lb-envio-sem-contato-texto"></span>
-          <button class="btn btn-peq" type="button" id="lb-envio-ir" data-acao="lb-envio-ir"></button>
-        </div>
-      </div>
-      <div class="modal-acoes">
-        <button class="btn" type="button" data-acao="lb-envio-fechar">Cancelar</button>
-        <button class="btn btn-primario" type="submit" id="lb-envio-abrir"><svg class="ic"><use href="#i-whats"/></svg><span>Abrir o WhatsApp</span></button>
-      </div>
-    </form>
-  </dialog>
-
   <!-- Comando (novo ou alterar) -->
   <dialog class="modal vidro" id="lb-comando" aria-labelledby="lb-comando-titulo">
     <form id="form-lb-comando" class="modal-corpo">
@@ -1581,7 +1586,7 @@
         <p class="dica">Pode ter várias linhas. Espaço e linhas em branco no começo e no fim não são copiados.</p>
         <details class="lb-comando-variaveis">
           <summary>Variáveis para a janela Emitir</summary>
-          <p class="dica">Só são trocadas quando o comando é copiado na janela <strong>Emitir</strong>, em Atendimentos. Aqui e na aba Comandos, o texto é copiado como está.</p>
+          <p class="dica">Só são trocadas quando o texto é copiado na janela <strong>Emitir</strong>, em Atendimentos. Em Textos prontos, ele é copiado como está.</p>
           <p class="dica">Para o nome do PDF da nota, por exemplo: <code>NFS-e Nº [numero-nota] - [nome] - [data-hoje] - COMP [comp]</code></p>
           <div class="cfg-variaveis" data-alvo="lb-comando-texto">
             <button class="btn btn-peq" type="button" data-acao="cfg-variavel" data-variavel="nome">[nome]</button>
@@ -1744,12 +1749,12 @@
         </div>
         <aside class="emitir-comandos" aria-labelledby="emitir-comandos-titulo">
           <div class="emitir-comandos-cab">
-            <h3 id="emitir-comandos-titulo">Comandos</h3>
-            <span class="select"><select id="emitir-categoria" aria-label="Categoria de comandos"></select></span>
+            <h3 id="emitir-comandos-titulo">Textos prontos</h3>
+            <span class="select"><select id="emitir-categoria" aria-label="Categoria dos textos prontos"></select></span>
           </div>
           <ul class="emitir-comandos-lista" id="emitir-comandos-lista"></ul>
           <p class="dica" id="emitir-comandos-vazio" hidden></p>
-          <p class="dica emitir-comandos-dica">✓ = já copiado nesta emissão. As [variáveis] dos comandos saem preenchidas.</p>
+          <p class="dica emitir-comandos-dica">✓ = já copiado nesta emissão. As [variáveis] dos textos saem preenchidas.</p>
         </aside>
       </div>
       <p class="dica">O CPF e o nascimento ficam guardados só neste computador, no cadastro do contato.</p>
@@ -1848,38 +1853,21 @@
     </div>
   </dialog>
 
-  <!-- Mensagem para o paciente -->
-  <dialog class="modal vidro" id="ag-mensagem" aria-labelledby="ag-mensagem-titulo">
-    <form id="form-ag-mensagem" class="modal-corpo">
-      <h2 id="ag-mensagem-titulo"></h2>
-      <fieldset class="opcao" id="ag-destinos-campo">
-        <legend>Enviar para</legend>
-        <div class="escolhas ag-destinos" id="ag-destinos"></div>
-      </fieldset>
-      <div class="escolhas ag-tipos" role="group" aria-label="Qual mensagem">
-        <button class="escolha" type="button" data-acao="ag-tipo" data-tipo="agendar">Agendar manutenção</button>
-        <button class="escolha" type="button" data-acao="ag-tipo" data-tipo="cobrar">Cobrar manutenção</button>
-        <button class="escolha" type="button" data-acao="ag-tipo" data-tipo="retorno">Agendar retorno</button>
-      </div>
+  <!-- Agendado (este mês ou o próximo), com o dia da consulta: tratamentos.js -->
+  <dialog class="modal vidro modal-confirmar" id="ag-agendar" aria-labelledby="ag-agendar-titulo">
+    <form id="form-ag-agendar" class="modal-corpo">
+      <h2 id="ag-agendar-titulo"></h2>
+      <p id="ag-agendar-texto"></p>
       <div class="campo campo-texto">
-        <label class="rotulo-campo" for="ag-msg-telefone">Telefone com DDD</label>
-        <input id="ag-msg-telefone" type="tel" autocomplete="off" placeholder="(61) 90000-0000">
+        <label class="rotulo-campo" for="ag-agendar-dia">Dia da consulta (se já souber)</label>
+        <input id="ag-agendar-dia" type="date">
+        <p class="dica">Com o dia, o Início avisa quem tem consulta hoje e a mensagem de agendar já confirma a data.</p>
       </div>
-      <div class="campo campo-texto" id="ag-msg-texto-campo">
-        <label class="rotulo-campo" for="ag-msg-texto">Mensagem</label>
-        <textarea id="ag-msg-texto" rows="6"></textarea>
-      </div>
-      <div class="faixa faixa-aviso" id="ag-sem-pix" hidden>
-        <svg class="ic"><use href="#i-alerta"/></svg>
-        <div class="ag-sem-pix-corpo">
-          <span>Para cobrar, preencha a chave Pix nas Configurações.</span>
-          <button class="btn btn-peq" type="button" data-acao="ag-abrir-config">Abrir Configurações</button>
-        </div>
-      </div>
-      <p class="modal-erro" id="ag-mensagem-erro" role="alert" hidden></p>
+      <p class="modal-erro" id="ag-agendar-erro" role="alert" hidden></p>
       <div class="modal-acoes">
-        <button class="btn" type="button" data-acao="ag-fechar-mensagem">Cancelar</button>
-        <button class="btn btn-primario" type="submit" id="ag-enviar"><svg class="ic"><use href="#i-whats"/></svg><span>Abrir o WhatsApp</span></button>
+        <button class="btn btn-perigo" type="button" id="ag-agendar-tirar" data-acao="ag-agendar-tirar" hidden>Tirar o agendado</button>
+        <button class="btn" type="button" data-acao="ag-agendar-fechar">Cancelar</button>
+        <button class="btn btn-primario" type="submit" id="ag-agendar-sim"></button>
       </div>
     </form>
   </dialog>
