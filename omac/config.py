@@ -35,6 +35,8 @@ PADRAO = {
     # Como os arquivos das notas são nomeados; do nome só saem o número e quem recebe a nota.
     "formato_arquivo": "NFS-e Nº [numero-da-nota] - [nome-do-paciente] - [data-de-emissao]",
     "servico_esperado": "tratamento odontológico",  # a descrição da nota deve ter isso; "" = não avisa
+    # O mesmo para a nota de um dependente; diz também onde está o nome dele (1.15.0).
+    "servico_dependente": "tratamento odontológico referente ao(a) dependente [nome-do-dependente]",
     # Textos das mensagens com [variáveis] (whatsapp/catalogo.py): {"agendar": {"paciente": "", "responsavel": ""}}.
     # "" = o padrão. Antes da 1.13.0 eram mensagem_nota, mensagem_notas e mensagem_cobranca (um texto só).
     "mensagens": {},
@@ -118,7 +120,7 @@ def normalizar(cfg: dict) -> dict:
         limpo[chave] = bool(limpo[chave])
     for chave in ("pasta_notas", "pasta_extratos", "pasta_saida",
                   "assistente_nome", "chave_pix", "atualizacao_adiada_em", "site_nota",
-                  "formato_arquivo", "servico_esperado",
+                  "formato_arquivo", "servico_esperado", "servico_dependente",
                   "emissao_categoria",
                   "backup_pasta", "backup_ultimo", "backup_erro"):
         limpo[chave] = str(limpo[chave] or "")

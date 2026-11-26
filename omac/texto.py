@@ -35,6 +35,24 @@ def nome_limpo(texto) -> str:
     return " ".join(str(texto or "").split())
 
 
+class NomeInvalido(ValueError):
+    """O nome de uma pessoa tem número ou símbolo."""
+
+
+# Palavras de letras (com acento), separadas por espaço, hífen ou apóstrofo ("Ana-Clara D'Ávila"),
+# e o ponto de abreviação no fim de uma palavra ("Dra. Ana", "J. Silva Jr.").
+_RE_NOME_DE_PESSOA = re.compile(r"[^\W\d_]+\.?(?:(?: |-|'|’)[^\W\d_]+\.?)*")
+
+
+def nome_de_pessoa(texto) -> str:
+    """O nome sem espaço sobrando, ou NomeInvalido se tiver número ou símbolo. Vazio continua vazio."""
+    nome = nome_limpo(texto)
+    if nome and not _RE_NOME_DE_PESSOA.fullmatch(nome):
+        raise NomeInvalido(f"Confira o nome “{nome}”: use só letras e espaços "
+                           "(hífen, apóstrofo e ponto de abreviação também valem, como em Ana-Clara, D'Ávila e Dra. Ana).")
+    return nome
+
+
 def mesma_pessoa(nome_a: str, nome_b: str) -> bool:
     """Um dos nomes pode ter um sobrenome a mais ou a menos que o outro.
 

@@ -152,7 +152,7 @@ class EnvioNotasApi(ApiBase):
             else:
                 if not (nome or "").strip():
                     return {"erro": "Escolha para quem vai a mensagem."}
-                ct.obter(contatos, nome)["telefone"] = telefone
+                ct.obter(contatos, nome, validar=False)["telefone"] = telefone  # nome do PDF da nota
 
         colar = bool(colar) and self._colar_disponivel()
         if colar != self._cfg["colar_sozinho"] and self._colar_disponivel():

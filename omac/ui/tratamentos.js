@@ -88,7 +88,7 @@ function desenharAgenda() {
 function celulaPaciente(p) {
   const td = document.createElement("td");
   const caixa = Object.assign(document.createElement("div"), { className: "paciente" });
-  caixa.append(Object.assign(document.createElement("span"), { textContent: p.nome }));
+  caixa.append(nomeComFicha(p.nome, p.contato_id));
   // Todos os responsáveis; quem recebe as mensagens ganha o ícone do WhatsApp.
   for (const r of p.responsaveis || []) {
     const recebe = r.contato_id === p.destino.contato_id;

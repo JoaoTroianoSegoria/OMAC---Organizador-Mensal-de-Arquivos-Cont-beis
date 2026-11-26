@@ -654,6 +654,7 @@ function ligarEventos() {
   document.addEventListener("change", (e) => {
     if (e.target.classList?.contains("campo-cpf")) e.target.value = cpfBR(e.target.value.trim());
   });
+  document.addEventListener("input", filtrarCampo, true);
 
   $$("[data-sel-mes]").forEach((s) => s.addEventListener("change", (e) => mudarMes(estado.ano, Number(e.target.value))));
   $$("[data-sel-ano]").forEach((s) => s.addEventListener("change", (e) => mudarMes(Number(e.target.value), estado.mes)));
@@ -672,4 +673,38 @@ function ligarEventos() {
   });
 
   Object.values(modulos).forEach((m) => m.ligar?.());
+}
+
+/* ---------- Campos de pessoa (1.15.0) ----------
+ * Nome (.campo-nome), CPF (.campo-cpf) e telefone (type="tel"): o que não cabe nem entra no campo.
+ * O Python confere de novo ao salvar (texto.nome_de_pessoa, contatos/cpf.py, normalizar_telefone).
+ * Escolher um nome da lista de sugestões (insertReplacementText) passa sem filtro: é um contato que
+ * já existe, mesmo que tenha sido salvo antes dessa regra. */
+const FILTROS_DE_CAMPO = {
+  nome: [/[^\p{L}\s.'’-]/gu, "No nome entram só letras e espaços (e hífen, apóstrofo ou ponto, como em Ana-Clara, D'Ávila e Dra. Ana)."],
+  cpf: [/[^\d.-]/g, "No CPF entram só números, pontos e traço, como 000.000.000-00."],
+  telefone: [/[^\d\s()+.-]/g, "No telefone entram só números, espaço, parênteses e traço, como (61) 90000-0000."],
+};
+let avisoDeCampoEm = 0;
+
+function tipoDoCampo(el) {
+  if (el.classList?.contains("campo-cpf")) return "cpf";
+  if (el.classList?.contains("campo-nome")) return "nome";
+  return el.type === "tel" ? "telefone" : "";
+}
+
+function filtrarCampo(e) {
+  const el = e.target;
+  const tipo = tipoDoCampo(el);
+  if (!tipo || e.inputType === "insertReplacementText") return;
+  const [proibido, aviso] = FILTROS_DE_CAMPO[tipo];
+  const limpo = el.value.replace(proibido, "");
+  if (limpo === el.value) return;
+  const cursor = Math.max(0, (el.selectionEnd ?? el.value.length) - (el.value.length - limpo.length));
+  el.value = limpo;
+  el.setSelectionRange?.(cursor, cursor);
+  if (Date.now() - avisoDeCampoEm > 4000) {  // um aviso só, mesmo digitando várias letras
+    avisoDeCampoEm = Date.now();
+    mostrarToast(aviso);
+  }
 }

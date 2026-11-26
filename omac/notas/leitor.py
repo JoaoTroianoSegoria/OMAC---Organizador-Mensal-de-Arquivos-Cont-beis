@@ -9,8 +9,10 @@ valor na linha de baixo, por exemplo:
     30/10/2026
 
 O nome do paciente vem do nome do arquivo, salvo quando a descrição do
-serviço indica um dependente ("... referente ao dependente FULANO"): nesse
-caso o nome do dependente tem prioridade.
+serviço indica um dependente ("... referente ao(a) dependente FULANO"): nesse
+caso o nome do dependente tem prioridade. A nota fica no CPF do responsável
+(o tomador); o nome do arquivo é o do dependente (1.15.0; antes era o do
+responsável, e os arquivos antigos assim continuam sendo lidos).
 
 O jeito de nomear os arquivos e o serviço que a descrição deve ter são da
 pessoa (Configurações → Notas fiscais): chegam aqui como `Regras`. Do nome do
@@ -27,9 +29,10 @@ from decimal import Decimal
 from pathlib import Path
 
 from ..pdf import PdfIlegivel, extrair_paginas
+from ..texto import mesma_pessoa
 
 # Mude quando a forma de ler as notas mudar: invalida o cache antigo.
-VERSAO_LEITOR = 3  # 2: nome e CPF do tomador; 3: quem recebe a nota guardado na leitura
+VERSAO_LEITOR = 4  # 2: nome e CPF do tomador; 3: quem recebe a nota guardado na leitura; 4: arquivo com o dependente
 
 
 class NotaIlegivel(Exception):
@@ -42,20 +45,25 @@ class FormatoInvalido(ValueError):
 
 FORMATO_PADRAO = "NFS-e Nº [numero-da-nota] - [nome-do-paciente] - [data-de-emissao]"
 SERVICO_PADRAO = "tratamento odontológico"
+DEPENDENTE = "nome-do-dependente"
+SERVICO_DEPENDENTE_PADRAO = f"tratamento odontológico referente ao(a) dependente [{DEPENDENTE}]"
 NUMERO, NOME, EMISSAO, COMPETENCIA = "numero-da-nota", "nome-do-paciente", "data-de-emissao", "data-competencia"
 VARIAVEIS_DO_ARQUIVO = (NUMERO, NOME, EMISSAO, COMPETENCIA)
 
 
 @dataclass(frozen=True)
 class Regras:
-    """Como ler: o formato do nome dos arquivos e o serviço que a descrição deve ter ("" = não avisa)."""
+    """Como ler: o formato do nome dos arquivos e o serviço que a descrição deve ter ("" = não avisa),
+    sem e com dependente. O da nota com dependente também diz onde está o nome dele."""
 
     formato: str = FORMATO_PADRAO
     servico: str = SERVICO_PADRAO
+    servico_dependente: str = SERVICO_DEPENDENTE_PADRAO
 
     def assinatura(self) -> str:
         """Muda quando a leitura muda: o cache guardado com outras regras não vale."""
-        return f"{' '.join(self.formato.split())}|{' '.join(self.servico.split())}"
+        partes = (self.formato, self.servico, self.servico_dependente)
+        return "|".join(" ".join(p.split()) for p in partes)
 
 
 PADRAO = Regras()
@@ -72,7 +80,7 @@ class Nota:
     dependente: bool = False
     cancelada: bool = False
     avisos: list[str] = field(default_factory=list)
-    responsavel: str = ""  # quem recebe a nota: o nome do arquivo (ou o tomador, se o arquivo estiver fora do formato)
+    responsavel: str = ""  # quem recebe a nota (ver _quem_recebe)
     tomador: str = ""  # nome de quem recebeu a nota, como está no PDF
     cpf_tomador: str = ""  # só os 11 números; vazio se for CNPJ ou não estiver lá
 
@@ -195,14 +203,19 @@ def ler_nome_arquivo(nome: str, regras: Regras = PADRAO) -> tuple[int, str] | No
 
 
 def problema_no_nome(nota: Nota, regras: Regras = PADRAO) -> str:
-    """Por que o nome do arquivo não serve ("" = está certo): fora do formato ou com outro número.
+    """Por que o nome do arquivo não serve ("" = está certo): fora do formato, com outro número ou,
+    na nota de um dependente, com o nome de outra pessoa (o responsável, como era antes da 1.15.0).
 
     O site novo baixa o PDF com um nome só de números; aí o OMAC sugere o nome certo.
     """
     lido = ler_nome_arquivo(nota.arquivo, regras)
     if lido is None:
         return "fora_do_formato"
-    return "numero_diferente" if lido[0] != nota.numero else ""
+    if lido[0] != nota.numero:
+        return "numero_diferente"
+    if nota.dependente and not mesma_pessoa(lido[1], nota.paciente):
+        return "nome_do_responsavel"
+    return ""
 
 
 # Caracteres que o Windows não aceita em nome de arquivo.
@@ -233,7 +246,7 @@ def nome_certo(nota: Nota, nome: str, regras: Regras = PADRAO) -> str:
 
 
 def responsavel(nota: Nota) -> str:
-    """Quem recebe a nota. O nome do arquivo é o do responsável, mesmo com dependente."""
+    """Quem recebe a nota (o responsável, se ela é de um dependente)."""
     if nota.responsavel:
         return nota.responsavel
     lido = ler_nome_arquivo(nota.arquivo)
@@ -269,7 +282,6 @@ _RE_BLOCO_TOMADOR = re.compile(
     r"TOMADOR\s*/\s*ADQUIRENTE(.*?)(?:INTERMEDI|SERVI[ÇC]O PRESTADO|$)", re.IGNORECASE | re.DOTALL
 )
 _RE_CPF = re.compile(r"(?<![\d./-])(\d{3}\.?\d{3}\.?\d{3}-?\d{2})(?![\d./-])")
-_RE_DEPENDENTE = re.compile(r"\bdependente\b\s*[:\-]?\s*(.+)", re.IGNORECASE | re.DOTALL)
 _RE_CANCELADA = re.compile(r"\bcancelad[ao]\b", re.IGNORECASE)
 # A marca de cancelamento fica sozinha na linha: "CANCELADA", "NFS-e cancelada".
 _RE_MARCA_CANCELADA = re.compile(
@@ -316,13 +328,13 @@ def interpretar_texto(texto: str, nome_arquivo: str, regras: Regras = PADRAO) ->
         avisos.append("A palavra “cancelada” aparece no texto da nota. Ela continua no relatório: confira se vale mesmo.")
 
     descricao = " ".join((_buscar(_RE_DESCRICAO, texto) or "").split())
-    servico = " ".join(regras.servico.split())
-    if servico and " ".join(_sem_acentos(servico).lower().split()) not in _sem_acentos(descricao).lower():
-        avisos.append(f"A descrição do serviço não contém “{servico}”.")
+    dependente = _nome_dependente(descricao, regras.servico_dependente)
+    aviso = _aviso_da_descricao(descricao, regras, dependente)
+    if aviso:
+        avisos.append(aviso)
 
     do_arquivo = ler_nome_arquivo(nome_arquivo, regras)
     tomador = _limpar_nome(_buscar(_RE_TOMADOR, texto) or "")
-    dependente = _nome_dependente(descricao)
 
     if dependente:
         paciente = dependente
@@ -352,7 +364,7 @@ def interpretar_texto(texto: str, nome_arquivo: str, regras: Regras = PADRAO) ->
         dependente=bool(dependente),
         cancelada=cancelada,
         avisos=avisos,
-        responsavel=do_arquivo[1] if do_arquivo else paciente,
+        responsavel=_quem_recebe(dependente, do_arquivo, tomador, paciente),
         tomador=tomador,
         cpf_tomador=_cpf_do_tomador(texto),
     )
@@ -378,13 +390,70 @@ def _cpf_do_tomador(texto: str) -> str:
     return re.sub(r"\D", "", m.group(1)) if m else ""
 
 
-def _nome_dependente(descricao: str) -> str | None:
-    m = _RE_DEPENDENTE.search(descricao)
+def _quem_recebe(dependente: str | None, do_arquivo: tuple[int, str] | None, tomador: str, paciente: str) -> str:
+    """O responsável pela nota. Sem dependente, é quem está no nome do arquivo (ou o tomador).
+    Com dependente, o nome do arquivo pode ser o do responsável (arquivos de antes da 1.15.0)
+    ou o do próprio dependente (o certo agora): aí quem recebe é o tomador, que está no PDF."""
+    if not dependente:
+        return do_arquivo[1] if do_arquivo else paciente
+    if do_arquivo and not mesma_pessoa(do_arquivo[1], dependente):
+        return do_arquivo[1]
+    return tomador
+
+
+# Letras com e sem acento: o modelo das Configurações pode estar escrito de um jeito e a nota de outro.
+_ACENTOS = {"a": "aáàâãä", "e": "eéèêë", "i": "iíìîï", "o": "oóòôõö", "u": "uúùûü", "c": "cç", "n": "nñ"}
+
+
+def _sem_ligar_para_acento(palavra: str) -> str:
+    return "".join(f"[{_ACENTOS[c]}]" if c in _ACENTOS else re.escape(c) for c in _sem_acentos(palavra).lower())
+
+
+def _partes_do_modelo(modelo: str) -> tuple[str, str] | None:
+    """(texto antes, texto depois) de [nome-do-dependente] no modelo; None se ele não tem a variável."""
+    m = re.search(r"\[\s*" + DEPENDENTE + r"\s*\]", modelo or "", re.IGNORECASE)
+    return (modelo[:m.start()], modelo[m.end():]) if m else None
+
+
+def _nome_dependente(descricao: str, modelo: str = SERVICO_DEPENDENTE_PADRAO) -> str | None:
+    """O nome que vem depois da última palavra antes de [nome-do-dependente] no modelo
+    ("dependente", no padrão). Sem a variável no modelo, procura a palavra "dependente"."""
+    partes = _partes_do_modelo(modelo)
+    palavras = re.findall(r"[^\W\d_]+", partes[0]) if partes else []
+    ancora = _sem_ligar_para_acento(palavras[-1]) if palavras else "dependente"
+    m = re.search(rf"\b{ancora}\b\s*[:\-]?\s*(.+)", descricao, re.IGNORECASE | re.DOTALL)
     if not m:
         return None
+    nome = m.group(1)
+    # O que o modelo tem depois do nome (", menor de idade"...) não faz parte dele.
+    depois = re.findall(r"[^\W\d_]+", partes[1]) if partes else []
+    if depois:
+        nome = re.split(rf"\b{_sem_ligar_para_acento(depois[0])}\b", nome, maxsplit=1, flags=re.IGNORECASE)[0]
     # Corta o que vier depois do nome: CPF, números, parênteses, pontuação.
-    nome = re.split(r"[,;:()\[\]\d]|\s[-–]\s|\bCPF\b", m.group(1), maxsplit=1, flags=re.IGNORECASE)[0]
+    nome = re.split(r"[,;:()\[\]\d]|\s[-–]\s|\bCPF\b", nome, maxsplit=1, flags=re.IGNORECASE)[0]
     return _limpar_nome(nome) or None
+
+
+def _comparavel(texto: str) -> str:
+    """Para comparar a descrição com a esperada sem ligar para acento, pontuação e artigos:
+    "referente ao(a) dependente", "a(ao) dependente" e "à dependente" contam como iguais."""
+    palavras = re.findall(r"[a-z0-9]+", _sem_acentos(texto).lower())
+    return " ".join(p for p in palavras if len(p) > 2 or p.isdigit())
+
+
+def _aviso_da_descricao(descricao: str, regras: Regras, dependente: str | None) -> str:
+    """Aviso se a descrição não tem o texto esperado (o de dependente, quando a nota é de um)."""
+    modelo = " ".join(regras.servico_dependente.split()) if dependente else ""
+    if modelo:
+        partes = _partes_do_modelo(modelo)
+        esperado = f"{partes[0]}{dependente}{partes[1]}" if partes else modelo
+        if _comparavel(esperado) not in _comparavel(descricao):
+            return f"A descrição do serviço não está como a de dependente: “{' '.join(esperado.split())}”."
+        return ""
+    servico = " ".join(regras.servico.split())
+    if servico and _comparavel(servico) not in _comparavel(descricao):
+        return f"A descrição do serviço não contém “{servico}”."
+    return ""
 
 
 def _limpar_nome(nome: str) -> str:

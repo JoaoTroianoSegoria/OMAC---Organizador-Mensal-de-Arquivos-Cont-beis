@@ -11,7 +11,7 @@ import uuid
 from datetime import date
 
 from ..dados import esquema
-from ..texto import mesma_pessoa, nome_limpo, normalizar
+from ..texto import NomeInvalido, mesma_pessoa, nome_de_pessoa, nome_limpo, normalizar
 from ..whatsapp.mensagens import TelefoneInvalido, normalizar_telefone
 from . import cpf as cpfs
 
@@ -37,6 +37,14 @@ def telefone(texto, de_quem: str = "") -> str:
         return normalizar_telefone(texto)
     except TelefoneInvalido as e:
         raise ContatoInvalido(f"Telefone {de_quem}: {e}" if de_quem else str(e)) from e
+
+
+def nome_valido(texto) -> str:
+    """Nome de pessoa digitado: só letras, espaços, hífen e apóstrofo (texto.nome_de_pessoa)."""
+    try:
+        return nome_de_pessoa(texto)
+    except NomeInvalido as e:
+        raise ContatoInvalido(str(e)) from e
 
 
 def cpf(texto, de_quem: str = "") -> str:
@@ -89,14 +97,16 @@ def conferir_nome(contatos: list[dict], nome: str, ignorar: str | None = None) -
             f"Já existe o contato “{igual['nome']}”. Se for outra pessoa, coloque o sobrenome para diferenciar.")
 
 
-def obter(contatos: list[dict], nome: str, telefone_: str = "", hoje: date | None = None) -> dict:
-    """O contato com esse nome, ou um novo. Telefone novo só preenche quem não tinha."""
+def obter(contatos: list[dict], nome: str, telefone_: str = "", hoje: date | None = None,
+          validar: bool = True) -> dict:
+    """O contato com esse nome, ou um novo. Telefone novo só preenche quem não tinha.
+    O nome de um contato novo é conferido (validar=False para nomes que vêm do PDF da nota)."""
     nome = nome_limpo(nome)
     if not nome:
         raise ContatoInvalido("Diga o nome do contato.")
     contato = por_nome(contatos, nome)
     if contato is None:
-        contato = novo(nome, telefone_, hoje)
+        contato = novo(nome_valido(nome) if validar else nome, telefone_, hoje)
         contatos.append(contato)
     elif telefone_ and not contato["telefone"]:
         contato["telefone"] = telefone_
@@ -139,7 +149,7 @@ def _responsaveis(contatos: list[dict], linhas: list[dict] | None, proprio_id: s
 
 def salvar(contatos: list[dict], dados: dict, contato_id: str | None, hoje: date) -> dict:
     """Cria ou altera. Valida tudo antes de mexer: um erro não deixa nada pela metade."""
-    nome = nome_limpo(dados.get("nome"))
+    nome = nome_valido(dados.get("nome"))
     if not nome:
         raise ContatoInvalido("Diga o nome do contato.")
     conferir_nome(contatos, nome, ignorar=contato_id)

@@ -12,7 +12,7 @@ from ..nucleo import ApiBase, seguro
 from ..texto import mesma_pessoa, normalizar
 from . import exportar as exp
 from . import pesquisa
-from .leitor import (FORMATO_PADRAO, SERVICO_PADRAO, FormatoInvalido, Regras, compilar_formato, ler_nome_arquivo,
+from .leitor import (FORMATO_PADRAO, SERVICO_DEPENDENTE_PADRAO, SERVICO_PADRAO, FormatoInvalido, Regras, compilar_formato, ler_nome_arquivo,
                      nome_certo, problema_no_nome, responsavel)
 
 
@@ -58,21 +58,25 @@ class NotasApi(ApiBase):
     # --- Nome do arquivo errado (o site baixa o PDF com um nome só de números) ------------
 
     @staticmethod
-    def _nome_de_quem_recebe(nota, contatos: list[dict]) -> str:
-        """O nome do arquivo é o de quem recebe a nota (o tomador). Do contato, se achar (pelo
-        CPF ou pelo nome), para sair escrito como nos Contatos; senão, como está no PDF."""
+    def _nome_para_o_arquivo(nota, contatos: list[dict]) -> str:
+        """O nome do arquivo é o do paciente: o dependente, se a nota é de um; senão, quem recebe a
+        nota (o tomador). Do contato, se achar (pelo CPF ou pelo nome), para sair escrito como nos
+        Contatos; senão, como está no PDF. O CPF da nota de dependente é do responsável: não serve."""
+        if nota.dependente:
+            return NotasApi._contato_pelo_nome(nota.paciente, contatos)
         if nota.cpf_tomador:
             achado = next((c for c in contatos if c.get("cpf") and cpfs.digitos(c["cpf"]) == nota.cpf_tomador), None)
             if achado:
                 return achado["nome"]
-        nome = nota.tomador or nota.paciente
-        if nome and nome != "(sem nome)":
-            iguais = [c for c in contatos if normalizar(c["nome"]) == normalizar(nome)]
-            parecidos = iguais or [c for c in contatos if mesma_pessoa(c["nome"], nome)]
-            if len(parecidos) == 1:
-                return parecidos[0]["nome"]
-            return nome
-        return ""
+        return NotasApi._contato_pelo_nome(nota.tomador or nota.paciente, contatos)
+
+    @staticmethod
+    def _contato_pelo_nome(nome: str, contatos: list[dict]) -> str:
+        if not nome or nome == "(sem nome)":
+            return ""
+        iguais = [c for c in contatos if normalizar(c["nome"]) == normalizar(nome)]
+        parecidos = iguais or [c for c in contatos if mesma_pessoa(c["nome"], nome)]
+        return parecidos[0]["nome"] if len(parecidos) == 1 else nome
 
     def _renomear(self, nota, contatos: list[dict]) -> dict | None:
         """Sugestão de nome certo para o PDF, ou None se o nome dele já está certo."""
@@ -80,7 +84,7 @@ class NotasApi(ApiBase):
         motivo = problema_no_nome(nota, regras)
         if not motivo:
             return None
-        nome = self._nome_de_quem_recebe(nota, contatos)
+        nome = self._nome_para_o_arquivo(nota, contatos)
         if not nome:
             return None
         return {"motivo": motivo, "de": nota.arquivo, "nome": nome, "para": nome_certo(nota, nome, regras)}
@@ -176,7 +180,7 @@ class NotasApi(ApiBase):
         pasta = self._cfg["pasta_notas"]
         if not pasta or not Path(pasta).is_dir():
             return {"sem_pasta": True}
-        regras = Regras(formato, self._cfg["servico_esperado"])
+        regras = Regras(formato, self._cfg["servico_esperado"], self._cfg["servico_dependente"])
         nomes = sorted(p.name for p in Path(pasta).iterdir() if p.is_file() and p.suffix.lower() == ".pdf")
         lidos = [(n, ler_nome_arquivo(n, regras)) for n in nomes]
         entendidos = [(n, x) for n, x in lidos if x]
@@ -190,20 +194,23 @@ class NotasApi(ApiBase):
         }
 
     @seguro
-    def notas_salvar_regras(self, formato: str, servico: str):
-        """Guarda o formato do nome e o serviço esperado. As notas são lidas de novo na próxima vez."""
+    def notas_salvar_regras(self, formato: str, servico: str, servico_dependente: str | None = None):
+        """Guarda o formato do nome e o serviço esperado (sem e com dependente). As notas são lidas
+        de novo na próxima vez. Sem servico_dependente (tela antiga), ele fica como está."""
         formato = " ".join(str(formato or "").split()) or FORMATO_PADRAO
         try:
             compilar_formato(formato)
         except FormatoInvalido as e:
             return {"erro": str(e)}
+        dependente = self._cfg["servico_dependente"] if servico_dependente is None else servico_dependente
         self._cfg = config.salvar({**self._cfg, "formato_arquivo": formato,
-                                   "servico_esperado": " ".join(str(servico or "").split())})
+                                   "servico_esperado": " ".join(str(servico or "").split()),
+                                   "servico_dependente": " ".join(str(dependente or "").split())})
         return {"config": self._cfg}
 
     @seguro
     def notas_regras_padrao(self):
-        return {"formato": FORMATO_PADRAO, "servico": SERVICO_PADRAO}
+        return {"formato": FORMATO_PADRAO, "servico": SERVICO_PADRAO, "servico_dependente": SERVICO_DEPENDENTE_PADRAO}
 
     @seguro
     def abrir_nota(self, arquivo: str):

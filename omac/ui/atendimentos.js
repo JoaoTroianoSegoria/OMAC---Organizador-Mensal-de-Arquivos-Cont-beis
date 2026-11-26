@@ -204,7 +204,7 @@ function linhaDoAtendimento(a) {
 
   tr.append(
     tdPago,
-    celula(a.nome),
+    celula(nomeComFicha(a.nome, a.contato_id)),
     a.tratamento ? celula(a.tratamento, "pg-c-tratamento") : celula("—", "pg-c-tratamento ag-sem-dado"),
     celula(dataBR(a.data).slice(0, 5), "c-data"),
     a.valor_centavos == null ? celula("Sem valor", "c-valor ag-sem-dado") : celula(dinheiro(a.valor_centavos), "c-valor"),

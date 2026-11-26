@@ -12,7 +12,11 @@ class TelefoneInvalido(ValueError):
 
 
 def normalizar_telefone(telefone: str) -> str:
-    """Devolve só os dígitos, com o 55 do Brasil na frente."""
+    """Devolve só os dígitos, com o 55 do Brasil na frente. Fora os números, só vale o que se usa
+    para escrever um telefone: espaço, parênteses, traço, ponto e o + do 55."""
+    if re.search(r"[^\d\s()+.-]", telefone or ""):
+        raise TelefoneInvalido("O telefone só pode ter números (e espaço, parênteses ou traço), "
+                               "como (61) 90000-0000.")
     digitos = re.sub(r"\D", "", telefone or "").lstrip("0")
     if len(digitos) in (10, 11):
         digitos = f"55{digitos}"

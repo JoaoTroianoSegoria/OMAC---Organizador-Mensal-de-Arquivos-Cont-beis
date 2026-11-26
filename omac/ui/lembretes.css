@@ -1,7 +1,7 @@
 /* OMAC — Lembretes (notas a enviar, contas, lembretes livres, comandos) e as janelas.
  * Tokens e componentes vêm de estilo.css. */
 
-.c-acao-nota { width: 6.5rem; white-space: nowrap; }
+.c-acao-nota { width: 8.75rem; white-space: nowrap; }
 .btn-enviada { color: var(--acento); }
 .c-acoes-envio { width: 11rem; text-align: right !important; white-space: nowrap; padding-left: 0 !important; padding-right: .75rem !important; }
 .c-telefone { width: 13rem; white-space: nowrap; }

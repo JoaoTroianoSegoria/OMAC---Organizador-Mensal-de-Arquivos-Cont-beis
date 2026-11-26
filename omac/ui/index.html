@@ -16,6 +16,7 @@
   <link rel="stylesheet" href="emitir.css">
   <link rel="stylesheet" href="inicio.css">
   <link rel="stylesheet" href="menu.css">
+  <link rel="stylesheet" href="ficha.css">
   <script>
     /* Antes de tudo: se um script não carregar ou quebrar, a tela diz qual, em vez de ficar muda. */
     window.omacErrosDeTela = [];
@@ -55,7 +56,7 @@
      * muitos juntos. Quem precisa de todos carregados usa omacQuandoPronto(fn). */
     const OMAC_SCRIPTS = ["nucleo.js", "relatorio.js", "notas.js", "extrato.js", "lembretes.js", "modelos.js",
       "contatos.js", "tratamentos.js", "atendimentos.js", "backup.js", "resumo.js", "inicio.js", "atualizacao.js",
-      "configuracoes.js", "cfg-menu.js", "emitir.js", "menu.js", "mensagem.js", "textos.js"];
+      "configuracoes.js", "cfg-menu.js", "emitir.js", "menu.js", "mensagem.js", "textos.js", "ficha.js"];
     const OMAC_TENTATIVAS = 4;
     window.omacScriptsProntos = false;
     function omacQuandoPronto(fn) {
@@ -389,7 +390,7 @@
                     <th scope="col" class="c-valor">Valor</th>
                     <th scope="col" class="c-data">Emissão</th>
                     <th scope="col" class="c-data">Competência</th>
-                    <th scope="col" class="c-acao c-acao-nota"><span class="so-leitor">Enviar e abrir PDF</span></th>
+                    <th scope="col" class="c-acao c-acao-nota"><span class="so-leitor">Enviar, abrir e renomear o PDF</span></th>
                   </tr>
                 </thead>
                 <tbody id="tabela-corpo"></tbody>
@@ -1295,13 +1296,21 @@
                   <button class="btn btn-peq" type="button" data-acao="cfg-variavel" data-variavel="data-de-emissao">Data de emissão</button>
                   <button class="btn btn-peq" type="button" data-acao="cfg-variavel" data-variavel="data-competencia">Data de competência</button>
                 </div>
-                <p class="dica">Escreva o nome de um arquivo trocando as partes que mudam pelos botões. Do nome o OMAC só tira o <strong>número</strong> e o <strong>nome</strong> de quem recebe a nota; datas e valor vêm do PDF. O que vier depois (como “COMP - 02-10 -”) é ignorado.</p>
+                <p class="dica">Escreva o nome de um arquivo trocando as partes que mudam pelos botões. Do nome o OMAC só tira o <strong>número</strong> e o <strong>nome</strong> do paciente (o dependente, quando a nota é de um); datas e valor vêm do PDF. O que vier depois (como “COMP - 02-10 -”) é ignorado.</p>
                 <div class="cfg-teste" id="cfg-formato-teste" role="status" aria-live="polite"></div>
               </div>
               <div class="campo campo-texto">
                 <label class="rotulo-campo" for="cfg-servico">Descrição esperada do serviço</label>
                 <input id="cfg-servico" type="text" autocomplete="off" placeholder="Em branco: não avisa">
-                <p class="dica">Avisa quando a descrição da nota não tem esse texto. Em branco, não avisa nada.</p>
+                <p class="dica">Para a nota do próprio paciente. Avisa quando a descrição da nota não tem esse texto. Em branco, não avisa nada.</p>
+              </div>
+              <div class="campo campo-texto">
+                <label class="rotulo-campo" for="cfg-servico-dependente">Descrição esperada com dependente</label>
+                <input id="cfg-servico-dependente" type="text" autocomplete="off" spellcheck="false" placeholder="Em branco: usa a de cima">
+                <div class="cfg-variaveis" data-alvo="cfg-servico-dependente">
+                  <button class="btn btn-peq" type="button" data-acao="cfg-variavel" data-variavel="nome-do-dependente">Nome do dependente</button>
+                </div>
+                <p class="dica">Para a nota no CPF do responsável, de um tratamento do dependente. O OMAC acha o nome do dependente logo depois da palavra que vem antes de <strong>[nome-do-dependente]</strong>, e é ele que vai no nome do arquivo.</p>
               </div>
               <p class="modal-erro" id="cfg-leitura-erro" role="alert" hidden></p>
               <div class="form-acoes">
@@ -1706,7 +1715,7 @@
           <form class="emitir-form" id="form-emitir-cpf" hidden>
             <div class="campo campo-texto">
               <label class="rotulo-campo" for="emitir-cpf-campo" id="emitir-cpf-rotulo">CPF</label>
-              <input id="emitir-cpf-campo" class="campo-cpf" type="text" inputmode="numeric" autocomplete="off" placeholder="000.000.000-00">
+              <input id="emitir-cpf-campo" class="campo-cpf" maxlength="14" type="text" inputmode="numeric" autocomplete="off" placeholder="000.000.000-00">
             </div>
             <div class="emitir-form-botoes">
               <button class="btn btn-primario" type="submit">Salvar CPF</button>
@@ -1722,7 +1731,7 @@
             <form class="emitir-form" id="form-emitir-dep" hidden>
               <div class="campo campo-texto">
                 <label class="rotulo-campo" for="emitir-dep-cpf">CPF do dependente</label>
-                <input id="emitir-dep-cpf" class="campo-cpf" type="text" inputmode="numeric" autocomplete="off" placeholder="000.000.000-00">
+                <input id="emitir-dep-cpf" class="campo-cpf" maxlength="14" type="text" inputmode="numeric" autocomplete="off" placeholder="000.000.000-00">
               </div>
               <div class="campo campo-texto">
                 <label class="rotulo-campo" for="emitir-dep-nasc">Nascimento</label>
@@ -1761,7 +1770,7 @@
       <div class="form-conta-campos">
         <div class="campo campo-texto">
           <label class="rotulo-campo" for="ct-nome">Nome</label>
-          <input id="ct-nome" type="text" autocomplete="off" list="ct-nomes" required>
+          <input id="ct-nome" class="campo-nome" type="text" autocomplete="off" list="ct-nomes" required>
         </div>
         <div class="campo campo-texto">
           <label class="rotulo-campo" for="ct-telefone">Telefone com DDD</label>
@@ -1769,7 +1778,7 @@
         </div>
         <div class="campo campo-texto">
           <label class="rotulo-campo" for="ct-cpf">CPF</label>
-          <input id="ct-cpf" class="campo-cpf" type="text" inputmode="numeric" autocomplete="off" placeholder="000.000.000-00">
+          <input id="ct-cpf" class="campo-cpf" maxlength="14" type="text" inputmode="numeric" autocomplete="off" placeholder="000.000.000-00">
         </div>
         <div class="campo campo-texto">
           <label class="rotulo-campo" for="ct-nascimento">Data de nascimento</label>
@@ -1885,7 +1894,7 @@
       <h2 id="pg-atendimento-titulo"></h2>
       <div class="campo campo-texto">
         <label class="rotulo-campo" for="pg-nome">Paciente</label>
-        <input id="pg-nome" type="text" autocomplete="off" list="pg-nomes" required>
+        <input id="pg-nome" class="campo-nome" type="text" autocomplete="off" list="pg-nomes" required>
         <datalist id="pg-nomes"></datalist>
         <p class="dica pg-contato-novo" id="pg-contato-novo" hidden><svg class="ic"><use href="#i-mais"/></svg><span>Contato novo: entra em Contatos quando você salvar.</span></p>
       </div>
@@ -1978,15 +1987,52 @@
   </dialog>
 
   <!-- Renomear o PDF de uma nota (nome só de números ou com o número errado): notas.js -->
+  <!-- Ficha do paciente (clicar no nome em Atendimentos ou Tratamentos): ficha.js -->
+  <dialog class="modal vidro modal-largo ficha" id="ficha" aria-labelledby="ficha-titulo">
+    <div class="modal-corpo" id="ficha-corpo">
+      <div class="ficha-topo">
+        <button class="btn-linha" type="button" id="ficha-voltar" data-acao="ficha-voltar" title="Voltar para a ficha anterior" aria-label="Voltar para a ficha anterior" hidden><svg class="ic"><use href="#i-voltar"/></svg></button>
+        <div class="ficha-nome-bloco">
+          <h2 id="ficha-titulo"></h2>
+          <p class="sub" id="ficha-sub"></p>
+        </div>
+        <button class="btn btn-peq" type="button" data-acao="ficha-editar"><svg class="ic"><use href="#i-lapis"/></svg><span>Editar</span></button>
+      </div>
+      <dl class="ficha-dados" id="ficha-dados"></dl>
+      <section class="ficha-bloco" id="ficha-vinculos-bloco">
+        <h3>Responsáveis e dependentes</h3>
+        <div class="ficha-vinculos" id="ficha-vinculos"></div>
+      </section>
+      <section class="ficha-bloco" id="ficha-tratamento-bloco">
+        <h3>Tratamento de orto</h3>
+        <div id="ficha-tratamento"></div>
+      </section>
+      <section class="ficha-bloco">
+        <h3>Atendimentos</h3>
+        <p class="ficha-linha ficha-suave" id="ficha-atendimentos-resumo"></p>
+        <ul class="ficha-lista" id="ficha-atendimentos"></ul>
+      </section>
+      <section class="ficha-bloco">
+        <h3>Notas fiscais</h3>
+        <p class="ficha-linha ficha-suave" id="ficha-notas-resumo"></p>
+        <ul class="ficha-lista" id="ficha-notas"></ul>
+      </section>
+      <div class="modal-acoes">
+        <button class="btn" type="button" data-acao="ficha-fechar">Fechar</button>
+      </div>
+    </div>
+  </dialog>
+
   <dialog class="modal vidro" id="nt-renomear" aria-labelledby="nt-renomear-titulo">
     <form id="form-nt-renomear" class="modal-corpo">
       <h2 id="nt-renomear-titulo">Renomear o PDF da nota</h2>
       <p id="nt-renomear-motivo"></p>
       <p class="dica">Agora: <span class="nt-renomear-de" id="nt-renomear-de"></span></p>
       <div class="campo campo-texto">
-        <label class="rotulo-campo" for="nt-renomear-para">Nome certo</label>
+        <label class="rotulo-campo" for="nt-renomear-para" id="nt-renomear-rotulo">Nome certo</label>
         <input id="nt-renomear-para" type="text" autocomplete="off" spellcheck="false" required>
-        <p class="dica">Montado com o número, as datas e o nome de quem recebe a nota, como estão dentro do PDF. Dá para mudar antes de renomear.</p>
+        <p class="dica" id="nt-renomear-sugestao">Montado com o número, as datas e o nome do paciente (o dependente, se a nota é de um), como estão dentro do PDF. Dá para mudar antes de renomear.</p>
+        <p class="dica">O nome precisa seguir o formato das Configurações → Notas fiscais, com o número desta nota.</p>
       </div>
       <p class="modal-erro" id="nt-renomear-erro" role="alert" hidden></p>
       <div class="modal-acoes">

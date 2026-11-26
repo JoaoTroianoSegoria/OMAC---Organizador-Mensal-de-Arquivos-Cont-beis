@@ -33,12 +33,23 @@ def confere(numeros: str) -> bool:
     return True
 
 
+# Como o CPF pode vir escrito: 000.000.000-00 · 000.000.000.00 · 000000000-00 · 00000000000.
+_RE_ESCRITO = re.compile(r"\d{3}(\.?)\d{3}\1\d{3}[.-]?\d{2}")
+
+
 def limpar(texto, de_quem: str = "") -> str:
-    """Os 11 números, de qualquer jeito que vier escrito. Vazio continua vazio."""
-    if not str(texto or "").strip():
+    """Os 11 números, escritos só com números, pontos e traço (1.15.0: letra ou outro símbolo
+    no meio não é mais jogado fora sem avisar). Vazio continua vazio."""
+    texto = str(texto or "").strip()
+    if not texto:
         return ""
     numeros = digitos(texto)
     sufixo = f" {de_quem}" if de_quem else ""
+    if re.search(r"[^\d.-]", texto):
+        raise CpfInvalido(f"O CPF{sufixo} só pode ter números, pontos e traço, como 000.000.000-00.")
+    if len(numeros) == 11 and not _RE_ESCRITO.fullmatch(texto):
+        raise CpfInvalido(f"Confira os pontos e o traço do CPF{sufixo}: escreva como 000.000.000-00 "
+                          "ou só os 11 números.")
     if len(numeros) != 11:
         raise CpfInvalido(f"O CPF{sufixo} precisa ter 11 números (tem {len(numeros)}).")
     if not confere(numeros):
