@@ -1670,9 +1670,13 @@
   <!-- Emitir nota: nome e CPF de quem recebe a nota, para copiar -->
   <dialog class="modal vidro modal-emitir" id="emitir" aria-labelledby="emitir-titulo">
     <div class="modal-corpo">
-      <div>
-        <h2 id="emitir-titulo">Emitir nota</h2>
-        <p class="sub emitir-atendimento" id="emitir-atendimento"></p>
+      <div class="emitir-topo">
+        <div>
+          <h2 id="emitir-titulo">Emitir nota</h2>
+          <p class="sub emitir-atendimento" id="emitir-atendimento"></p>
+        </div>
+        <!-- O mesmo olho das telas (nucleo.js): mostra o valor sem precisar fechar a janela. -->
+        <button class="btn btn-peq olho" type="button" data-acao="olho" aria-pressed="false" aria-label="Mostrar os valores" title="Mostrar os valores"><svg class="ic"><use href="#i-olho-fechado"/></svg><span>Valores</span></button>
       </div>
       <div class="emitir-colunas">
         <div class="emitir-esq">

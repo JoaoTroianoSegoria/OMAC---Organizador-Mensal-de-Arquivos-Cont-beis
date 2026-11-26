@@ -33,3 +33,7 @@
 .emitir-dependente-cab { display: flex; align-items: center; justify-content: space-between; gap: .5rem; }
 .emitir-dependente-rotulo { color: var(--texto-2); font-size: .85rem; }
 .emitir-dep-dados { margin: 0; font-size: .88rem; font-variant-numeric: tabular-nums; }
+
+/* Título com o olho dos valores à direita */
+.emitir-topo { display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; }
+.emitir-topo .olho { flex: none; }

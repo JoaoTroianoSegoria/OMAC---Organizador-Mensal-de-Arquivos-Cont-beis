@@ -53,6 +53,23 @@ def nome_de_pessoa(texto) -> str:
     return nome
 
 
+# Ficam minúsculas no meio do nome, como se escreve em português: "Lucas da Silva".
+_PARTICULAS = {"da", "das", "de", "do", "dos", "e"}
+
+
+def nome_bonito(nome) -> str:
+    """Só as iniciais maiúsculas, mesmo que o nome venha todo em maiúsculas (como no PDF da nota):
+    "LUCAS DA SILVA" → "Lucas da Silva", "ANA-CLARA D'ÁVILA" → "Ana-Clara D'Ávila"."""
+    palavras = nome_limpo(nome).split(" ")
+    saida = []
+    for i, palavra in enumerate(palavras):
+        if i and palavra.lower() in _PARTICULAS:
+            saida.append(palavra.lower())
+            continue
+        saida.append(re.sub(r"[^\W\d_]+", lambda m: m.group(0)[:1].upper() + m.group(0)[1:].lower(), palavra))
+    return " ".join(saida)
+
+
 def mesma_pessoa(nome_a: str, nome_b: str) -> bool:
     """Um dos nomes pode ter um sobrenome a mais ou a menos que o outro.
 

@@ -101,7 +101,7 @@ def test_nota_de_dependente_vai_com_o_nome_dele_mesmo_com_o_cpf_do_responsavel_n
 def test_nota_antiga_de_dependente_com_o_nome_do_responsavel_ganha_o_renomear(api):
     nota = next(n for n in api.notas_do_mes(2026, 10)["notas"] if n["numero"] == 803)  # fabrica: FERNANDA COSTA
     assert nota["renomear"]["motivo"] == "nome_do_responsavel"
-    assert " - LUCAS COSTA RIBEIRO - " in nota["renomear"]["para"]
+    assert " - Lucas Costa Ribeiro - " in nota["renomear"]["para"]  # só as iniciais maiúsculas
     sem = [n for n in api.notas_do_mes(2026, 10)["notas"] if not n["dependente"]]
     assert all(n["renomear"] is None for n in sem)
 
@@ -122,6 +122,18 @@ def test_regras_guardam_a_descricao_com_dependente(api):
     r = api.notas_salvar_regras(api._cfg["formato_arquivo"], "tratamento")  # tela antiga: não mexe
     assert r["config"]["servico_dependente"] == "referente ao menor [nome-do-dependente]"
     assert api._regras_notas().servico_dependente == "referente ao menor [nome-do-dependente]"
+
+
+@pytest.mark.parametrize("pdf, sugerido", [
+    ("LUCAS DA SILVA", "Lucas da Silva"),
+    ("ANA-CLARA D'ÁVILA DOS SANTOS E SOUZA", "Ana-Clara D'Ávila dos Santos e Souza"),
+    ("ÉRICA  ÇÃO", "Érica Ção"),
+    ("Lucas Costa Ribeiro", "Lucas Costa Ribeiro"),
+    ("DA SILVA", "Da Silva"),  # a primeira palavra é sempre maiúscula
+])
+def test_nome_sugerido_so_com_as_iniciais_maiusculas(pdf, sugerido):
+    from omac.texto import nome_bonito
+    assert nome_bonito(pdf) == sugerido
 
 
 # --- Campos de pessoa --------------------------------------------------------------------

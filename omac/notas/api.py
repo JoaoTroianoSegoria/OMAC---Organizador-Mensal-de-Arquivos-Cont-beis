@@ -9,7 +9,7 @@ from pathlib import Path
 from .. import config, sistema
 from ..contatos import cpf as cpfs
 from ..nucleo import ApiBase, seguro
-from ..texto import mesma_pessoa, normalizar
+from ..texto import mesma_pessoa, nome_bonito, normalizar
 from . import exportar as exp
 from . import pesquisa
 from .leitor import (FORMATO_PADRAO, SERVICO_DEPENDENTE_PADRAO, SERVICO_PADRAO, FormatoInvalido, Regras, compilar_formato, ler_nome_arquivo,
@@ -84,7 +84,7 @@ class NotasApi(ApiBase):
         motivo = problema_no_nome(nota, regras)
         if not motivo:
             return None
-        nome = self._nome_para_o_arquivo(nota, contatos)
+        nome = nome_bonito(self._nome_para_o_arquivo(nota, contatos))  # "LUCAS DA SILVA" → "Lucas da Silva"
         if not nome:
             return None
         return {"motivo": motivo, "de": nota.arquivo, "nome": nome, "para": nome_certo(nota, nome, regras)}

@@ -80,8 +80,8 @@ def test_nota_nova_com_nome_de_numeros_vem_com_o_nome_certo(api):
     _baixada(api)
     r = api.notas_do_mes(2026, 11)
     assert r["novas"] == [{"numero": 813, "paciente": "RAFAEL MARTINS", "renomear": {
-        "motivo": "fora_do_formato", "de": NUMERICO, "nome": "RAFAEL MARTINS",
-        "para": "NFS-e Nº 000000813 - RAFAEL MARTINS - 23-11 - COMP 21-11.pdf"}}]
+        "motivo": "fora_do_formato", "de": NUMERICO, "nome": "Rafael Martins",  # 1.15.0: só as iniciais maiúsculas
+        "para": "NFS-e Nº 000000813 - Rafael Martins - 23-11 - COMP 21-11.pdf"}}]
     nota = next(n for n in r["notas"] if n["numero"] == 813)
     assert nota["renomear"]["para"].startswith("NFS-e Nº 000000813")
     assert all(n["renomear"] is None for n in r["notas"] if n["numero"] != 813)
