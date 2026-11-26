@@ -45,11 +45,26 @@ def test_cpf_ficticio_e_valido_e_formatado():
     assert cpfs.confere(NUMEROS)
 
 
-@pytest.mark.parametrize("digitado", ["529.982.247-25", "52998224725", "529.982.247.25", " 529 982 247 25 ",
+@pytest.mark.parametrize("digitado", ["529.982.247-25", "52998224725", "529.982.247.25", " 529.982.247-25 ",
                                       "529982247-25"])
-def test_aceita_qualquer_jeito_com_11_numeros(digitado):
+def test_aceita_os_jeitos_de_escrever_com_11_numeros(digitado):
     assert cpfs.limpar(digitado) == NUMEROS
     assert cpfs.formatar(cpfs.limpar(digitado)) == VALIDO
+
+
+@pytest.mark.parametrize("digitado, trecho", [
+    ("529 982 247 25", "só pode ter números"),  # espaço no meio
+    ("529.982.247-2a", "só pode ter números"),
+    ("CPF 529.982.247-25", "só pode ter números"),
+    ("529/982/247-25", "só pode ter números"),
+    ("529.982247-25", "pontos e o traço"),  # ponto num lugar e no outro não
+    ("5299.82.247-25", "pontos e o traço"),
+    ("529..982.247-25", "pontos e o traço"),
+])
+def test_recusa_cpf_com_outros_caracteres(digitado, trecho):
+    """1.15.0: letra, espaço ou símbolo no meio não são mais jogados fora sem avisar."""
+    with pytest.raises(cpfs.CpfInvalido, match=trecho):
+        cpfs.limpar(digitado)
 
 
 @pytest.mark.parametrize("ruim, trecho", [

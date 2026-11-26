@@ -22,6 +22,7 @@ modulos.configuracoes = {
     $("#form-cfg-leitura").addEventListener("submit", (e) => { e.preventDefault(); salvarLeitura(); });
     $("#cfg-formato").addEventListener("input", () => { ajustes.editado.leitura = true; depois("teste", testarFormato); });
     $("#cfg-servico").addEventListener("input", () => { ajustes.editado.leitura = true; });
+    $("#cfg-servico-dependente").addEventListener("input", () => { ajustes.editado.leitura = true; });
     const lista = $("#cfg-msg-lista");
     lista.addEventListener("submit", (e) => {
       e.preventDefault();
@@ -88,6 +89,7 @@ function preencherLeitura(cfg) {
   if (!cfg) return;
   $("#cfg-formato").value = cfg.formato_arquivo;
   $("#cfg-servico").value = cfg.servico_esperado;
+  $("#cfg-servico-dependente").value = cfg.servico_dependente;
 }
 
 async function testarFormato() {
@@ -125,7 +127,8 @@ async function testarFormato() {
 }
 
 async function salvarLeitura() {
-  const r = await api().notas_salvar_regras($("#cfg-formato").value, $("#cfg-servico").value);
+  const r = await api().notas_salvar_regras($("#cfg-formato").value, $("#cfg-servico").value,
+    $("#cfg-servico-dependente").value);
   if (r.erro) {
     $("#cfg-leitura-erro").textContent = r.erro;
     $("#cfg-leitura-erro").hidden = false;
@@ -144,6 +147,7 @@ async function leituraPadrao() {
   if (r.erro) return mostrarToast(r.erro, { erro: true });
   $("#cfg-formato").value = r.formato;
   $("#cfg-servico").value = r.servico;
+  $("#cfg-servico-dependente").value = r.servico_dependente;
   ajustes.editado.leitura = true;
   testarFormato();
   mostrarToast("Voltou ao padrão. Clique em Salvar para valer.");

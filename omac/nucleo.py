@@ -55,7 +55,7 @@ class ApiBase:
 
     def _regras_notas(self) -> Regras:
         """Como ler as notas, das Configurações (formato do nome do arquivo e serviço esperado)."""
-        return Regras(self._cfg["formato_arquivo"], self._cfg["servico_esperado"])
+        return Regras(self._cfg["formato_arquivo"], self._cfg["servico_esperado"], self._cfg["servico_dependente"])
 
     @seguro
     def estado(self):

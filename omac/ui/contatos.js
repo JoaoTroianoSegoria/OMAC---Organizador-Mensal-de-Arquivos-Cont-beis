@@ -212,7 +212,7 @@ function linhaDeResponsavel(r) {
     div.append(Object.assign(document.createElement("label"), { className: "rotulo-campo", htmlFor: el.id, textContent: rotulo }), caixa);
     return div;
   };
-  const nome = Object.assign(document.createElement("input"), { type: "text", autocomplete: "off", className: "ct-resp-nome", value: r ? r.nome : "" });
+  const nome = Object.assign(document.createElement("input"), { type: "text", autocomplete: "off", className: "ct-resp-nome campo-nome", value: r ? r.nome : "" });
   nome.setAttribute("list", "ct-nomes");
   nome.dataset.parte = "nome";
   const papel = Object.assign(document.createElement("select"), { className: "ct-resp-papel" });
@@ -223,7 +223,7 @@ function linhaDeResponsavel(r) {
   caixaPapel.append(papel);
   const tel = Object.assign(document.createElement("input"), { type: "tel", autocomplete: "off", className: "ct-resp-tel", placeholder: "(61) 90000-0000", value: r && r.telefone ? telefoneBR(r.telefone) : "" });
   tel.dataset.parte = "tel";
-  const cpf = Object.assign(document.createElement("input"), { type: "text", inputMode: "numeric", autocomplete: "off", className: "ct-resp-cpf campo-cpf", placeholder: "000.000.000-00", value: r && r.cpf ? cpfBR(r.cpf) : "" });
+  const cpf = Object.assign(document.createElement("input"), { type: "text", inputMode: "numeric", autocomplete: "off", className: "ct-resp-cpf campo-cpf", maxLength: 14, placeholder: "000.000.000-00", value: r && r.cpf ? cpfBR(r.cpf) : "" });
   cpf.dataset.parte = "cpf";
   li.append(campo("Nome do responsável", nome), campo("Quem é", papel, caixaPapel), campo("Telefone", tel),
     campo("CPF (opcional)", cpf), botaoIcone("ct-tirar-responsavel", "i-fechar", "Tirar este responsável", {}));

@@ -13,6 +13,7 @@ from ..tratamentos import orto
 from ..whatsapp.mensagens import abrir_conversa, normalizar_telefone
 from . import contatos as ct
 from . import cpf as cpfs
+from . import ficha as fp
 
 
 class ContatosApi(ApiBase):
@@ -66,6 +67,12 @@ class ContatosApi(ApiBase):
     @seguro
     def contatos_listar(self):
         return self._vista_contatos()
+
+    @seguro
+    def contatos_ficha(self, contato_id: str):
+        """Ficha do paciente (1.15.0): dados, responsáveis/dependentes e o resumo (contatos/ficha.py)."""
+        return fp.montar(contato_id, self._lista_de_contatos(), self._armazem.ler(esquema.TRATAMENTOS)["tratamentos"],
+                         self._armazem.ler(esquema.ATENDIMENTOS), self._servico_notas.todas(), date.today())
 
     # --- Salvar (com a ortodontia) --------------------------------------------------------
 

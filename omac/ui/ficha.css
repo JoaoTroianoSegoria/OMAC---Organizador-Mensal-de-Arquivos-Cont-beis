@@ -1,0 +1,62 @@
+/* Ficha do paciente (ficha.js) */
+.ficha .modal-corpo { display: flex; flex-direction: column; gap: 1rem; max-height: calc(100vh - 4rem); overflow-y: auto; }
+.ficha-topo { display: flex; align-items: flex-start; gap: .6rem; }
+.ficha-nome-bloco { flex: 1; min-width: 0; }
+.ficha-nome-bloco h2 { overflow-wrap: anywhere; }
+.ficha-nome-bloco .sub[hidden] { display: none; }
+
+/* Telefone, CPF e nascimento lado a lado */
+.ficha-dados { display: grid; grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr)); gap: .6rem; margin: 0; }
+.ficha-dado {
+  padding: .6rem .8rem; border-radius: var(--raio-m);
+  background: var(--vidro-forte); border: 1px solid var(--linha);
+}
+.ficha-dado dt { font-size: .75rem; font-weight: 600; color: var(--texto-3); }
+.ficha-dado dd { margin: .1rem 0 0; font-weight: 600; font-variant-numeric: tabular-nums; }
+.ficha-dado .ficha-falta { font-weight: 400; color: var(--texto-3); }
+
+.ficha-bloco { display: flex; flex-direction: column; gap: .45rem; }
+.ficha-bloco[hidden] { display: none; }
+.ficha-bloco h3 { font-size: .8rem; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: var(--texto-3); }
+.ficha-linha { margin: 0; }
+.ficha-suave { color: var(--texto-2); font-size: .9rem; }
+
+/* Responsáveis e dependentes: cada um é um botão que abre a ficha dele */
+.ficha-vinculos { display: flex; flex-direction: column; gap: .4rem; }
+.ficha-vinculo {
+  display: flex; flex-direction: column; gap: .15rem; width: 100%;
+  padding: .6rem .8rem; text-align: left; font: inherit; color: inherit; cursor: pointer;
+  border: 1px solid var(--linha); border-radius: var(--raio-m); background: transparent;
+  transition: background-color .15s;
+}
+.ficha-vinculo:hover { background: var(--acento-suave); }
+.ficha-vinculo-topo { display: flex; align-items: center; gap: .5rem; flex-wrap: wrap; }
+.ficha-vinculo-detalhe { font-size: .85rem; color: var(--texto-2); font-variant-numeric: tabular-nums; }
+
+/* Últimos atendimentos e notas */
+.ficha-lista { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+.ficha-item {
+  display: grid; grid-template-columns: 5.6rem 1fr auto auto; align-items: center; gap: .75rem;
+  padding: .45rem .2rem; border-bottom: 1px solid var(--linha); font-size: .92rem;
+}
+.ficha-item:last-child { border-bottom: 0; }
+.ficha-item-data { color: var(--texto-2); font-variant-numeric: tabular-nums; }
+.ficha-item-nome { min-width: 0; overflow-wrap: anywhere; }
+.ficha-item-valor { text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.ficha-cancelada { opacity: .6; }
+.ficha-cancelada .ficha-item-valor { text-decoration: line-through; }
+.ficha-pg-pago { color: var(--acento); }
+.ficha-pg-nao_pago { color: var(--aviso-texto); }
+
+/* O nome do paciente nas tabelas abre a ficha */
+.ficha-nome, .ficha-nota {
+  border: 0; background: none; padding: 0; font: inherit; color: inherit; cursor: pointer; text-align: left;
+  text-decoration: underline; text-decoration-color: var(--linha); text-underline-offset: .2em;
+}
+.ficha-nome:hover, .ficha-nota:hover { text-decoration-color: currentColor; }
+.ficha-nota { justify-self: start; font-weight: 600; }
+
+@media (max-width: 40rem) {
+  .ficha-item { grid-template-columns: 1fr auto; }
+  .ficha-item-data { grid-column: 1 / -1; }
+}

@@ -35,6 +35,41 @@ def nome_limpo(texto) -> str:
     return " ".join(str(texto or "").split())
 
 
+class NomeInvalido(ValueError):
+    """O nome de uma pessoa tem número ou símbolo."""
+
+
+# Palavras de letras (com acento), separadas por espaço, hífen ou apóstrofo ("Ana-Clara D'Ávila"),
+# e o ponto de abreviação no fim de uma palavra ("Dra. Ana", "J. Silva Jr.").
+_RE_NOME_DE_PESSOA = re.compile(r"[^\W\d_]+\.?(?:(?: |-|'|’)[^\W\d_]+\.?)*")
+
+
+def nome_de_pessoa(texto) -> str:
+    """O nome sem espaço sobrando, ou NomeInvalido se tiver número ou símbolo. Vazio continua vazio."""
+    nome = nome_limpo(texto)
+    if nome and not _RE_NOME_DE_PESSOA.fullmatch(nome):
+        raise NomeInvalido(f"Confira o nome “{nome}”: use só letras e espaços "
+                           "(hífen, apóstrofo e ponto de abreviação também valem, como em Ana-Clara, D'Ávila e Dra. Ana).")
+    return nome
+
+
+# Ficam minúsculas no meio do nome, como se escreve em português: "Lucas da Silva".
+_PARTICULAS = {"da", "das", "de", "do", "dos", "e"}
+
+
+def nome_bonito(nome) -> str:
+    """Só as iniciais maiúsculas, mesmo que o nome venha todo em maiúsculas (como no PDF da nota):
+    "LUCAS DA SILVA" → "Lucas da Silva", "ANA-CLARA D'ÁVILA" → "Ana-Clara D'Ávila"."""
+    palavras = nome_limpo(nome).split(" ")
+    saida = []
+    for i, palavra in enumerate(palavras):
+        if i and palavra.lower() in _PARTICULAS:
+            saida.append(palavra.lower())
+            continue
+        saida.append(re.sub(r"[^\W\d_]+", lambda m: m.group(0)[:1].upper() + m.group(0)[1:].lower(), palavra))
+    return " ".join(saida)
+
+
 def mesma_pessoa(nome_a: str, nome_b: str) -> bool:
     """Um dos nomes pode ter um sobrenome a mais ou a menos que o outro.
 

@@ -130,8 +130,8 @@ function avisarNotasNovas(novas) {
   // O PDF veio do site com um nome só de números (ou com o número errado): oferece o nome certo.
   // Esse aviso fica até alguém fechar, porque a nota sem o nome certo fica sem o paciente.
   for (const n of novas.filter((x) => x.renomear)) {
-    mostrarToast(`Nota nova nº ${n.numero} – ${n.renomear.nome}: o nome do PDF ${n.renomear.motivo === "numero_diferente"
-      ? "tem outro número" : "está fora do formato"}.`, {
+    mostrarToast(`Nota nova nº ${n.numero} – ${n.renomear.nome}: o nome do PDF ${MOTIVO_CURTO[n.renomear.motivo]
+      || "está fora do formato"}.`, {
       fica: true,
       acoes: [["Renomear", () => abrirRenomear(n)]],
     });
@@ -189,18 +189,27 @@ function botaoRenomear(n) {
   return b;
 }
 
-/* `n`: uma nota da lista ou da leitura nova ({numero, arquivo?, renomear: {motivo, para}}). */
+const MOTIVO_CURTO = { numero_diferente: "tem outro número", nome_do_responsavel: "está com o nome do responsável" };
+
+/* `n`: uma nota da lista ou da leitura nova ({numero, arquivo?, renomear: {motivo, para}}).
+ * Sem `renomear` (o nome já está certo), é a pessoa mudando o nome à mão, pelo lápis da linha. */
 function abrirRenomear(n) {
   const arquivo = n.arquivo || n.renomear.de;
   notaRenomeando = { numero: n.numero, arquivo };
-  $("#nt-renomear-motivo").textContent = n.renomear.motivo === "numero_diferente"
-    ? `O número no nome do PDF é diferente do número da nota (${n.numero}).`
-    : `O nome do PDF da nota nº ${n.numero} está fora do formato, então o OMAC não sabe de quem ela é.`;
+  const sugerido = !!n.renomear;
+  $("#nt-renomear-motivo").hidden = !sugerido;
+  $("#nt-renomear-sugestao").hidden = !sugerido;
+  $("#nt-renomear-rotulo").textContent = sugerido ? "Nome certo" : "Nome novo";
   $("#nt-renomear-de").textContent = arquivo;
-  $("#nt-renomear-para").value = n.renomear.para.replace(/\.pdf$/i, "");
+  $("#nt-renomear-para").value = (sugerido ? n.renomear.para : arquivo).replace(/\.pdf$/i, "");
   $("#nt-renomear-erro").hidden = true;
   $("#nt-renomear").showModal();
   $("#nt-renomear-para").focus();
+  if (!sugerido) return;
+  $("#nt-renomear-motivo").textContent = {
+    numero_diferente: `O número no nome do PDF é diferente do número da nota (${n.numero}).`,
+    nome_do_responsavel: `A nota nº ${n.numero} é do dependente ${n.renomear.nome}, mas o PDF está com o nome de outra pessoa (o responsável).`,
+  }[n.renomear.motivo] || `O nome do PDF da nota nº ${n.numero} está fora do formato, então o OMAC não sabe de quem ela é.`;
 }
 
 async function renomearNota() {
@@ -287,7 +296,12 @@ function desenharNotas() {
   for (const n of notas) {
     const doNome = n.renomear ? n.avisos.findIndex((a) => a.includes("nome do arquivo")) : -1;
     n.avisos.forEach((a, i) => itens.push([`Nota nº ${n.numero}`, a, i === doNome ? botaoRenomear(n) : null]));
-    if (n.renomear && doNome < 0) itens.push([`Nota nº ${n.numero}`, "O nome do arquivo está fora do formato.", botaoRenomear(n)]);
+    if (n.renomear && doNome < 0) {
+      const motivo = n.renomear.motivo === "nome_do_responsavel"
+        ? `O nome do arquivo é o do responsável; o certo é o do dependente (${n.renomear.nome}).`
+        : "O nome do arquivo está fora do formato.";
+      itens.push([`Nota nº ${n.numero}`, motivo, botaoRenomear(n)]);
+    }
   }
   for (const a of avisos) itens.push([a.arquivo || "", a.mensagem]);
   $("#avisos-lista").replaceChildren(...listaDeAvisos(itens));
@@ -376,7 +390,14 @@ function linhaDaNota(n) {
   enviar.title = enviada ? "Já enviada. Clique para enviar de novo" : "Enviar a nota pelo WhatsApp";
   enviar.setAttribute("aria-label", `${enviada ? "Enviar de novo" : "Enviar"} a nota ${n.numero} pelo WhatsApp`);
   enviar.innerHTML = `<svg class="ic"><use href="#${enviada ? "i-ok" : "i-whats"}"/></svg>`;
-  tdAcao.append(enviar, abrir);
+  const renomear = document.createElement("button");
+  renomear.className = "btn-linha";
+  renomear.dataset.acao = "nt-renomear";
+  renomear.dataset.arquivo = n.arquivo;
+  renomear.title = "Mudar o nome do PDF da nota";
+  renomear.setAttribute("aria-label", `Mudar o nome do PDF da nota ${n.numero}`);
+  renomear.innerHTML = '<svg class="ic"><use href="#i-lapis"/></svg>';
+  tdAcao.append(enviar, abrir, renomear);
 
   tr.append(tdSel, tdNum, tdPac, tdValor, tdEm, tdComp, tdAcao);
   return tr;
