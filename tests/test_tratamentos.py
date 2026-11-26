@@ -178,31 +178,48 @@ def test_desmarcar_confere(api):
 # --- Mensagens ---------------------------------------------------------------------
 
 
-def test_reais():
-    assert msg.reais(125050) == "R$ 1.250,50"
-    assert msg.reais(5) == "R$ 0,05"
+CFG = {"assistente_nome": "Exemplo", "chave_pix": " chave@exemplo.com "}
 
 
-def test_mensagem_de_agendar():
-    t = msg.agendar("Exemplo", "MARIA EXEMPLO", NOV)
-    assert t.startswith("*Assistente Exemplo:* Olá, Maria.\n") and "novembro" in t
+def test_mensagem_de_agendar_e_a_de_sempre():
+    assert msg.todas(CFG, "MARIA EXEMPLO", NOV, None)["agendar"] == (
+        "*Assistente Exemplo:* Olá, Maria.\nVamos agendar a sua manutenção do aparelho para novembro? "
+        "Me diga qual dia e horário ficam melhores para você.")
+    assert msg.todas(CFG, "Pedro Alves", NOV, None, "Helena")["agendar"] == (
+        "*Assistente Exemplo:* Olá, Helena.\nVamos agendar a manutenção do aparelho de Pedro para novembro? "
+        "Me diga qual dia e horário ficam melhores para você.")
 
 
 def test_cobranca_tem_valor_e_chave():
-    t = msg.cobrar("", "Maria", NOV, 25000, " chave@exemplo.com ")
-    assert "R$ 250,00" in t and "\nchave@exemplo.com\n" in t and "novembro" in t
+    t = msg.todas(CFG, "Maria", NOV, 25000)["cobrar"]
+    assert t == ("*Assistente Exemplo:* Olá, Maria.\nSegue a chave Pix para o pagamento da manutenção de novembro, "
+                 "no valor de R$ 250,00:\n\nchave@exemplo.com\n\nDepois me envie o comprovante, por favor.")
+    t = msg.todas(CFG, "Pedro", NOV, 25000, "Helena")["cobrar"]
+    assert "manutenção de Pedro, referente a novembro, no valor de R$ 250,00:" in t
 
 
 def test_cobranca_sem_valor_nao_inventa_numero():
-    assert "R$" not in msg.cobrar("", "Maria", NOV, None, "chave")
+    t = msg.todas(CFG, "Maria", NOV, None)["cobrar"]
+    assert "R$" not in t and "manutenção de novembro:\n\nchave@exemplo.com" in t
 
 
 def test_cobranca_sem_chave_fica_vazia():
-    assert msg.cobrar("", "Maria", NOV, 25000, "  ") == ""
+    assert msg.todas({"chave_pix": "  "}, "Maria", NOV, 25000)["cobrar"] == ""
+    # Um texto que não usa a chave não precisa dela.
+    cfg = {"mensagens": {"pix_manutencao": {"paciente": "Oi [primeiro-nome-do-paciente], falta pagar."}}}
+    assert msg.todas(cfg, "Maria", NOV, 25000)["cobrar"] == "Oi Maria, falta pagar."
 
 
 def test_retorno():
-    assert "retorno" in msg.retorno("", "Maria")
+    assert msg.todas({}, "Maria", NOV, None)["retorno"] == (
+        "Olá, Maria.\nEstá na hora de agendar o seu retorno. Me diga qual dia e horário ficam melhores para você.")
+    assert "o retorno de Maria." in msg.todas({}, "Maria", NOV, None, "Helena")["retorno"]
+
+
+def test_texto_mudado_so_vale_para_a_sua_versao():
+    cfg = {"mensagens": {"agendar": {"responsavel": "[primeiro-nome-do-responsavel], e a [primeiro-nome-do-paciente]?"}}}
+    assert msg.todas(cfg, "Ana Clara", NOV, None, "Helena")["agendar"] == "Helena, e a Ana?"
+    assert msg.todas(cfg, "Ana Clara", NOV, None)["agendar"].startswith("Olá, Ana.\nVamos agendar a sua")
 
 
 def _mensagens(api, tratamento_id, papel=""):
@@ -536,10 +553,10 @@ def test_api_proximo_mes_consulta_e_widget(api, monkeypatch):
 
 
 def test_mensagem_de_agendar_confirma_o_dia():
-    from omac.tratamentos import mensagens as msg
-    texto = msg.agendar("Exemplo", "Pedro Alves", date(2026, 11, 20), "Helena", consulta="2026-12-04")
+    texto = msg.todas({}, "Pedro Alves", date(2026, 11, 20), None, "Helena", consulta="2026-12-04")["agendar"]
     assert "confirmar a manutenção do aparelho de Pedro na sexta-feira, 04/12" in texto
-    assert "Vamos agendar" in msg.agendar("Exemplo", "Pedro Alves", date(2026, 11, 20))
+    texto = msg.todas({}, "Pedro Alves", date(2026, 11, 20), None, consulta="2026-12-04")["agendar"]
+    assert "confirmar a sua manutenção do aparelho na sexta-feira, 04/12. Está tudo certo" in texto
 
 
 def test_manutencao_na_ficha_marca_o_atendido(api):

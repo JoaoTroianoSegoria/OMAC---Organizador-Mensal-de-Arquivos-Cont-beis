@@ -31,8 +31,9 @@ ARQUIVOS: dict[str, dict] = {
     CONTATOS: {"versao": 1, "conteudo": "Os contatos", "padrao": {"contatos": [], "a_conferir": []}},
     # Ortodontia: {"id", "contato_id", "valor_centavos", situação, altas, atendidos, "criado_em"...}
     TRATAMENTOS: {"versao": 1, "conteudo": "Os pacientes de ortodontia", "padrao": {"tratamentos": []}},
-    # Ficha: {"id", "contato_id", "tratamento", "data", "valor_centavos", "forma", "parcelas", "pago_em", "nota"}
-    ATENDIMENTOS: {"versao": 1, "conteudo": "Os atendimentos da ficha", "padrao": {"atendimentos": []}},
+    # Ficha: {"id", "contato_id", "tratamento", "data", "valor_centavos", "forma", "parcelas", "pago_em", "nota",
+    #  "lista_id"}. Listas (1.14.0): [{"id", "nome"}]; vazia = só a "Lista 1" (id ""), ver atendimentos/listas.py.
+    ATENDIMENTOS: {"versao": 1, "conteudo": "Os atendimentos da ficha", "padrao": {"atendimentos": [], "listas": []}},
     LEMBRETES: {"versao": 1, "conteudo": "As contas e os lembretes",
                 "padrao": {"ultima_abertura": "", "destinatario": "", "contas": [], "livres": []}},
     NOTAS_ENVIADAS: {"versao": 1, "conteudo": "As notas já enviadas", "padrao": {"inicio": "", "enviadas": {}}},
@@ -55,7 +56,7 @@ ITENS: dict[str, dict[str, dict]] = {
         "criado_em": "",  # primeiro mês do histórico
     }},
     ATENDIMENTOS: {"atendimentos": {"tratamento": "", "valor_centavos": None, "forma": "", "parcelas": 1,
-                                    "pago_em": "", "nota": ""}},
+                                    "pago_em": "", "nota": "", "lista_id": ""}},
     # Contas: {"nome", "dia", "pagas": {"AAAA-MM": dia}, "criada_em"} (criada_em é preenchida em contas.py).
     # Livres: {"id", "titulo", "observacao", "criado_em", "feito_em"} ("" = em aberto) e a repetição:
     # "repetir" (nao | dia | semana | mes | data), "dia_semana" (0 = segunda), "dia_mes", "data",

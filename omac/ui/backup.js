@@ -26,18 +26,6 @@ modulos.backup = {
   },
 };
 
-/* As Configurações não são um módulo: o que elas precisam carregar ao aparecer fica aqui. */
-modulos.config = {
-  aoMostrar() {
-    carregarBackup();
-    carregarDestinatario();
-    carregarConfiguracoes(); // configuracoes.js: formato das notas e mensagens
-  },
-  irParaAba(grupo) {
-    $(`#g-${grupo}`)?.closest("section")?.scrollIntoView({ block: "start" });
-  },
-};
-
 Object.assign(acoes, {
   "bk-pasta": escolherPastaDoBackup,
   "bk-agora": fazerBackupAgora,

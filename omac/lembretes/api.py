@@ -11,6 +11,7 @@ from ..inicio.registro import widget
 from ..nucleo import ApiBase, seguro
 from ..planilha import MESES
 from ..texto import normalizar
+from ..whatsapp import catalogo as cat
 from ..whatsapp import mensagens as msg
 from . import comandos as cm
 from . import contas as lb
@@ -113,13 +114,13 @@ class LembretesApi(ApiBase):
             "contas": itens,
             "destinatario": destinatario,
             "telefone": destino["telefone"] if destino else "",
-            "mensagem": msg.mensagem_de_lembrete(self._cfg["assistente_nome"], destinatario, itens) if itens else "",
+            "mensagem": cat.lembrete_contas(self._cfg, destinatario, itens) if itens else "",
         }
 
     @seguro
     def lembretes_texto(self, contas: list[dict]):
         """Refaz a mensagem do lembrete sem as contas que acabaram de ser marcadas como pagas."""
-        return {"mensagem": msg.mensagem_de_lembrete(self._cfg["assistente_nome"], self._nome_do_destinatario(), contas)}
+        return {"mensagem": cat.lembrete_contas(self._cfg, self._nome_do_destinatario(), contas)}
 
     @seguro
     def lembretes_do_dia(self, forcar: bool = False):
@@ -143,7 +144,7 @@ class LembretesApi(ApiBase):
             "livres": livres,
             "fechamento": fechamento,
             "destinatario": destinatario,
-            "mensagem": msg.mensagem_de_lembrete(self._cfg["assistente_nome"], destinatario, contas),
+            "mensagem": cat.lembrete_contas(self._cfg, destinatario, contas),
         }
 
     @seguro
@@ -227,8 +228,7 @@ class LembretesApi(ApiBase):
             "contato_id": destino["id"] if destino else "",
             "destinatario": nome,
             "telefone": destino["telefone"] if destino else "",
-            "mensagem": msg.mensagem_de_lembrete_livre(self._cfg["assistente_nome"], nome, item["titulo"],
-                                                       item["observacao"]),
+            "mensagem": cat.lembrete_livre(self._cfg, nome, item["titulo"], item["observacao"]),
         }
 
     @seguro

@@ -9,7 +9,6 @@ from omac import config, sistema
 from omac.app import Api
 from omac.notas import pesquisa
 from omac.notas.leitor import Nota
-from omac.whatsapp import mensagens as msg
 from tests.fabrica import criar_pasta_exemplo, nome_arquivo
 
 TEL = "5561900000000"
@@ -70,30 +69,6 @@ def test_periodo_pela_competencia_com_as_pontas():
     assert _numeros(pesquisa.filtrar(NOTAS, "", date(2026, 3, 20), date(2026, 4, 9))) == [11, 12]
     assert _numeros(pesquisa.filtrar(NOTAS, "", de=date(2026, 4, 1))) == [12, 13]
     assert _numeros(pesquisa.filtrar(NOTAS, "maria", ate=date(2026, 3, 31))) == [10]
-
-
-# --- Mensagem de várias notas ---------------------------------------------------------------
-
-
-def test_mensagem_de_uma_nota_e_a_de_sempre():
-    assert msg.mensagem_das_notas("", "ANA", [("ANA", date(2026, 1, 2))]) == msg.mensagem_da_nota(
-        "", "ANA", date(2026, 1, 2))
-
-
-def test_mensagem_de_varias_notas_do_mesmo_paciente():
-    texto = msg.mensagem_das_notas("João", "MARIA DA SILVA", [
-        ("MARIA DA SILVA", date(2026, 3, 12)), ("MARIA DA SILVA", date(2026, 3, 5)),
-        ("MARIA DA SILVA", date(2026, 3, 19))])
-    assert texto == ("*Assistente João:* Olá, Maria.\nSeguem as 3 notas fiscais referentes ao "
-                     "tratamento odontológico realizado nos dias 05/03, 12/03 e 19/03.")
-
-
-def test_mensagem_de_notas_de_pacientes_diferentes_lista_cada_um():
-    texto = msg.mensagem_das_notas("", "FERNANDA COSTA", [
-        ("LUCAS RIBEIRO", date(2026, 3, 5)), ("FERNANDA COSTA", date(2026, 3, 6)),
-        ("LUCAS RIBEIRO", date(2026, 3, 9))])
-    assert texto == ("Olá, Fernanda.\nSeguem as 3 notas fiscais referentes ao tratamento odontológico:\n"
-                     "• Fernanda Costa: 06/03\n• Lucas Ribeiro: 05/03 e 09/03")
 
 
 # --- API ------------------------------------------------------------------------------

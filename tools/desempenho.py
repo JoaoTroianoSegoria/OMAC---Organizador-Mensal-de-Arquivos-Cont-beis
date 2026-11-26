@@ -99,6 +99,9 @@ def main():
                     for _ in range(12):
                         pagina.mouse.wheel(0, -300)
                         pagina.wait_for_timeout(60)
+                # Nas Configurações a cortina cobre o menu (1.13.0): sair pelo Voltar, como a pessoa faz.
+                pagina.click('[data-acao="cfg-voltar"]')
+                pagina.wait_for_timeout(600)
                 pagina.click('.menu-item[data-view="atendimentos"]')
                 pagina.wait_for_timeout(400)
                 olho = []

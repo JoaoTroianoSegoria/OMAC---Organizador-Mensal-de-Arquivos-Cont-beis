@@ -5,12 +5,18 @@
  *
  * O mês daqui é o do dia a dia (o atual), e não o do relatório dos outros módulos,
  * que no começo do mês costuma ser o anterior. Por isso ele tem os próprios seletores.
+ *
+ * Listas (1.14.0): abas que separam a ficha (ex.: Brasília e São Paulo). Totais, meses e a
+ * planilha são da lista aberta; o Python liga as notas olhando todas.
  */
 "use strict";
 
 const ficha = {
   ano: 0,
   mes: 0,
+  lista: "", // id da lista aberta ("" = a Lista 1 de antes das listas)
+  listas: [], // [{id, nome, qtd (no mês), total (em todos os meses)}]
+  listaEditando: null, // a lista da janela de renomear (null = nova lista)
   filtro: "todos",
   atendimentos: [],
   nomes: [],
@@ -34,6 +40,16 @@ modulos.atendimentos = {
     ficha.mes = hoje.getMonth() + 1;
     $("#form-atendimento").addEventListener("submit", salvarAtendimento);
     $("#form-tratamento").addEventListener("submit", adicionarTratamento);
+    $("#form-pg-lista").addEventListener("submit", salvarLista);
+    // Abas das listas com as setas, como em qualquer lista de abas.
+    $("#pg-listas-abas").addEventListener("keydown", (e) => {
+      if (e.key !== "ArrowLeft" && e.key !== "ArrowRight") return;
+      const vizinha = e.key === "ArrowRight" ? e.target.nextElementSibling : e.target.previousElementSibling;
+      if (!vizinha) return;
+      e.preventDefault();
+      vizinha.focus();
+      abrirLista(vizinha.dataset.id);
+    });
     $("#pg-nome").addEventListener("change", sugerirDaOrtodontia);
     $("#pg-nome").addEventListener("input", avisarContatoNovo);
     $("#pg-sel-mes").addEventListener("change", (e) => irParaMesDaFicha(ficha.ano, Number(e.target.value)));
@@ -59,12 +75,17 @@ Object.assign(acoes, {
   "pg-excluir": excluirAtendimento,
   "pg-exportar": exportarFicha,
   "pg-tirar-tratamento": (alvo) => tirarTratamento(alvo.dataset.nome),
+  "pg-lista": (alvo) => abrirLista(alvo.dataset.id),
+  "pg-lista-nova": () => abrirJanelaDaLista(null),
+  "pg-lista-editar": () => abrirJanelaDaLista(ficha.listas.find((l) => l.id === ficha.lista)),
+  "pg-lista-apagar": apagarLista,
+  "pg-lista-fechar": () => $("#pg-lista-janela").close(),
 });
 
 /* ---------- Lista ---------- */
 
 async function carregarFicha() {
-  aplicarFicha(await api().atendimentos_listar(ficha.ano, ficha.mes));
+  aplicarFicha(await api().atendimentos_listar(ficha.ano, ficha.mes, ficha.lista));
 }
 
 function irParaMesDaFicha(ano, mes) {
@@ -75,8 +96,8 @@ function irParaMesDaFicha(ano, mes) {
 
 function aplicarFicha(r) {
   if (r.erro) return mostrarToast(r.erro, { erro: true });
-  Object.assign(ficha, { ano: r.ano, mes: r.mes, atendimentos: r.atendimentos, nomes: r.nomes, orto: r.orto,
-    semNotaPorPadrao: r.sem_nota_por_padrao });
+  Object.assign(ficha, { ano: r.ano, mes: r.mes, lista: r.lista_id, listas: r.listas, atendimentos: r.atendimentos,
+    nomes: r.nomes, orto: r.orto, semNotaPorPadrao: r.sem_nota_por_padrao });
   ficha.totais = r.totais;
   ficha.meses = r.meses;
   ficha.notasLidas = r.notas_lidas;
@@ -115,9 +136,13 @@ function desenharFicha() {
   $("#pg-filtros").hidden = vazio;
   $("#pg-caixa").hidden = vazio;
   $("#pg-vazio").hidden = !vazio;
+  if (ficha.listas.length > 1) $("#pg-vazio-titulo").textContent = `Nenhum atendimento de ${nomeDaLista(ficha.lista)} neste mês`;
+  else $("#pg-vazio-titulo").textContent = "Nenhum atendimento neste mês";
   $("#pg-exportar").disabled = vazio;
   $("#pg-sem-pasta").hidden = vazio || ficha.notasLidas;
   $$("#pg-filtros .escolha").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.filtro === ficha.filtro)));
+
+  desenharListas();
 
   const visiveis = ficha.atendimentos.filter(passaNoFiltro);
   if (visiveis.length === 0) {
@@ -200,7 +225,7 @@ function marcarPagoNaLista(caixa) {
     marcar: [`Marcar o atendimento de ${qual} como pago?`, "Marcar como pago"],
     desmarcar: [`Tirar o pago do atendimento de ${qual}?`, "Tirar o pago"],
   }, async (pago) => {
-    const r = await api().atendimentos_marcar_pago(a.id, pago, ficha.ano, ficha.mes);
+    const r = await api().atendimentos_marcar_pago(a.id, pago, ficha.ano, ficha.mes, ficha.lista);
     if (r.erro) {
       caixa.checked = !pago;
       return mostrarToast(r.erro, { erro: true });
@@ -223,14 +248,14 @@ async function abrirCobranca(id) {
     rotuloDestino: (d) => (d.papel ? `${d.nome} (${d.papel})` : `${d.nome} (paciente)`),
     texto: (d) => d.mensagem,
     falta: () => (r.sem_pix
-      ? { texto: "A mensagem de cobrança usa a chave Pix: preencha nas Configurações.", botao: "Abrir Configurações", acao: () => { mostrarView("config"); $("#cfg-pix").focus(); } }
+      ? { texto: "A mensagem de cobrança usa a chave Pix: preencha nas Configurações.", botao: "Abrir Configurações", acao: () => irPara("config", "cfg-pix") }
       : null),
     enviar: ({ destino, telefone, texto: mensagem }) => api().atendimentos_cobrar(r.id, destino.contato_id, telefone, mensagem),
   });
 }
 
 async function exportarFicha() {
-  const r = await api().atendimentos_exportar(ficha.ano, ficha.mes);
+  const r = await api().atendimentos_exportar(ficha.ano, ficha.mes, ficha.lista);
   if (!r || r.cancelado) return;
   if (r.erro) return mostrarToast(r.erro, { erro: true });
   estado.cfg.pasta_saida = r.caminho.replace(/[\\/][^\\/]*$/, "");
@@ -302,6 +327,10 @@ function abrirAtendimento(a) {
   escolherNota(a ? a.nota : "");
   $("#pg-contato-novo").hidden = true;
 
+  // Com mais de uma lista, dá para escolher (ou mudar) a lista do atendimento.
+  $("#pg-lista-campo").hidden = ficha.listas.length < 2;
+  $("#pg-lista-sel").replaceChildren(...ficha.listas.map((l) => new Option(l.nome, l.id)));
+  $("#pg-lista-sel").value = ficha.lista;
   $("#pg-excluir").hidden = !a;
   $("#pg-atendimento-erro").hidden = true;
   $("#pg-atendimento").showModal();
@@ -329,6 +358,7 @@ async function salvarAtendimento(e) {
     parcelas: Number($("#pg-parcelas").value),
     pago: $("#pg-pago").checked,
     nota: ficha.nota,
+    lista_id: ficha.listas.length > 1 ? $("#pg-lista-sel").value : ficha.lista,
   }, anterior ? anterior.id : null);
   if (r.erro) {
     $("#pg-atendimento-erro").textContent = r.erro;
@@ -337,20 +367,101 @@ async function salvarAtendimento(e) {
   }
   $("#pg-atendimento").close();
   const outroMes = r.ano !== ficha.ano || r.mes !== ficha.mes;
+  const outraLista = r.lista_id !== ficha.lista;
   aplicarFicha(r);
   if (outroMes) mostrarToast(`O atendimento foi para ${MESES[r.mes - 1]} de ${r.ano}, o mês da data dele.`);
+  if (outraLista) mostrarToast(`O atendimento está na lista ${nomeDaLista(r.lista_id)}.`);
   // Manutenção de paciente de orto: o Atendido de Tratamentos foi marcado junto.
   if (r.atendido_marcado) mostrarToast(`${r.atendido_marcado} ficou como atendido em Tratamentos neste mês.`);
 }
 
 async function excluirAtendimento() {
-  const r = await api().atendimentos_apagar(ficha.editando.id, ficha.ano, ficha.mes);
+  const r = await api().atendimentos_apagar(ficha.editando.id, ficha.ano, ficha.mes, ficha.lista);
   $("#pg-atendimento").close();
   if (r.erro) return mostrarToast(r.erro, { erro: true });
   aplicarFicha(r);
   mostrarToast(`Atendimento excluído: ${r.apagado_nome}`, {
-    acoes: [["Desfazer", async () => aplicarFicha(await api().atendimentos_restaurar(r.apagado, ficha.ano, ficha.mes))]],
+    acoes: [["Desfazer", async () => aplicarFicha(await api().atendimentos_restaurar(r.apagado, ficha.ano, ficha.mes, r.lista_id))]],
   });
+}
+
+/* ---------- Listas (abas) ---------- */
+
+function nomeDaLista(id) {
+  return ficha.listas.find((l) => l.id === id)?.nome || "";
+}
+
+function desenharListas() {
+  $("#pg-listas-abas").replaceChildren(...ficha.listas.map((l) => {
+    const aba = Object.assign(document.createElement("button"), { type: "button", className: "escolha pg-lista" });
+    aba.setAttribute("role", "tab");
+    aba.setAttribute("aria-selected", String(l.id === ficha.lista));
+    aba.setAttribute("aria-pressed", String(l.id === ficha.lista)); // o visual das .escolha
+    aba.tabIndex = l.id === ficha.lista ? 0 : -1;
+    aba.dataset.acao = "pg-lista";
+    aba.dataset.id = l.id;
+    aba.append(texto("span", l.nome));
+    if (l.qtd) aba.append(texto("small", String(l.qtd), "pg-lista-qtd"));
+    aba.title = `${l.nome}: ${plural(l.qtd, "atendimento", "atendimentos")} em ${MESES[ficha.mes - 1].toLowerCase()}`;
+    return aba;
+  }));
+  const atual = nomeDaLista(ficha.lista);
+  $("#pg-lista-editar").title = `Renomear ou apagar a lista ${atual}`;
+  $("#pg-lista-editar").setAttribute("aria-label", `Renomear ou apagar a lista ${atual}`);
+}
+
+function abrirLista(id) {
+  if (id === ficha.lista) return;
+  ficha.lista = id;
+  carregarFicha();
+}
+
+/* `lista` null = nova lista. */
+function abrirJanelaDaLista(lista) {
+  ficha.listaEditando = lista;
+  $("#pg-lista-titulo").textContent = lista ? `Lista ${lista.nome}` : "Nova lista";
+  $("#pg-lista-nome").value = lista ? lista.nome : "";
+  $("#pg-lista-erro").hidden = true;
+  const apagar = $("#pg-lista-apagar");
+  apagar.hidden = !lista;
+  if (lista) {
+    // Só lista vazia pode ser apagada, e a ficha precisa de pelo menos uma.
+    const motivo = ficha.listas.length < 2 ? "A ficha precisa de pelo menos uma lista."
+      : lista.total ? `Para apagar, a lista precisa estar vazia (tem ${plural(lista.total, "atendimento", "atendimentos")}).` : "";
+    apagar.disabled = !!motivo;
+    apagar.title = motivo;
+  }
+  $("#pg-lista-janela").showModal();
+  $("#pg-lista-nome").select();
+}
+
+async function salvarLista(e) {
+  e.preventDefault();
+  const nome = $("#pg-lista-nome").value;
+  const lista = ficha.listaEditando;
+  const r = lista ? await api().atendimentos_lista_renomear(lista.id, nome, ficha.ano, ficha.mes)
+    : await api().atendimentos_lista_criar(nome, ficha.ano, ficha.mes);
+  if (r.erro) {
+    $("#pg-lista-erro").textContent = r.erro;
+    $("#pg-lista-erro").hidden = false;
+    return;
+  }
+  $("#pg-lista-janela").close();
+  aplicarFicha(r);
+  mostrarToast(lista ? `A lista agora se chama ${nomeDaLista(r.lista_id)}.` : `Lista ${nomeDaLista(r.lista_id)} criada.`);
+}
+
+async function apagarLista() {
+  const lista = ficha.listaEditando;
+  const r = await api().atendimentos_lista_apagar(lista.id, ficha.ano, ficha.mes);
+  if (r.erro) {
+    $("#pg-lista-erro").textContent = r.erro;
+    $("#pg-lista-erro").hidden = false;
+    return;
+  }
+  $("#pg-lista-janela").close();
+  aplicarFicha(r);
+  mostrarToast(`Lista ${lista.nome} apagada.`);
 }
 
 /* ---------- Tratamentos sugeridos (Configurações) ---------- */

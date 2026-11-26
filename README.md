@@ -85,8 +85,13 @@ Notas fiscais, extrato bancário e as regras do extrato em abas de uma tela só,
   <img src="docs/capturas/textos.png" alt="Textos prontos: textos que se mandam sempre, com Copiar" width="49%">
 </p>
 
+<p align="center">
+  <img src="docs/capturas/config-mensagens.png" alt="Configurações, Mensagens: texto para o paciente e para o responsável" width="49%">
+  <img src="docs/capturas/config-procura.png" alt="Procura nas Configurações que aceita erro de digitação" width="49%">
+</p>
+
 - **Uma janela só para o WhatsApp:** nota, várias notas, Tratamentos, cobrança e lembretes usam a mesma janela: quem recebe em botões (o paciente ou um responsável), o tipo de mensagem quando há mais de um, o telefone e o texto, que dá para ajustar antes de abrir a conversa.
-- **Mensagem do seu jeito:** em Configurações → WhatsApp, o texto da nota (o de várias notas juntas e o de cobrança) é escrito com variáveis como `[primeiro-nome-do-responsavel]`, `[data-competencia]`, `[mes-competencia]`, `[numero-da-nota]`, `[valor]` e `[lista-das-notas]`, com prévia na hora e o botão **Voltar ao padrão**.
+- **Mensagem do seu jeito:** em Configurações → **Mensagens** dá para mudar o texto de **todas** as mensagens (notas, cobrança, as três de Tratamentos e os lembretes). As que vão para o paciente ou para um responsável têm **dois textos**, em abas: *Para o paciente* ("Olá, Lucas. Vamos agendar a sua manutenção…") e *Para o responsável* ("Olá, Fernanda. Vamos agendar a manutenção de Lucas…"); o OMAC usa um ou outro conforme quem recebe. O texto é escrito com variáveis como `[primeiro-nome-do-responsavel]`, `[primeiro-nome-do-paciente]`, `[mes-atual]`, `[dia-da-consulta]`, `[data-competencia]`, `[valor]`, `[chave-pix]` e `[lista-das-notas]`, com prévia na hora e o botão **Voltar ao padrão**.
 - **Notas a enviar:** a mensagem sai pronta e assinada, o PDF é copiado e a conversa abre no aplicativo ou no WhatsApp Web. A pessoa cola o PDF e aperta enviar. Dá para trocar quem recebe (a mãe, o pai…) antes de abrir. As notas novas ficam na lista, em qualquer mês, até serem enviadas, e dá para seguir direto para a próxima.
 - **Contas:** na primeira abertura do dia, uma janela mostra o que vence amanhã ou hoje, e um clique deixa a mensagem pronta para quem cuida dos pagamentos (um contato escolhido nas Configurações).
 - **Enviar lembrete a qualquer momento:** cada conta em aberto (ou que ficou sem pagar no mês passado) tem o botão de WhatsApp, e no topo há **Enviar lembrete das contas em aberto**. A mensagem já diz "venceu dia X" quando o vencimento passou. O aviso automático continua igual.
@@ -138,7 +143,7 @@ Notas fiscais, extrato bancário e as regras do extrato em abas de uma tela só,
 </p>
 
 - **Os pacientes de ortodontia**, com telefone e valor da manutenção. **Novo paciente** abre a janela de contato com a ortodontia já ligada; escrever o nome de quem já é contato abre o cadastro dele.
-- **Três mensagens prontas:** agendar a manutenção do mês, cobrar com a chave Pix das Configurações e agendar o retorno. O texto pode ser ajustado antes de abrir a conversa.
+- **Três mensagens prontas:** agendar a manutenção do mês (ou confirmar o dia, se já foi marcado), cobrar com a chave Pix das Configurações e agendar o retorno, cada uma com o texto para o paciente e o texto para o responsável (Configurações → Mensagens). O texto pode ser ajustado antes de abrir a conversa.
 - **Para quem enviar** se escolhe na hora: o próprio paciente ou um dos responsáveis. O OMAC lembra a última escolha, e o texto já sai falando com o responsável sobre o paciente.
 - **Agendado do mês:** marca quem já está com a manutenção agendada e recomeça sozinho todo dia 1, mesmo que o app esteja fechado nesse dia. Ao marcar, dá para informar o **dia da consulta** (opcional): o "Hoje" do Início avisa quem tem consulta no dia, e a mensagem de agendar já confirma a data. Desmarcar e o **Atendido** pedem confirmação (Enter confirma), para um clique sem querer não mudar nada.
 - **Feitos no mês e o próximo mês:** quem já foi agendado e atendido desce para **Feitos em novembro**. Ali, **Agendar** deixa o mês seguinte já agendado (com o dia, se souber): quando ele chega, o paciente aparece com o Agendado marcado ("agendado em novembro") e só falta o Atendido.
@@ -159,8 +164,9 @@ Notas fiscais, extrato bancário e as regras do extrato em abas de uma tela só,
 </p>
 
 - **A ficha de papel, dentro do app:** paciente, tratamento, data, valor, forma de pagamento (Pix PJ, Pix PF, dinheiro, débito ou crédito), em quantas vezes no crédito, pago e nota.
+- **Várias listas** (por exemplo, **Brasília** e **São Paulo**): abas entre o mês e os totais, com **Nova lista**, renomear e apagar (só lista vazia). Os totais, o filtro de meses e a planilha para imprimir são da lista aberta, com o nome dela no arquivo e no alto da folha. Na janela do atendimento dá para escolher ou mudar a lista. Notas ligadas sozinhas, cobrança e Tratamentos funcionam igual em todas, e o Início, o Resumo do ano, as notas e o extrato continuam somando tudo.
 - **Pago sem esforço:** fica em branco enquanto espera; se o mês acabar sem marcar, aparece como **não pago**. Pagou depois, é só marcar. Na lista, marcar e desmarcar o pago perguntam antes (*“Marcar o atendimento de Fulano (21/11 · R$ 180,00) como pago?”*), e Enter confirma.
-- **Cobrar:** quem ainda não pagou tem o botão do WhatsApp na linha, com a mensagem de cobrança pronta (data, tratamento, valor e a chave Pix) para o paciente ou um responsável. O texto fica em Configurações → WhatsApp, com variáveis.
+- **Cobrar:** quem ainda não pagou tem o botão do WhatsApp na linha, com a mensagem de cobrança pronta (data, tratamento, valor e a chave Pix) para o paciente ou um responsável. O texto fica em Configurações → Mensagens, com variáveis.
 - **Nota em três situações:** **ok** (achada sozinha na pasta, ou marcada como emitida), **falta emitir** e **não precisa**. Dinheiro e Pix PF já sugerem "não precisa", e dá para trocar.
 - **Emitir:** onde falta a nota e o atendimento já foi pago aparece o botão **Emitir** (antes de pagar ele não aparece, para não emitir sem querer), que abre uma janela com o nome e o CPF de quem recebe a nota (o paciente ou um responsável, e a última escolha fica guardada), cada um com o botão **Copiar**, e o botão para abrir o site onde a nota é emitida (configurável). Ao lado, os **Textos prontos** da categoria escolhida (ela fica guardada), com Copiar e um ✓ no que já foi copiado. Nos textos dá para usar variáveis como `[nome]`, `[cpf]`, `[data-competencia]`, `[valor]`, `[nome-do-dependente]`, `[cpf-dependente]` e `[data-nascimento-dependente]`, que saem preenchidas; se faltar um dado, o OMAC pede antes de copiar. Para o nome do PDF há `[numero-nota]` (o maior número da pasta + 1, com 9 dígitos), `[data-hoje]` e `[comp]` (dia-mês): `NFS-e Nº [numero-nota] - [nome] - [data-hoje] - COMP [comp]`. A data e o valor (só o número, como `180,00`) também têm Copiar.
 - **O paciente é um contato:** o campo completa com a lista de contatos; um nome novo vira contato ao salvar. Paciente de ortodontia já vem com a manutenção e o valor.
@@ -187,6 +193,8 @@ Notas fiscais, extrato bancário e as regras do extrato em abas de uma tela só,
 - **Valores escondidos:** o OMAC sempre abre com os valores como **R$ ----**, para quem passa perto do computador não ver. O botão **Valores**, com o olho, fica no canto de cima de cada tela com dinheiro (Início, Relatório mensal, Resumo, Atendimentos, Tratamentos e Lembretes) e mostra ou esconde todos de uma vez, e depois de alguns minutos sem mexer eles se escondem de novo (o tempo fica nas Configurações).
 - **Avisos que minimizam:** a faixa de avisos fica só com a quantidade, sem sumir, e abre de novo com um clique.
 - **Aviso de versão nova:** o OMAC avisa e abre o download no navegador. Trocar a pasta do programa não mexe nos dados.
+- **Configurações por categoria:** ao clicar em Configurações, o botão sobe até o topo do menu lateral trazendo as categorias (Geral, Notas fiscais, Extrato, Atendimentos, WhatsApp, Mensagens, Backup e Sistema) como uma cortina, e embaixo fica o **Voltar**. Do lado direito aparece a categoria escolhida; em Mensagens, os itens embaixo dela levam direto a cada mensagem. A **procura** aceita erro de digitação ("pixi" acha a chave Pix).
+- **Cabeçalho das colunas grudado:** ao descer uma lista comprida (notas, extrato, Tratamentos, Atendimentos, Contatos…), a linha com os nomes das colunas fica no topo.
 - **Menu lateral em grupos** (Financeiro, Atendimento, Outros), com o nome de cada grupo e uma linha. No lápis, embaixo do menu, dá para arrastar as telas (ou usar as setas ↑ ↓), trocar os nomes, criar e apagar grupos, e voltar ao padrão. Tela nova de uma versão futura entra sozinha no último grupo.
 
 <p align="center">
@@ -284,7 +292,7 @@ omac/
 ├── extrato/          leitor.py · pasta.py · regras.py · exportar.py · api.py
 ├── lembretes/        contas.py · livres.py · comandos.py · api.py
 ├── modelos/          modelos.py · api.py
-├── whatsapp/         mensagens.py (telefone, link oficial e textos, usado por todos)
+├── whatsapp/         mensagens.py (telefone e link oficial) · variaveis.py · catalogo.py (todas as mensagens editáveis) · api.py
 ├── backup/           backup.py · api.py
 ├── resumo/           ano.py · api.py
 ├── inicio/           registro.py (widgets) · api.py
@@ -314,6 +322,8 @@ Para criar um módulo: uma pasta em `omac/` com a classe da API (herdando de `Ap
 - [x] **Lembretes e Comandos** (1.7.0).
 - [x] **Relatório mensal**, pesquisa de notas, envio de várias notas de uma vez e **Modelos** para imprimir (1.8.0).
 - [x] **CPF nos contatos** com a janela **Emitir**, **valores escondidos** e **lembretes que repetem** (1.9.0).
+- [x] **Várias listas em Atendimentos** (ex.: Brasília e São Paulo), com totais e planilha por lista (1.14.0).
+- [x] **Configurações por categoria** com a cortina no menu lateral e procura que aceita erro de digitação, **todas as mensagens editáveis** com texto para o paciente e para o responsável, e o **cabeçalho das listas grudado** no topo (1.13.0).
 - [x] **Uma janela só para o WhatsApp**, **cobrar** em Atendimentos, **Textos prontos** no menu, em Tratamentos o **próximo mês já agendado** com o **dia da consulta**, valor nos finalizados, dia que veio no histórico e manutenção da ficha marcando o atendido (1.12.0).
 - [x] **Desempenho** sem mudar nada do que a tela faz: listas que só redesenham quando algo mudou, pesquisas que esperam parar de digitar, Início calculando só os cartões que aparecem, tela junta no `.exe`, cache do extrato e leitura das notas e extratos enquanto a janela abre (1.11.0).
 - [x] **Nome do PDF da nota** nos Comandos e **Renomear** o PDF baixado com nome de números; confirmação no **Pago**, **Agendado** e **Atendido**; "Confere" virou **Agendado** (1.10.2).

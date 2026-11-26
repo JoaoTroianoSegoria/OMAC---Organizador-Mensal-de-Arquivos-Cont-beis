@@ -6,7 +6,7 @@ import pytest
 
 from omac import sistema
 from omac.app import Api
-from omac.whatsapp import variaveis as vr
+from omac.whatsapp import catalogo as cat
 
 
 @pytest.fixture
@@ -29,32 +29,33 @@ def _atendimento(api, nome="Pedro Alves Souza", **campos):
 
 
 def test_mensagem_padrao_com_tudo():
-    texto = vr.mensagem_cobranca({"assistente_nome": "Exemplo", "chave_pix": "chave@x.com"}, "HELENA ALVES",
-                                 "PEDRO ALVES SOUZA", date(2026, 11, 21), "Manutenção", 22000)
+    texto = cat.cobranca({"assistente_nome": "Exemplo", "chave_pix": "chave@x.com"}, "HELENA ALVES", "mãe",
+                         "PEDRO ALVES SOUZA", date(2026, 11, 21), "Manutenção", 22000)
     assert texto.startswith("*Assistente Exemplo:* Olá, Helena.")
     assert "atendimento de Pedro em 21/11 (Manutenção), no valor de R$ 220,00." in texto
     assert "chave@x.com" in texto
 
 
-def test_sem_tratamento_nem_valor_o_texto_fica_limpo():
-    texto = vr.mensagem_cobranca({}, "Pedro", "Pedro", date(2026, 11, 21), "", None)
-    assert "atendimento de Pedro em 21/11." in texto
+def test_para_o_proprio_paciente_e_o_seu_atendimento():
+    texto = cat.cobranca({}, "Pedro", "", "Pedro", date(2026, 11, 21), "", None)
+    assert texto.startswith("Olá, Pedro.\nPassando para lembrar do pagamento do seu atendimento em 21/11.")
     assert "()" not in texto and "no valor de" not in texto
 
 
 def test_modelo_nas_configuracoes(api):
-    modelos = api.mensagens_modelos()
-    assert modelos["cobranca"]["modelo"] == vr.MODELO_COBRANCA
-    assert {v["nome"] for v in modelos["cobranca"]["variaveis"]} >= {"data-do-atendimento", "chave-pix", "valor"}
-    assert "erro" in api.mensagens_salvar("cobranca", "Oi [numero-da-nota]")  # variável de nota não vale aqui
-    api.mensagens_salvar("cobranca", "Oi [primeiro-nome-do-responsavel], falta o de [data-do-atendimento].")
+    grupos = api.mensagens_modelos()["grupos"]
+    cobranca = next(m for g in grupos for m in g["mensagens"] if m["tipo"] == "cobranca")
+    assert {v["nome"] for v in cobranca["variaveis"]} >= {"data-do-atendimento", "chave-pix", "valor"}
+    assert [v["versao"] for v in cobranca["versoes"]] == ["paciente", "responsavel"]
+    assert "erro" in api.mensagens_salvar("cobranca", "paciente", "Oi [numero-da-nota]")  # variável de nota não vale
+    api.mensagens_salvar("cobranca", "paciente", "Oi [primeiro-nome-do-paciente], falta o de [data-do-atendimento].")
     a = _atendimento(api)
     r = api.atendimentos_preparar_cobranca(a["id"])
     assert r["destinos"][0]["mensagem"] == "Oi Pedro, falta o de 21/11."
-    assert r["sem_pix"] is False  # o modelo não usa a chave Pix
-    previa = api.mensagens_previa("cobranca", vr.MODELO_COBRANCA)
-    assert "Lucas" in previa["texto"] and previa["desconhecidas"] == []
-    assert api.mensagens_padrao("cobranca")["config"]["mensagem_cobranca"] == ""
+    assert r["sem_pix"] is False  # a chave está preenchida
+    previa = api.mensagens_previa("cobranca", "responsavel", cobranca["versoes"][1]["padrao"])
+    assert "Olá, Fernanda" in previa["texto"] and "de Lucas" in previa["texto"] and previa["desconhecidas"] == []
+    assert "cobranca" not in api.mensagens_padrao("cobranca", "paciente")["config"]["mensagens"]
 
 
 def test_preparar_e_cobrar_guarda_o_telefone_e_a_escolha(api):

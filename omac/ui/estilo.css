@@ -398,7 +398,7 @@ button { cursor: pointer; }
 .olho[aria-pressed="true"] .ic { color: var(--acento); }
 
 /* ---------- Mural (ligarMural em nucleo.js): o bloco sobe até encostar no de cima ---------- */
-.ini-grade.mural, .grade-config.mural { grid-auto-rows: 2px; row-gap: 0; align-items: start; }
+.ini-grade.mural { grid-auto-rows: 2px; row-gap: 0; align-items: start; }
 
 /* ---------- Faixas (avisos / canceladas) ---------- */
 .faixa {
@@ -436,7 +436,13 @@ button { cursor: pointer; }
 .lista-simples b { font-weight: 600; }
 
 /* ---------- Tabela ---------- */
-.tabela-caixa { overflow-x: auto; overflow-y: hidden; }
+/* "clip" corta sem virar caixa de rolagem: assim o cabeçalho das colunas gruda no topo da tela
+ * ao descer a lista. Só a tabela que não cabe na largura ganha rolagem para o lado (.larga, nucleo.js),
+ * e aí o cabeçalho deixa de grudar (o navegador não deixa os dois juntos).
+ * Cortar nas duas direções segue os cantos redondos do cartão: o cabeçalho (quadrado) fica redondo
+ * só no topo do cartão, e a última linha com o mouse em cima fica redonda embaixo. */
+.tabela-caixa { overflow: clip; }
+.tabela-caixa.larga { overflow-x: auto; overflow-y: hidden; }
 .tabela {
   width: 100%;
   border-collapse: separate; border-spacing: 0;
@@ -444,14 +450,17 @@ button { cursor: pointer; }
 }
 .tabela th, .tabela td { padding: .7rem 1rem; text-align: left; }
 .tabela thead th {
-  position: sticky; top: 0; z-index: 1;
+  position: sticky; top: 0; z-index: 2;
   font-size: .8rem; font-weight: 700; letter-spacing: .02em;
   color: var(--texto-2);
-  background: var(--vidro-forte);
+  /* Quase sólido: grudado no topo, as linhas passam por baixo dele sem aparecer através. */
+  background: color-mix(in srgb, var(--solido) 94%, transparent);
+  -webkit-backdrop-filter: blur(1.2rem) saturate(180%);
+  backdrop-filter: blur(1.2rem) saturate(180%);
   border-bottom: 1px solid var(--linha);
 }
-.tabela thead th:first-child { border-top-left-radius: var(--raio); }
-.tabela thead th:last-child { border-top-right-radius: var(--raio); }
+/* Na tela, gruda na borda de cima mesmo (sem a margem de .5rem do .conteudo, onde as linhas apareceriam). */
+.conteudo .tabela thead th { top: -.5rem; }
 .tabela tbody td { border-bottom: 1px solid var(--linha); }
 .tabela tbody tr { transition: background-color .12s; }
 .tabela tbody tr:hover { background: var(--acento-suave); }
@@ -499,7 +508,6 @@ button { cursor: pointer; }
 .vazio-icone .ic { width: 2rem; height: 2rem; }
 
 /* ---------- Configurações ---------- */
-.grade-config { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 26rem), 1fr)); gap: 1rem; align-items: start; }
 .grupo { padding: 1.25rem 1.4rem 1.4rem; display: flex; flex-direction: column; gap: 1.25rem; }
 .grupo h2 { font-size: 1.1rem; }
 .opcao { border: 0; margin: 0; padding: 0; min-width: 0; display: flex; flex-direction: column; gap: .55rem; }
@@ -696,6 +704,8 @@ input[type="range"] { flex: 1; accent-color: var(--acento); height: 2rem; cursor
 [data-contraste="alto"] .chave span { background: var(--texto); }
 [data-contraste="alto"] .chave[aria-checked="true"] span { background: var(--acento-texto); }
 [data-contraste="alto"] .tabela thead th { background: var(--solido); border-bottom: 2px solid var(--linha); }
+[data-visual="otimizado"] .tabela thead th,
+[data-contraste="alto"] .tabela thead th { -webkit-backdrop-filter: none; backdrop-filter: none; }
 [data-contraste="alto"] .selo-breve { color: var(--texto); }
 [data-contraste="alto"] .etiqueta { border: 1px solid currentColor; }
 [data-contraste="alto"] .etiqueta-erro { color: var(--texto); background: none; }
